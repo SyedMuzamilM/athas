@@ -105,7 +105,9 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
         </div>
 
         {/* Main content area */}
-        <div className="flex-1 overflow-y-auto p-4">{renderTabContent()}</div>
+        <div className="flex-1 overflow-y-auto p-4 [overscroll-behavior:contain]">
+          {renderTabContent()}
+        </div>
       </div>
     </Dialog>
   );

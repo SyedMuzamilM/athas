@@ -4,8 +4,10 @@ import type { ChatMode } from "@/features/ai/store/types";
 import Select from "@/ui/select";
 import { cn } from "@/utils/cn";
 
-interface ChatModeSelectorProps {
+interface ModeSelectorProps {
   className?: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 const FALLBACK_MODES: { id: ChatMode; label: string }[] = [
@@ -13,16 +15,21 @@ const FALLBACK_MODES: { id: ChatMode; label: string }[] = [
   { id: "plan", label: "Plan" },
 ];
 
-export const ChatModeSelector = memo(function ChatModeSelector({
+export const ModeSelector = memo(function ModeSelector({
   className,
-}: ChatModeSelectorProps) {
+  open,
+  onOpenChange,
+}: ModeSelectorProps) {
   const mode = useAIChatStore((state) => state.mode);
   const setMode = useAIChatStore((state) => state.setMode);
-  const getCurrentAgentId = useAIChatStore((state) => state.getCurrentAgentId);
+  const currentChatId = useAIChatStore((state) => state.currentChatId);
+  const chats = useAIChatStore((state) => state.chats);
+  const selectedAgentId = useAIChatStore((state) => state.selectedAgentId);
   const sessionModeState = useAIChatStore((state) => state.sessionModeState);
   const changeSessionMode = useAIChatStore((state) => state.changeSessionMode);
 
-  const currentAgentId = getCurrentAgentId();
+  const currentAgentId =
+    chats.find((chat) => chat.id === currentChatId)?.agentId ?? selectedAgentId;
   const isAcpAgent = currentAgentId !== "custom";
   const hasDynamicModes = isAcpAgent;
   const shouldHideForAcp = isAcpAgent && sessionModeState.availableModes.length === 0;
@@ -70,7 +77,10 @@ export const ChatModeSelector = memo(function ChatModeSelector({
       disabled={isSelectorDisabled}
       size="xs"
       openDirection="up"
-      className={cn("max-w-[120px] px-1 py-0", className)}
+      variant="secondary"
+      open={open}
+      onOpenChange={onOpenChange}
+      className={cn("w-fit min-w-[92px] max-w-[132px]", className)}
       menuClassName="w-[248px]"
       aria-label="Select chat mode"
     />

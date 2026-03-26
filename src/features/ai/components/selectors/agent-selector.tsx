@@ -1,7 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
-import { Check, ChevronDown, Download, LoaderCircle, Plus, Search, Settings2 } from "lucide-react";
+import { ChevronDown, Download, LoaderCircle, Plus, Search, Settings2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
+import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { AgentConfig } from "@/features/ai/types/acp";
 import { AGENT_OPTIONS, type AgentType } from "@/features/ai/types/ai-chat";
@@ -12,15 +13,12 @@ import Input from "@/ui/input";
 import { paneIconButtonClassName } from "@/ui/pane";
 import { cn } from "@/utils/cn";
 
-interface UnifiedAgentSelectorProps {
+interface AgentSelectorProps {
   variant?: "header" | "input";
   onOpenSettings?: () => void;
 }
 
-export function UnifiedAgentSelector({
-  variant = "header",
-  onOpenSettings,
-}: UnifiedAgentSelectorProps) {
+export function AgentSelector({ variant = "header", onOpenSettings }: AgentSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -151,7 +149,13 @@ export function UnifiedAgentSelector({
       }
 
       if (variant === "header") {
-        createNewChat(agentId);
+        const newChatId = createNewChat(agentId);
+        const nextAgentInfo = AGENT_OPTIONS.find((a) => a.id === agentId);
+        if (nextAgentInfo?.isAcp) {
+          void AcpStreamHandler.warmup(agentId, newChatId).catch((error) => {
+            console.error(`Failed to prepare ${agentId} session:`, error);
+          });
+        }
       } else {
         changeCurrentChatAgent(agentId);
       }
@@ -243,7 +247,7 @@ export function UnifiedAgentSelector({
           type="button"
           variant="ghost"
           size="sm"
-          className="ui-font flex h-8 items-center gap-1.5 rounded-full border border-border bg-secondary-bg/80 px-3 text-xs transition-colors hover:bg-hover"
+          className="ui-font flex h-8 max-w-[min(220px,100%)] items-center gap-1.5 rounded-full border border-border bg-secondary-bg/80 px-3 text-xs transition-colors hover:bg-hover"
         >
           <ProviderIcon providerId={currentAgentId} size={11} className="text-text-lighter" />
           <span className="max-w-[140px] truncate text-text">{currentAgent?.name || "Agent"}</span>
@@ -258,7 +262,7 @@ export function UnifiedAgentSelector({
         anchorRef={triggerRef}
         anchorAlign="end"
         onClose={() => setIsOpen(false)}
-        className="flex w-[320px] flex-col overflow-hidden rounded-2xl p-0"
+        className="flex w-[min(360px,calc(100vw-16px))] max-w-[calc(100vw-16px)] flex-col overflow-hidden rounded-2xl p-0"
       >
         <div className="bg-secondary-bg px-2 py-2" onKeyDown={handleKeyDown}>
           <Input
@@ -274,7 +278,7 @@ export function UnifiedAgentSelector({
           />
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-1.5">
+        <div className="min-h-0 flex-1 overflow-y-auto p-1.5 [overscroll-behavior:contain]">
           {filteredItems.length === 0 ? (
             <div className="p-4 text-center text-text-lighter text-xs">No results found</div>
           ) : (
@@ -284,39 +288,35 @@ export function UnifiedAgentSelector({
               const isSelected = itemIndex === selectedIndex;
               const isInstalling = installingAgentId === item.id;
               const isUnavailable = !item.isInstalled && item.id !== "custom";
+              const isClickable = item.isInstalled || item.id === "custom" || item.canInstall;
 
               return (
                 <div
                   key={item.id}
+                  role="button"
+                  tabIndex={-1}
                   onMouseEnter={() => setSelectedIndex(itemIndex)}
+                  onClick={() =>
+                    item.isInstalled || item.id === "custom"
+                      ? void handleAgentChange(item.id as AgentType)
+                      : void handleInstallAgent(item.id)
+                  }
                   className={cn(
-                    "group flex min-h-10 items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs transition-colors",
+                    "group flex min-h-8 items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs transition-colors",
                     isSelected ? "bg-hover/90" : "bg-transparent",
                     item.isCurrent && "bg-selected/90 ring-1 ring-accent/10",
+                    isClickable && "cursor-pointer",
                   )}
                 >
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() =>
-                      item.isInstalled || item.id === "custom"
-                        ? handleAgentChange(item.id as AgentType)
-                        : handleInstallAgent(item.id)
-                    }
-                    className="h-auto min-w-0 flex-1 justify-start gap-2 px-0 py-0 hover:bg-transparent"
-                  >
-                    <ProviderIcon providerId={item.id} size={10} className="text-text-lighter" />
+                  <div className="flex min-w-0 flex-1 items-center gap-2">
+                    <ProviderIcon providerId={item.id} size={12} className="text-text-lighter" />
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-text text-xs">{item.name}</div>
-                      {isUnavailable ? (
-                        <div className="mt-0.5 text-[10px] text-text-lighter">
-                          Install before use
-                        </div>
-                      ) : null}
+                      <div className="truncate text-left text-text text-xs leading-4">
+                        {item.name}
+                      </div>
                     </div>
-                  </Button>
-                  <div className="flex min-w-18 shrink-0 items-center justify-end gap-1">
+                  </div>
+                  <div className="flex shrink-0 items-center justify-end gap-1">
                     {item.id === "custom" && onOpenSettings ? (
                       <Button
                         type="button"
@@ -338,20 +338,23 @@ export function UnifiedAgentSelector({
                         <Settings2 />
                       </Button>
                     ) : null}
-                    {item.isCurrent && <Check className="shrink-0 text-accent" />}
-                    {!item.isCurrent && item.isInstalled && item.id !== "custom" && (
-                      <Check className="shrink-0 text-green-500" />
-                    )}
                     {isUnavailable && item.canInstall ? (
                       <Button
                         type="button"
-                        onClick={() => void handleInstallAgent(item.id)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void handleInstallAgent(item.id);
+                        }}
                         disabled={isInstalling}
                         variant="outline"
                         size="xs"
-                        className="h-6 shrink-0 gap-1 rounded-full bg-secondary-bg/80 px-2 py-0 text-[10px] text-text-lighter disabled:cursor-wait disabled:opacity-70"
+                        className="h-5 shrink-0 gap-1 rounded-full bg-secondary-bg/80 px-2 py-0 text-[10px] text-text-lighter disabled:cursor-wait disabled:opacity-70"
                       >
-                        {isInstalling ? <LoaderCircle className="animate-spin" /> : <Download />}
+                        {isInstalling ? (
+                          <LoaderCircle size={10} className="animate-spin" />
+                        ) : (
+                          <Download size={10} />
+                        )}
                         {isInstalling ? "Installing" : "Install"}
                       </Button>
                     ) : null}

@@ -6,7 +6,7 @@ import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 
-interface ApiKeyModalProps {
+interface ProviderApiKeyModalProps {
   isOpen: boolean;
   onClose: () => void;
   providerId: string;
@@ -15,14 +15,14 @@ interface ApiKeyModalProps {
   hasExistingKey: boolean;
 }
 
-const ApiKeyModal = ({
+const ProviderApiKeyModal = ({
   isOpen,
   onClose,
   providerId,
   onSave,
   onRemove,
   hasExistingKey,
-}: ApiKeyModalProps) => {
+}: ProviderApiKeyModalProps) => {
   const [apiKey, setApiKey] = useState("");
   const [isValidating, setIsValidating] = useState(false);
   const [validationStatus, setValidationStatus] = useState<"idle" | "valid" | "invalid">("idle");
@@ -313,4 +313,4 @@ const ApiKeyModal = ({
   );
 };
 
-export default ApiKeyModal;
+export default ProviderApiKeyModal;

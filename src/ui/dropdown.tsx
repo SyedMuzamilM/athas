@@ -4,6 +4,7 @@ import {
   type CSSProperties,
   type ReactNode,
   type RefObject,
+  type WheelEvent as ReactWheelEvent,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -25,7 +26,7 @@ export const DROPDOWN_TRIGGER_BASE = cn(
 );
 
 const dropdownRootVariants = cva(
-  "fixed z-[10040] min-w-[190px] max-w-[min(420px,calc(100vw-16px))] select-none overflow-y-auto rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur-sm",
+  "fixed z-[10040] min-w-[190px] max-w-[min(420px,calc(100vw-16px))] select-none overflow-y-auto rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur-sm [overscroll-behavior:contain]",
 );
 
 const dropdownItemVariants = cva(
@@ -58,6 +59,35 @@ export function dropdownTriggerClassName(className?: string) {
 
 export function dropdownItemClassName(className?: string) {
   return cn(DROPDOWN_ITEM_BASE, className);
+}
+
+function containScrollChain(event: ReactWheelEvent<HTMLDivElement>) {
+  const root = event.currentTarget;
+  const deltaY = event.deltaY;
+
+  if (deltaY === 0) return;
+
+  let node = event.target instanceof HTMLElement ? event.target : null;
+
+  while (node) {
+    const style = window.getComputedStyle(node);
+    const canScrollY =
+      (style.overflowY === "auto" || style.overflowY === "scroll") &&
+      node.scrollHeight > node.clientHeight;
+
+    if (canScrollY) {
+      const maxScrollTop = node.scrollHeight - node.clientHeight;
+      if ((deltaY < 0 && node.scrollTop > 0) || (deltaY > 0 && node.scrollTop < maxScrollTop)) {
+        return;
+      }
+    }
+
+    if (node === root) break;
+    node = node.parentElement;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
 }
 
 export interface MenuItem {
@@ -99,6 +129,7 @@ export function MenuPopover({
   const node = isOpen ? (
     <motion.div
       ref={menuRef}
+      onWheelCapture={containScrollChain}
       initial={initial}
       animate={animate}
       exit={exit}

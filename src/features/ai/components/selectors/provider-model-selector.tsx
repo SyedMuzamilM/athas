@@ -32,6 +32,7 @@ import {
 import { useSettingsStore } from "@/features/settings/store";
 import Input from "@/ui/input";
 import { Button } from "@/ui/button";
+import { controlFieldSizeVariants, controlFieldSurfaceVariants } from "@/ui/control-field";
 import { MenuPopover } from "@/ui/dropdown";
 import { cn } from "@/utils/cn";
 import {
@@ -40,7 +41,7 @@ import {
 } from "@/features/ai/services/providers/ai-provider-registry";
 import { checkOllamaConnection } from "@/features/ai/services/providers/ollama-provider";
 
-interface AIModelSelectorProps {
+interface ProviderModelSelectorProps {
   providerId: string;
   modelId: string;
   onProviderChange: (id: string) => void;
@@ -65,13 +66,13 @@ interface FilteredItem {
   isCurrent?: boolean;
 }
 
-export function AIModelSelector({
+export function ProviderModelSelector({
   providerId,
   modelId,
   onProviderChange,
   onModelChange,
   disabled,
-}: AIModelSelectorProps) {
+}: ProviderModelSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -234,15 +235,16 @@ export function AIModelSelector({
 
     const rect = trigger.getBoundingClientRect();
     const viewportPadding = 8;
-    const width = 360;
+    const minWidth = Math.max(rect.width, 300);
+    const maxWidth = Math.min(420, window.innerWidth - viewportPadding * 2);
+    const safeWidth = Math.max(Math.min(minWidth, maxWidth), Math.min(280, maxWidth));
     const estimatedHeight = 480;
-    const safeWidth = Math.min(width, window.innerWidth - viewportPadding * 2);
     const availableBelow = window.innerHeight - rect.bottom - viewportPadding;
     const availableAbove = rect.top - viewportPadding;
     const openUp =
-      availableBelow < Math.min(estimatedHeight, 280) && availableAbove > availableBelow;
+      availableBelow < Math.min(estimatedHeight, 240) && availableAbove > availableBelow;
     const maxHeight = Math.max(
-      220,
+      160,
       Math.min(estimatedHeight, openUp ? availableAbove - 6 : availableBelow - 6),
     );
     const measuredHeight = dropdownRef.current?.getBoundingClientRect().height ?? estimatedHeight;
@@ -437,26 +439,30 @@ export function AIModelSelector({
 
   return (
     <div>
-      <Button
+      <button
         ref={triggerRef}
         type="button"
         onClick={() => !disabled && setIsOpen((open) => !open)}
         disabled={disabled}
-        variant="secondary"
-        size="sm"
-        className="h-auto rounded-lg px-3 py-1.5 text-xs"
+        className={cn(
+          controlFieldSurfaceVariants({ variant: "secondary" }),
+          controlFieldSizeVariants({ size: "sm" }),
+          "inline-flex w-[min(360px,100%)] min-w-0 items-center justify-between gap-2 px-2 text-left",
+        )}
         aria-label="Select AI provider and model"
       >
-        <ProviderIcon providerId={providerId} size={14} className="text-text-lighter" />
-        <span className="text-text">
-          {currentProvider?.name || providerId}
-          <span className="text-text-lighter"> / </span>
-          {currentModelName}
+        <span className="flex min-w-0 items-center gap-2">
+          <ProviderIcon providerId={providerId} size={14} className="text-text-lighter" />
+          <span className="min-w-0 truncate text-left text-text">
+            {currentProvider?.name || providerId}
+            <span className="text-text-lighter"> / </span>
+            {currentModelName}
+          </span>
         </span>
         <ChevronDown
           className={cn("text-text-lighter transition-transform", isOpen && "rotate-180")}
         />
-      </Button>
+      </button>
 
       <MenuPopover
         isOpen={isOpen && !!position}
@@ -465,7 +471,7 @@ export function AIModelSelector({
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: -4, scale: 0.98 }}
         transition={{ duration: 0.15, ease: "easeOut" }}
-        className="z-[10030] flex flex-col overflow-hidden rounded-2xl bg-primary-bg/95 p-0 shadow-xl"
+        className="z-[10030] flex max-w-[min(420px,calc(100vw-16px))] flex-col overflow-hidden rounded-2xl bg-primary-bg/95 p-0 shadow-xl"
         style={
           position
             ? {
@@ -516,7 +522,10 @@ export function AIModelSelector({
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-1.5">
+        <div
+          className="min-h-0 flex-1 overflow-y-auto p-1.5 [overscroll-behavior:contain]"
+          onWheelCapture={(event) => event.stopPropagation()}
+        >
           {modelFetchError && (
             <div className="mb-2 flex items-center gap-1.5 rounded-lg bg-red-500/10 px-2.5 py-2 text-red-400 text-xs">
               <AlertCircle className="shrink-0" />

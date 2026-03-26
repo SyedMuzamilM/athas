@@ -1,6 +1,10 @@
 import { Slash, X } from "lucide-react";
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { shouldIgnoreFile } from "@/features/quick-open/utils/file-filtering";
+import { controlFieldSizeVariants, controlFieldSurfaceVariants } from "@/ui/control-field";
+import { getPrimarySessionConfigOption } from "@/features/ai/lib/session-config-option-classifier";
 import { useAIChatStore } from "@/features/ai/store/store";
+import type { InlineDropdownPosition } from "@/features/ai/store/types";
 import type { SlashCommand } from "@/features/ai/types/acp";
 import type { AIChatInputBarProps } from "@/features/ai/types/ai-chat";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
@@ -9,7 +13,8 @@ import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { FileMentionDropdown } from "../mentions/file-mention-dropdown";
 import { SlashCommandDropdown } from "../mentions/slash-command-dropdown";
-import { ChatModeSelector } from "../selectors/chat-mode-selector";
+import { AcpConfigSelector } from "../selectors/acp-config-selector";
+import { ModeSelector } from "../selectors/mode-selector";
 import { ContextSelector } from "../selectors/context-selector";
 
 const AIChatInputBar = memo(function AIChatInputBar({
@@ -26,6 +31,9 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
   // Local state for input emptiness check (to avoid subscribing to full input text)
   const [hasInputText, setHasInputText] = useState(false);
+  const [activeInlineControl, setActiveInlineControl] = useState<
+    "model" | "mode" | "commands" | null
+  >(null);
 
   // Get state from stores with optimized selectors
   const { fontSize, fontFamily } = useEditorSettingsStore();
@@ -40,6 +48,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const hasApiKey = useAIChatStore((state) => state.hasApiKey);
   const mentionState = useAIChatStore((state) => state.mentionState);
   const getCurrentAgentId = useAIChatStore((state) => state.getCurrentAgentId);
+  const sessionConfigOptions = useAIChatStore((state) => state.sessionConfigOptions);
 
   // Check if current agent is "custom" (only show model selector for custom agent)
   const currentAgentId = getCurrentAgentId();
@@ -48,6 +57,10 @@ const AIChatInputBar = memo(function AIChatInputBar({
   // ACP agents don't need API key (they handle their own auth)
   const isInputEnabled = isCustomAgent ? hasApiKey : true;
   const isStreaming = isTyping && !!streamingMessageId;
+  const acpModelOption = useMemo(
+    () => (isCustomAgent ? null : getPrimarySessionConfigOption(sessionConfigOptions, "model")),
+    [isCustomAgent, sessionConfigOptions],
+  );
 
   // Memoize action selectors
   const setInput = useAIChatStore((state) => state.setInput);
@@ -68,12 +81,33 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const selectNextSlashCommand = useAIChatStore((state) => state.selectNextSlashCommand);
   const selectPreviousSlashCommand = useAIChatStore((state) => state.selectPreviousSlashCommand);
   const getFilteredSlashCommands = useAIChatStore((state) => state.getFilteredSlashCommands);
+  const changeSessionConfigOption = useAIChatStore((state) => state.changeSessionConfigOption);
 
   // Pasted images state and actions
   const pastedImages = useAIChatStore((state) => state.pastedImages);
   const addPastedImage = useAIChatStore((state) => state.addPastedImage);
   const removePastedImage = useAIChatStore((state) => state.removePastedImage);
   const clearPastedImages = useAIChatStore((state) => state.clearPastedImages);
+
+  const closeInlineMenus = useCallback(() => {
+    setActiveInlineControl(null);
+    if (slashCommandState.active) {
+      hideSlashCommands();
+    }
+    if (isContextDropdownOpen) {
+      setIsContextDropdownOpen(false);
+    }
+    if (mentionState.active) {
+      hideMention();
+    }
+  }, [
+    slashCommandState.active,
+    hideSlashCommands,
+    isContextDropdownOpen,
+    setIsContextDropdownOpen,
+    mentionState.active,
+    hideMention,
+  ]);
 
   // Computed state for send button
   const hasImages = pastedImages.length > 0;
@@ -125,16 +159,20 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
   const getMentionDropdownPosition = useCallback(() => {
     if (!inputRef.current) {
-      return { top: 0, left: 0 };
+      return { top: 0, bottom: 0, left: 0, width: 0 };
     }
 
     const inputRect = inputRef.current.getBoundingClientRect();
-    const paddingLeft = 8;
+    const horizontalInset = 8;
 
-    return {
-      top: inputRect.bottom + 6,
-      left: inputRect.left + paddingLeft,
+    const position: InlineDropdownPosition = {
+      top: inputRect.top,
+      bottom: inputRect.bottom,
+      left: inputRect.left + horizontalInset,
+      width: Math.max(inputRect.width - horizontalInset * 2, 220),
     };
+
+    return position;
   }, []);
 
   // Function to recalculate mention dropdown position
@@ -145,17 +183,26 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
   const getSlashDropdownPosition = useCallback(() => {
     if (!inputRef.current) {
-      return { top: 0, left: 0 };
+      return { top: 0, bottom: 0, left: 0, width: 0 };
     }
 
     const inputRect = inputRef.current.getBoundingClientRect();
-    const paddingLeft = 8;
+    const horizontalInset = 8;
 
-    return {
-      top: inputRect.bottom + 6,
-      left: inputRect.left + paddingLeft,
+    const position: InlineDropdownPosition = {
+      top: inputRect.top,
+      bottom: inputRect.bottom,
+      left: inputRect.left + horizontalInset,
+      width: Math.max(inputRect.width - horizontalInset * 2, 220),
     };
+
+    return position;
   }, []);
+
+  const mentionableFiles = useMemo(
+    () => allProjectFiles.filter((file) => !file.isDir && !shouldIgnoreFile(file.path)),
+    [allProjectFiles],
+  );
 
   // ResizeObserver to track container size changes
   useEffect(() => {
@@ -397,11 +444,17 @@ const AIChatInputBar = memo(function AIChatInputBar({
         const search = hasWhitespaceAfterSlash ? slashToken.split(/\s+/)[0] : slashToken;
 
         if (!hasWhitespaceAfterSlash && search.length < 50) {
+          setActiveInlineControl("commands");
+          if (isContextDropdownOpen) {
+            setIsContextDropdownOpen(false);
+          }
           showSlashCommands(getSlashDropdownPosition(), search);
         } else {
+          setActiveInlineControl(null);
           hideSlashCommands();
         }
       } else if (slashCommandState.active) {
+        setActiveInlineControl(null);
         hideSlashCommands();
       }
 
@@ -422,6 +475,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
     hideSlashCommands,
     slashCommandState.active,
     getSlashDropdownPosition,
+    isContextDropdownOpen,
+    setIsContextDropdownOpen,
   ]);
 
   // Handle paste - strip HTML formatting, keep only plain text. Images are added to preview.
@@ -709,7 +764,12 @@ const AIChatInputBar = memo(function AIChatInputBar({
                 onToggleBuffer={toggleBufferSelection}
                 onToggleFile={toggleFileSelection}
                 isOpen={isContextDropdownOpen}
-                onToggleOpen={() => setIsContextDropdownOpen(!isContextDropdownOpen)}
+                onToggleOpen={() => {
+                  if (!isContextDropdownOpen) {
+                    closeInlineMenus();
+                  }
+                  setIsContextDropdownOpen(!isContextDropdownOpen);
+                }}
               />
             </div>
 
@@ -726,26 +786,66 @@ const AIChatInputBar = memo(function AIChatInputBar({
           </div>
 
           <div className="flex shrink-0 items-center gap-1">
-            <ChatModeSelector />
+            {acpModelOption && (
+              <AcpConfigSelector
+                option={acpModelOption}
+                onChange={(value) => void changeSessionConfigOption(acpModelOption.id, value)}
+                open={activeInlineControl === "model"}
+                onOpenChange={(open) => {
+                  if (open) {
+                    closeInlineMenus();
+                    setActiveInlineControl("model");
+                    return;
+                  }
+                  setActiveInlineControl((current) => (current === "model" ? null : current));
+                }}
+                className="w-fit max-w-[180px]"
+                menuClassName="w-[min(280px,calc(100vw-16px))]"
+              />
+            )}
+
+            <ModeSelector
+              open={activeInlineControl === "mode"}
+              onOpenChange={(open) => {
+                if (open) {
+                  closeInlineMenus();
+                  setActiveInlineControl("mode");
+                  return;
+                }
+                setActiveInlineControl((current) => (current === "mode" ? null : current));
+              }}
+            />
 
             {hasSlashCommands && (
               <Button
                 onClick={() => {
                   if (inputRef.current && isInputEnabled) {
+                    if (slashCommandState.active) {
+                      setActiveInlineControl(null);
+                      hideSlashCommands();
+                      return;
+                    }
+                    closeInlineMenus();
                     inputRef.current.textContent = "/";
                     setInput("/");
                     setHasInputText(true);
                     inputRef.current.focus();
+                    setActiveInlineControl("commands");
                     showSlashCommands(getSlashDropdownPosition(), "");
                   }
                 }}
-                variant="ghost"
-                size="icon-xs"
-                className="text-text-lighter hover:text-text"
+                variant="secondary"
+                size="xs"
+                className={cn(
+                  controlFieldSurfaceVariants({ variant: "secondary" }),
+                  controlFieldSizeVariants({ size: "xs" }),
+                  "w-fit gap-0 px-1.5 text-text-lighter hover:text-text",
+                  slashCommandState.active && "border-border-strong bg-hover text-text",
+                )}
                 title="Show slash commands"
                 aria-label="Show slash commands"
               >
-                <Slash />
+                <Slash size={12} />
               </Button>
             )}
 
@@ -778,7 +878,9 @@ const AIChatInputBar = memo(function AIChatInputBar({
         </div>
       </div>
 
-      {mentionState.active && <FileMentionDropdown onSelect={handleFileMentionSelect} />}
+      {mentionState.active && (
+        <FileMentionDropdown files={mentionableFiles} onSelect={handleFileMentionSelect} />
+      )}
 
       {slashCommandState.active && <SlashCommandDropdown onSelect={handleSlashCommandSelect} />}
     </div>

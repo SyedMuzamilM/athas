@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { AlertCircle, CheckCircle, Globe, RefreshCw, RotateCcw, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AIModelSelector } from "@/features/ai/components/selectors/ai-model-selector";
+import { ProviderModelSelector } from "@/features/ai/components/selectors/provider-model-selector";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { AgentConfig, SessionConfigOption, SessionMode } from "@/features/ai/types/acp";
 import { getAvailableProviders, updateAgentStatus } from "@/features/ai/types/providers";
@@ -21,6 +21,7 @@ import { checkOllamaConnection } from "@/features/ai/services/providers/ollama-p
 
 const DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434";
 const DEFAULT_AUTOCOMPLETE_MODEL_ID = "mistralai/devstral-small";
+const NO_DEFAULT_SESSION_MODE = "__none__";
 
 const DEFAULT_AUTOCOMPLETE_MODELS = [
   { id: "mistralai/devstral-small", name: "Devstral Small 1.1" },
@@ -135,8 +136,7 @@ export const AISettings = () => {
       } else {
         setAutocompleteModels(DEFAULT_AUTOCOMPLETE_MODELS);
       }
-    } catch (error) {
-      console.error("Failed to fetch autocomplete models:", error);
+    } catch {
       setAutocompleteModels(DEFAULT_AUTOCOMPLETE_MODELS);
       setAutocompleteModelError("Could not load model list. Showing defaults.");
     } finally {
@@ -179,7 +179,7 @@ export const AISettings = () => {
             settings.aiModelId !== getDefaultSetting("aiModelId")
           }
         >
-          <AIModelSelector
+          <ProviderModelSelector
             providerId={settings.aiProviderId}
             modelId={settings.aiModelId}
             onProviderChange={(id) => handleProviderChange(id)}
@@ -261,15 +261,20 @@ export const AISettings = () => {
             canReset={settings.aiDefaultSessionMode !== getDefaultSetting("aiDefaultSessionMode")}
           >
             <Select
-              value={settings.aiDefaultSessionMode || ""}
+              value={settings.aiDefaultSessionMode || NO_DEFAULT_SESSION_MODE}
               options={[
-                { value: "", label: "None" },
+                { value: NO_DEFAULT_SESSION_MODE, label: "None" },
                 ...availableModes.map((mode) => ({
                   value: mode.id,
                   label: mode.name,
                 })),
               ]}
-              onChange={(value) => updateSetting("aiDefaultSessionMode", value)}
+              onChange={(value) =>
+                updateSetting(
+                  "aiDefaultSessionMode",
+                  value === NO_DEFAULT_SESSION_MODE ? "" : value,
+                )
+              }
               size="xs"
               variant="secondary"
             />

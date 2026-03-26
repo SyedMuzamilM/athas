@@ -46,6 +46,7 @@ export const ChatMessage = memo(function ChatMessage({
     message.toolCalls &&
     message.toolCalls.length > 0 &&
     (!message.content || message.content.trim().length === 0);
+  const isAcp = isAcpAgent(currentAgentId());
 
   const handleCopyMessage = useCallback(async (messageContent: string, messageId: string) => {
     try {
@@ -125,6 +126,10 @@ export const ChatMessage = memo(function ChatMessage({
   }
 
   if (isToolOnlyMessage) {
+    if (isAcp) {
+      return null;
+    }
+
     return (
       <div className="space-y-2">
         {message.toolCalls!.map((toolCall, toolIndex) => (
@@ -166,7 +171,7 @@ export const ChatMessage = memo(function ChatMessage({
 
   return (
     <div className="group relative w-full">
-      {message.toolCalls && message.toolCalls.length > 0 && (
+      {!isAcp && message.toolCalls && message.toolCalls.length > 0 && (
         <div className="mb-2 space-y-2">
           {message.toolCalls!.map((toolCall, toolIndex) => (
             <ToolCallDisplay

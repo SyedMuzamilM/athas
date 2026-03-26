@@ -5,10 +5,8 @@ import { createPortal } from "react-dom";
 import { useAIChatStore } from "@/features/ai/store/store";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { FileEntry } from "@/features/file-system/types/app";
 import { fuzzyScore } from "@/features/quick-open/utils/fuzzy-search";
-import { shouldIgnoreFile } from "@/features/quick-open/utils/file-filtering";
 import { useProjectStore } from "@/features/window/stores/project-store";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
@@ -16,36 +14,26 @@ import { cn } from "@/utils/cn";
 import { getDirectoryPath } from "@/utils/path-helpers";
 
 interface FileMentionDropdownProps {
+  files: FileEntry[];
   onSelect: (file: FileEntry) => void;
 }
 
 const MAX_RESULTS = 20;
 
 export const FileMentionDropdown = React.memo(function FileMentionDropdown({
+  files,
   onSelect,
 }: FileMentionDropdownProps) {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
   const { rootFolderPath } = useProjectStore();
-  const { getAllProjectFiles } = useFileSystemStore();
   const { mentionState, hideMention } = useAIChatStore();
   const { position, selectedIndex } = mentionState;
-
-  // Pre-filtered file list, refreshed when dropdown mounts
-  const [fileItems, setFileItems] = useState<Array<{ name: string; path: string }>>([]);
-
-  useEffect(() => {
-    getAllProjectFiles().then((allFiles) => {
-      const filtered: Array<{ name: string; path: string }> = [];
-      for (const file of allFiles) {
-        if (!file.isDir && !shouldIgnoreFile(file.path)) {
-          filtered.push({ name: file.name, path: file.path });
-        }
-      }
-      setFileItems(filtered);
-    });
-  }, [getAllProjectFiles]);
+  const fileItems = useMemo(
+    () => files.map((file) => ({ name: file.name, path: file.path })),
+    [files],
+  );
 
   useEffect(() => {
     setSearchTerm(mentionState.search || "");
@@ -91,14 +79,14 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
   }, [selectedIndex]);
 
   const adjustedPosition = useMemo(() => {
-    const dropdownWidth = Math.min(360, window.innerWidth - 16);
+    const dropdownWidth = Math.min(Math.max(position.width, 280), window.innerWidth - 16);
     const dropdownHeight = Math.min(
-      filteredFiles.length * 26 + 60,
+      filteredFiles.length * 34 + 64,
       EDITOR_CONSTANTS.BREADCRUMB_DROPDOWN_MAX_HEIGHT,
     );
     const padding = 8;
 
-    let { top, left } = position;
+    let { left } = position;
 
     if (left + dropdownWidth > window.innerWidth - padding) {
       left = Math.max(padding, window.innerWidth - dropdownWidth - padding);
@@ -107,19 +95,19 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
       left = padding;
     }
 
-    if (top + dropdownHeight > window.innerHeight - padding) {
-      top = Math.max(padding, top - dropdownHeight - 12);
-    }
-    if (top < padding) {
-      top = padding;
-    }
+    const attachedAboveTop = position.top - dropdownHeight - 4;
+    const attachedBelowTop = position.bottom + 4;
+    const top =
+      attachedAboveTop >= padding
+        ? attachedAboveTop
+        : Math.min(attachedBelowTop, window.innerHeight - dropdownHeight - padding);
 
     return {
       top: Math.max(padding, top),
       left: Math.max(padding, left),
       width: dropdownWidth,
     };
-  }, [position.top, position.left, filteredFiles.length]);
+  }, [position.bottom, position.left, position.top, position.width, filteredFiles.length]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -192,7 +180,7 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
             onClick={() => handleFileClick(file)}
             className={cn(
               "h-auto w-full justify-start gap-2 px-2.5 py-2 text-left",
-              "focus:outline-none focus:ring-1 focus:ring-accent/50",
+              "focus:outline-none focus:ring-1 focus:ring-border-strong/35",
               index === selectedIndex ? "bg-selected text-text" : "text-text hover:bg-hover",
             )}
             role="option"
