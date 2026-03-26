@@ -12,6 +12,8 @@ interface SlashCommandDropdownProps {
   onSelect: (command: SlashCommand) => void;
 }
 
+const ATTACHED_DROPDOWN_GAP = -1;
+
 export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
   onSelect,
 }: SlashCommandDropdownProps) {
@@ -55,8 +57,8 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
       left = padding;
     }
 
-    const attachedAboveTop = position.top - dropdownHeight - 4;
-    const attachedBelowTop = position.bottom + 4;
+    const attachedAboveTop = position.top - dropdownHeight - ATTACHED_DROPDOWN_GAP;
+    const attachedBelowTop = position.bottom + ATTACHED_DROPDOWN_GAP;
     const top =
       attachedAboveTop >= padding
         ? attachedAboveTop
@@ -99,7 +101,7 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95, y: -4 }}
       transition={{ duration: 0.15, ease: "easeOut" }}
-      className="scrollbar-hidden fixed select-none overflow-y-auto rounded-2xl border border-border bg-secondary-bg/95 p-1.5 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur-sm"
+      className="scrollbar-hidden fixed select-none overflow-y-auto rounded-t-2xl rounded-b-xl border border-border/70 bg-primary-bg/98 p-1.5 shadow-[0_14px_32px_-26px_rgba(0,0,0,0.5)] backdrop-blur-sm"
       style={{
         zIndex: 10040,
         maxHeight: `${EDITOR_CONSTANTS.BREADCRUMB_DROPDOWN_MAX_HEIGHT}px`,

@@ -58,6 +58,7 @@ enum AcpCommand {
 struct AcpWorker {
    connection: Option<Arc<acp::ClientSideConnection>>,
    session_id: Option<acp::SessionId>,
+   auth_method_id: Option<String>,
    process: Option<Child>,
    io_handle: Option<tokio::task::JoinHandle<()>>,
    client: Option<Arc<AthasAcpClient>>,
@@ -70,6 +71,7 @@ impl AcpWorker {
       Self {
          connection: None,
          session_id: None,
+         auth_method_id: None,
          process: None,
          io_handle: None,
          client: None,
@@ -290,6 +292,9 @@ impl AcpWorker {
       };
 
       let auth_methods = init_response.auth_methods.clone();
+      let prompt_auth_method_id = auth_methods
+         .first()
+         .map(|method| method.id.to_string());
 
       // Create or load session with timeout
       let cwd = workspace_path
@@ -494,6 +499,7 @@ impl AcpWorker {
       // Store state
       self.connection = Some(connection);
       self.session_id = active_session_id.clone();
+      self.auth_method_id = prompt_auth_method_id;
       self.process = Some(child);
       self.io_handle = Some(io_handle);
       self.client = Some(client);
@@ -529,11 +535,18 @@ impl AcpWorker {
          .as_ref()
          .context("No app handle available")?
          .clone();
+      let auth_method_id = self.auth_method_id.clone();
       let prompt = prompt.to_string();
 
       tokio::task::spawn_local(async move {
-         if let Err(err) =
-            Self::run_prompt(connection, session_id.clone(), app_handle.clone(), prompt).await
+         if let Err(err) = Self::run_prompt(
+            connection,
+            session_id.clone(),
+            app_handle.clone(),
+            prompt,
+            auth_method_id,
+         )
+         .await
          {
             log::error!("Failed to run ACP prompt: {}", err);
             let _ = app_handle.emit(
@@ -554,16 +567,52 @@ impl AcpWorker {
       session_id: acp::SessionId,
       app_handle: AppHandle,
       prompt: String,
+      auth_method_id: Option<String>,
    ) -> Result<()> {
       let prompt_request = acp::PromptRequest::new(
          session_id.clone(),
          vec![acp::ContentBlock::Text(acp::TextContent::new(prompt))],
       );
 
-      let response = connection
-         .prompt(prompt_request)
+      let send_prompt = |connection: Arc<acp::ClientSideConnection>,
+                         prompt_request: acp::PromptRequest| async move {
+         tokio::time::timeout(std::time::Duration::from_secs(30), connection.prompt(prompt_request))
+            .await
+      };
+
+      let mut prompt_result = send_prompt(connection.clone(), prompt_request.clone()).await;
+
+      if let Ok(Err(err)) = &prompt_result
+         && matches!(err.code, acp::ErrorCode::AuthRequired)
+      {
+         let Some(auth_method_id) = auth_method_id else {
+            bail!("Authentication required before sending prompt");
+         };
+
+         let auth_request = acp::AuthenticateRequest::new(auth_method_id);
+         match tokio::time::timeout(
+            std::time::Duration::from_secs(30),
+            connection.authenticate(auth_request),
+         )
          .await
-         .context("Failed to send prompt")?;
+         {
+            Ok(Ok(_)) => {
+               log::info!("ACP prompt authentication succeeded, retrying prompt");
+               prompt_result = send_prompt(connection.clone(), prompt_request).await;
+            }
+            Ok(Err(err)) => bail!("Authentication required: {}", err),
+            Err(_) => bail!("Authentication required but timed out"),
+         }
+      }
+
+      let response = match prompt_result {
+         Ok(Ok(response)) => response,
+         Ok(Err(err)) if matches!(err.code, acp::ErrorCode::AuthRequired) => {
+            bail!("Authentication required before sending prompt")
+         }
+         Ok(Err(err)) => Err(err).context("Failed to send prompt")?,
+         Err(_) => bail!("Timed out while sending prompt"),
+      };
 
       // Emit prompt complete event with stop reason
       let stop_reason: StopReason = response.stop_reason.into();
@@ -644,6 +693,7 @@ impl AcpWorker {
 
       self.connection = None;
       self.session_id = None;
+      self.auth_method_id = None;
       self.client = None;
       self.agent_id = None;
       self.app_handle = None;

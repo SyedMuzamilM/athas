@@ -5,8 +5,10 @@ import { createPortal } from "react-dom";
 import { useAIChatStore } from "@/features/ai/store/store";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
+import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { FileEntry } from "@/features/file-system/types/app";
 import { fuzzyScore } from "@/features/quick-open/utils/fuzzy-search";
+import { shouldIgnoreFile } from "@/features/quick-open/utils/file-filtering";
 import { useProjectStore } from "@/features/window/stores/project-store";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
@@ -19,6 +21,7 @@ interface FileMentionDropdownProps {
 }
 
 const MAX_RESULTS = 20;
+const ATTACHED_DROPDOWN_GAP = -1;
 
 export const FileMentionDropdown = React.memo(function FileMentionDropdown({
   files,
@@ -26,14 +29,36 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
 }: FileMentionDropdownProps) {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [fallbackFiles, setFallbackFiles] = useState<FileEntry[]>([]);
 
   const { rootFolderPath } = useProjectStore();
+  const { getAllProjectFiles } = useFileSystemStore();
   const { mentionState, hideMention } = useAIChatStore();
   const { position, selectedIndex } = mentionState;
+  const effectiveFiles = files.length > 0 ? files : fallbackFiles;
   const fileItems = useMemo(
-    () => files.map((file) => ({ name: file.name, path: file.path })),
-    [files],
+    () => effectiveFiles.map((file) => ({ name: file.name, path: file.path })),
+    [effectiveFiles],
   );
+
+  useEffect(() => {
+    if (files.length > 0) {
+      setFallbackFiles([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    getAllProjectFiles().then((allFiles) => {
+      if (cancelled) return;
+
+      setFallbackFiles(allFiles.filter((file) => !file.isDir && !shouldIgnoreFile(file.path)));
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [files, getAllProjectFiles]);
 
   useEffect(() => {
     setSearchTerm(mentionState.search || "");
@@ -95,8 +120,8 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
       left = padding;
     }
 
-    const attachedAboveTop = position.top - dropdownHeight - 4;
-    const attachedBelowTop = position.bottom + 4;
+    const attachedAboveTop = position.top - dropdownHeight - ATTACHED_DROPDOWN_GAP;
+    const attachedBelowTop = position.bottom + ATTACHED_DROPDOWN_GAP;
     const top =
       attachedAboveTop >= padding
         ? attachedAboveTop
@@ -142,7 +167,7 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95, y: -4 }}
       transition={{ duration: 0.15, ease: "easeOut" }}
-      className="fixed z-[10040] flex select-none flex-col overflow-hidden rounded-2xl border border-border bg-primary-bg/95 shadow-xl backdrop-blur-sm"
+      className="fixed z-[10040] flex select-none flex-col overflow-hidden rounded-t-2xl rounded-b-xl border border-border/70 bg-primary-bg/98 shadow-[0_14px_32px_-26px_rgba(0,0,0,0.5)] backdrop-blur-sm"
       style={{
         maxHeight: `${EDITOR_CONSTANTS.BREADCRUMB_DROPDOWN_MAX_HEIGHT}px`,
         width: `${adjustedPosition.width}px`,
@@ -153,21 +178,21 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
       role="listbox"
       aria-label="File suggestions"
     >
-      <div className="bg-secondary-bg px-2 py-2">
+      <div className="border-border/50 border-b bg-primary-bg/92 px-2 py-2">
         <Input
           type="text"
           placeholder="Search files..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          variant="ghost"
+          variant="default"
           leftIcon={Search}
-          className="w-full"
+          className="w-full border-border/60 bg-secondary-bg/85"
           aria-label="Search files"
         />
       </div>
 
       <div
-        className="items-container min-h-0 flex-1 overflow-y-auto p-1.5"
+        className="items-container min-h-0 flex-1 overflow-y-auto bg-primary-bg/96 p-1.5"
         role="listbox"
         aria-label="File list"
       >

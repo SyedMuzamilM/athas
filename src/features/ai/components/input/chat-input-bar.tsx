@@ -686,13 +686,21 @@ const AIChatInputBar = memo(function AIChatInputBar({
   // Get available slash commands
   const availableSlashCommands = useAIChatStore((state) => state.availableSlashCommands);
   const hasSlashCommands = availableSlashCommands.length > 0;
+  const hasAttachedComposerDropdown = mentionState.active || slashCommandState.active;
 
   return (
     <div
       ref={aiChatContainerRef}
       className="ai-chat-container relative z-20 bg-transparent px-3 pt-2 pb-3"
     >
-      <div className="overflow-hidden rounded-lg border border-border/60 bg-primary-bg/55">
+      <div
+        className={cn(
+          "overflow-hidden border bg-primary-bg/55 transition-[border-radius,border-color,box-shadow]",
+          hasAttachedComposerDropdown
+            ? "rounded-t-xl rounded-b-2xl border-border/70 shadow-[0_14px_32px_-26px_rgba(0,0,0,0.5)]"
+            : "rounded-lg border-border/60",
+        )}
+      >
         {pastedImages.length > 0 && (
           <div className="flex flex-wrap gap-2 px-2 pt-2">
             {pastedImages.map((image) => (
@@ -736,6 +744,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
             "max-h-[140px] min-h-[64px] w-full resize-none overflow-x-hidden overflow-y-auto bg-transparent",
             "ui-font px-2 py-1.5 text-inherit text-text placeholder:text-text-lighter",
             "focus:outline-none",
+            hasAttachedComposerDropdown && "border-border/40 border-t",
             !isInputEnabled ? "cursor-not-allowed opacity-50" : "cursor-text",
             "empty:before:pointer-events-none empty:before:text-text-lighter empty:before:content-[attr(data-placeholder)]",
           )}

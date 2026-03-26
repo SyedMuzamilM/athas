@@ -477,6 +477,30 @@ details: The agent session started, but no content, tool output, or resource was
             }
           }
 
+          const isAcpAuthError =
+            isAcpAgent(currentAgentId) &&
+            (mainError.includes("Authentication required") ||
+              errorDetails.includes("Authentication required"));
+
+          if (isAcpAuthError) {
+            errorTitle = "Authentication Required";
+            errorCode = "AUTH_REQUIRED";
+            const agentName =
+              AGENT_OPTIONS.find((agent) => agent.id === currentAgentId)?.name || "This agent";
+            errorMessage = `${agentName} needs external authentication before it can accept prompts.`;
+
+            if (
+              mainError.includes("Method not implemented") ||
+              errorDetails.includes("Method not implemented")
+            ) {
+              errorDetails =
+                "This ACP adapter does not implement the protocol authenticate flow. Complete login in the underlying CLI/adapter, then try again.";
+            } else if (!errorDetails) {
+              errorDetails =
+                "Complete authentication in the underlying CLI/adapter, then try again.";
+            }
+          }
+
           if (canReconnect) {
             errorTitle = "Connection Lost";
             errorCode = "RECONNECT";
