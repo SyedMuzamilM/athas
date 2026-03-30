@@ -1,4 +1,4 @@
-import { Slash, X } from "lucide-react";
+import { Mic, Slash, X } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { shouldIgnoreFile } from "@/features/quick-open/utils/file-filtering";
 import { controlFieldSizeVariants, controlFieldSurfaceVariants } from "@/ui/control-field";
@@ -10,7 +10,9 @@ import type { AIChatInputBarProps } from "@/features/ai/types/ai-chat";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
+import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
+import { isMac } from "@/utils/platform";
 import { FileMentionDropdown } from "../mentions/file-mention-dropdown";
 import { SlashCommandDropdown } from "../mentions/slash-command-dropdown";
 import { AcpConfigSelector } from "../selectors/acp-config-selector";
@@ -28,9 +30,13 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const aiChatContainerRef = useRef<HTMLDivElement>(null);
   const isUpdatingContentRef = useRef(false);
   const performanceTimer = useRef<number | null>(null);
+  const speechRecognitionRef = useRef<SpeechRecognition | null>(null);
+  const shouldKeepListeningRef = useRef(false);
 
   // Local state for input emptiness check (to avoid subscribing to full input text)
   const [hasInputText, setHasInputText] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [interimTranscript, setInterimTranscript] = useState("");
   const [activeInlineControl, setActiveInlineControl] = useState<
     "model" | "mode" | "commands" | null
   >(null);
@@ -112,6 +118,10 @@ const AIChatInputBar = memo(function AIChatInputBar({
   // Computed state for send button
   const hasImages = pastedImages.length > 0;
   const isSendDisabled = isStreaming ? false : (!hasInputText && !hasImages) || !isInputEnabled;
+  const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const isMacDevSpeechRecognitionBlocked = import.meta.env.DEV && isMac();
+  const isSpeechRecognitionSupported =
+    !isMacDevSpeechRecognitionBlocked && typeof SpeechRecognitionCtor !== "undefined";
 
   // Highly optimized function to get plain text from contentEditable div
   const getPlainTextFromDiv = useCallback(() => {
@@ -291,6 +301,14 @@ const AIChatInputBar = memo(function AIChatInputBar({
     // Note: We don't subscribe to continuous changes to avoid re-renders
     // The checkAndSync on mount handles initial sync and chat switching
   }, [getPlainTextFromDiv]);
+
+  useEffect(() => {
+    return () => {
+      shouldKeepListeningRef.current = false;
+      speechRecognitionRef.current?.abort();
+      speechRecognitionRef.current = null;
+    };
+  }, []);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     // Handle slash command navigation
@@ -478,6 +496,44 @@ const AIChatInputBar = memo(function AIChatInputBar({
     isContextDropdownOpen,
     setIsContextDropdownOpen,
   ]);
+
+  const insertTextAtCursor = useCallback(
+    (text: string) => {
+      if (!inputRef.current || !text) return;
+
+      const normalizedText = text.replace(/\s+/g, " ").trim();
+      if (!normalizedText) return;
+
+      const selection = window.getSelection();
+      const range = document.createRange();
+      const currentText = getPlainTextFromDiv();
+      const prefix = currentText.trim().length > 0 && !/\s$/.test(currentText) ? " " : "";
+      const textNode = document.createTextNode(`${prefix}${normalizedText} `);
+
+      inputRef.current.focus();
+
+      const selectionInsideInput =
+        !!selection && selection.rangeCount > 0 && inputRef.current.contains(selection.anchorNode);
+
+      if (selectionInsideInput && selection) {
+        const selectedRange = selection.getRangeAt(0);
+        selectedRange.deleteContents();
+        selectedRange.insertNode(textNode);
+        range.setStartAfter(textNode);
+      } else {
+        range.selectNodeContents(inputRef.current);
+        range.collapse(false);
+        range.insertNode(textNode);
+        range.setStartAfter(textNode);
+      }
+
+      range.collapse(true);
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      handleInputChange();
+    },
+    [getPlainTextFromDiv, handleInputChange],
+  );
 
   // Handle paste - strip HTML formatting, keep only plain text. Images are added to preview.
   const handlePaste = useCallback(
@@ -683,6 +739,109 @@ const AIChatInputBar = memo(function AIChatInputBar({
     await onSendMessage(currentInput);
   };
 
+  const stopVoiceInput = useCallback(() => {
+    shouldKeepListeningRef.current = false;
+    speechRecognitionRef.current?.stop();
+    setIsListening(false);
+    setInterimTranscript("");
+  }, []);
+
+  const startVoiceInput = useCallback(() => {
+    if (!isInputEnabled) return;
+
+    if (isMacDevSpeechRecognitionBlocked) {
+      toast.warning("Voice input is disabled in macOS dev mode. Test it in a packaged app build.");
+      return;
+    }
+
+    if (!SpeechRecognitionCtor) {
+      toast.warning("Voice input is not supported in this webview.");
+      return;
+    }
+
+    const recognition = new SpeechRecognitionCtor();
+    speechRecognitionRef.current = recognition;
+    shouldKeepListeningRef.current = true;
+
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = navigator.language || "en-US";
+
+    recognition.onresult = (event) => {
+      let committedTranscript = "";
+      let nextInterimTranscript = "";
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0]?.transcript?.trim();
+        if (!transcript) continue;
+
+        if (event.results[i].isFinal) {
+          committedTranscript += `${transcript} `;
+        } else {
+          nextInterimTranscript = transcript;
+        }
+      }
+
+      if (committedTranscript.trim()) {
+        insertTextAtCursor(committedTranscript);
+      }
+
+      setInterimTranscript(nextInterimTranscript);
+    };
+
+    recognition.onerror = (event) => {
+      const isExpectedAbort = event.error === "aborted" || event.error === "no-speech";
+      setIsListening(false);
+      setInterimTranscript("");
+
+      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+        shouldKeepListeningRef.current = false;
+        toast.error("Microphone permission was denied.");
+        return;
+      }
+
+      if (!isExpectedAbort) {
+        shouldKeepListeningRef.current = false;
+        toast.error("Voice input stopped unexpectedly.");
+      }
+    };
+
+    recognition.onend = () => {
+      if (shouldKeepListeningRef.current) {
+        try {
+          recognition.start();
+          return;
+        } catch {
+          shouldKeepListeningRef.current = false;
+        }
+      }
+
+      setIsListening(false);
+      setInterimTranscript("");
+      speechRecognitionRef.current = null;
+    };
+
+    try {
+      recognition.start();
+      setIsListening(true);
+      setInterimTranscript("");
+      inputRef.current?.focus();
+    } catch {
+      shouldKeepListeningRef.current = false;
+      speechRecognitionRef.current = null;
+      toast.error("Voice input could not be started.");
+    }
+  }, [SpeechRecognitionCtor, insertTextAtCursor, isInputEnabled, isMacDevSpeechRecognitionBlocked]);
+
+  const toggleVoiceInput = useCallback(() => {
+    if (isListening) {
+      stopVoiceInput();
+      return;
+    }
+
+    startVoiceInput();
+  }, [isListening, startVoiceInput, stopVoiceInput]);
+
   // Get available slash commands
   const availableSlashCommands = useAIChatStore((state) => state.availableSlashCommands);
   const hasSlashCommands = availableSlashCommands.length > 0;
@@ -792,6 +951,19 @@ const AIChatInputBar = memo(function AIChatInputBar({
                 <span>{queueCount}</span>
               </Badge>
             )}
+
+            {isListening && (
+              <Badge
+                shape="pill"
+                size="sm"
+                className="gap-1 border border-blue-500/30 bg-blue-500/10 px-2.5 text-blue-400"
+              >
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-400" />
+                <span className="max-w-[120px] truncate">
+                  {interimTranscript ? interimTranscript : "Listening..."}
+                </span>
+              </Badge>
+            )}
           </div>
 
           <div className="flex shrink-0 items-center gap-1">
@@ -857,6 +1029,33 @@ const AIChatInputBar = memo(function AIChatInputBar({
                 <Slash size={12} />
               </Button>
             )}
+
+            <Button
+              type="button"
+              disabled={!isInputEnabled || !isSpeechRecognitionSupported}
+              onClick={toggleVoiceInput}
+              variant="secondary"
+              size="xs"
+              className={cn(
+                controlFieldSurfaceVariants({ variant: "secondary" }),
+                controlFieldSizeVariants({ size: "xs" }),
+                "w-fit gap-1 px-1.5 text-text-lighter hover:text-text",
+                isListening && "border-blue-500/30 bg-blue-500/10 text-blue-400",
+              )}
+              title={
+                isMacDevSpeechRecognitionBlocked
+                  ? "Voice input is disabled in macOS dev mode"
+                  : !isSpeechRecognitionSupported
+                    ? "Voice input is not supported"
+                    : isListening
+                      ? "Stop voice input"
+                      : "Start voice input"
+              }
+              aria-label={isListening ? "Stop voice input" : "Start voice input"}
+              aria-pressed={isListening}
+            >
+              <Mic size={12} className={cn(isListening && "animate-pulse")} />
+            </Button>
 
             <Button
               type="button"
