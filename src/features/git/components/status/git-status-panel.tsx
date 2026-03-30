@@ -1,4 +1,13 @@
-import { Archive, Check, ChevronDown, ChevronRight, FileText, Minus, Plus } from "lucide-react";
+import {
+  Archive,
+  Check,
+  ChevronDown,
+  ChevronRight,
+  FileText,
+  Minus,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
@@ -327,15 +336,13 @@ const GitStatusPanel = ({
         <div key={status}>
           {statusFiles.map((file, index) => (
             <GitFileItem
-              key={`${file.path}-${index}`}
+              key={`${status}:${file.path}:${file.staged ? "staged" : "unstaged"}:${index}`}
               file={file}
               diffStats={getDiffStats(file)}
               onClick={() => onFileSelect?.(file.path, file.staged)}
               onContextMenu={(e) => handleContextMenu(e, file.path, file.staged)}
               onStage={() => handleStageFile(file.path)}
               onUnstage={() => handleUnstageFile(file.path)}
-              onDiscard={() => handleDiscardFile(file.path)}
-              onStash={() => handleStashFile(file.path)}
               disabled={isLoading}
             />
           ))}
@@ -409,15 +416,13 @@ const GitStatusPanel = ({
 
       const fileRows = sortFilesByPath(node.files).map((file) => (
         <GitFileItem
-          key={file.path}
+          key={`${section}:${file.path}:${file.staged ? "staged" : "unstaged"}:${file.status}`}
           file={file}
           diffStats={getDiffStats(file)}
           onClick={() => onFileSelect?.(file.path, file.staged)}
           onContextMenu={(e) => handleContextMenu(e, file.path, file.staged)}
           onStage={() => handleStageFile(file.path)}
           onUnstage={() => handleUnstageFile(file.path)}
-          onDiscard={() => handleDiscardFile(file.path)}
-          onStash={() => handleStashFile(file.path)}
           disabled={isLoading}
           showDirectory={false}
           showFileIcon
@@ -462,6 +467,12 @@ const GitStatusPanel = ({
     }),
     [groupedAllFiles],
   );
+
+  const contextMenuFile = useMemo(() => {
+    if (!contextMenu.data) return null;
+    return displayFiles.find((file) => file.path === contextMenu.data?.filePath) ?? null;
+  }, [contextMenu.data, displayFiles]);
+  const contextMenuData = contextMenu.data;
 
   return (
     <div className="flex h-full min-h-0 flex-col select-none">
@@ -549,25 +560,60 @@ const GitStatusPanel = ({
         </div>
       )}
 
-      {onOpenFile && (
-        <ContextMenu
-          isOpen={contextMenu.isOpen}
-          position={contextMenu.position}
-          items={
-            contextMenu.data
-              ? [
-                  {
-                    id: "open-file",
-                    label: "Open File",
-                    icon: <FileText />,
-                    onClick: () => onOpenFile(contextMenu.data!.filePath),
-                  },
-                ]
-              : []
-          }
-          onClose={contextMenu.close}
-        />
-      )}
+      <ContextMenu
+        isOpen={contextMenu.isOpen}
+        position={contextMenu.position}
+        items={
+          contextMenuData
+            ? [
+                ...(onOpenFile
+                  ? [
+                      {
+                        id: "open-file",
+                        label: "Open File",
+                        icon: <FileText />,
+                        onClick: () => onOpenFile(contextMenuData.filePath),
+                      },
+                    ]
+                  : []),
+                ...(contextMenuData.isStaged
+                  ? [
+                      {
+                        id: "unstage-file",
+                        label: "Unstage File",
+                        icon: <Minus />,
+                        onClick: () => void handleUnstageFile(contextMenuData.filePath),
+                      },
+                    ]
+                  : [
+                      {
+                        id: "stage-file",
+                        label: "Stage File",
+                        icon: <Plus />,
+                        onClick: () => void handleStageFile(contextMenuData.filePath),
+                      },
+                      {
+                        id: "stash-file",
+                        label: "Stash File",
+                        icon: <Archive />,
+                        onClick: () => void handleStashFile(contextMenuData.filePath),
+                      },
+                    ]),
+                ...(contextMenuFile && contextMenuFile.status !== "untracked"
+                  ? [
+                      {
+                        id: "discard-file",
+                        label: "Discard Changes",
+                        icon: <Trash2 />,
+                        onClick: () => void handleDiscardFile(contextMenuData.filePath),
+                      },
+                    ]
+                  : []),
+              ]
+            : []
+        }
+        onClose={contextMenu.close}
+      />
 
       <StashMessageModal
         isOpen={stashModal.isOpen}

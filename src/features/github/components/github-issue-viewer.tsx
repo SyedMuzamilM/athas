@@ -6,6 +6,7 @@ import { Button } from "@/ui/button";
 import { toast } from "@/ui/toast";
 import Tooltip from "@/ui/tooltip";
 import type { IssueDetails } from "../types/github";
+import { GITHUB_ISSUE_DETAILS_TTL_MS, githubIssueDetailsCache } from "../utils/github-data-cache";
 import { copyToClipboard } from "../utils/pr-viewer-utils";
 import { CommentItem } from "./comment-item";
 import GitHubMarkdown from "./github-markdown";
@@ -15,9 +16,6 @@ interface GitHubIssueViewerProps {
   repoPath?: string;
   bufferId: string;
 }
-
-const ISSUE_CACHE_TTL_MS = 120_000;
-const issueCache = new Map<string, { fetchedAt: number; details: IssueDetails }>();
 
 const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssueViewerProps) => {
   const buffers = useBufferStore.use.buffers();
@@ -40,23 +38,32 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
       }
 
       const cacheKey = `${repoPath}::${issueNumber}`;
-      const cached = issueCache.get(cacheKey);
-      if (cached && !force && Date.now() - cached.fetchedAt < ISSUE_CACHE_TTL_MS) {
-        setDetails(cached.details);
+      const cached = githubIssueDetailsCache.getFreshValue(cacheKey, GITHUB_ISSUE_DETAILS_TTL_MS);
+      if (cached && !force) {
+        setDetails(cached);
         setError(null);
         setIsLoading(false);
         return;
+      }
+
+      const stale = githubIssueDetailsCache.getSnapshot(cacheKey)?.value;
+      if (stale && !force) {
+        setDetails(stale);
       }
 
       setIsLoading(true);
       setError(null);
 
       try {
-        const nextDetails = await invoke<IssueDetails>("github_get_issue_details", {
-          repoPath,
-          issueNumber,
-        });
-        issueCache.set(cacheKey, { fetchedAt: Date.now(), details: nextDetails });
+        const nextDetails = await githubIssueDetailsCache.load(
+          cacheKey,
+          () =>
+            invoke<IssueDetails>("github_get_issue_details", {
+              repoPath,
+              issueNumber,
+            }),
+          { force, ttlMs: GITHUB_ISSUE_DETAILS_TTL_MS },
+        );
         setDetails(nextDetails);
         setError(null);
       } catch (nextError) {

@@ -6,6 +6,7 @@ import { Button } from "@/ui/button";
 import { toast } from "@/ui/toast";
 import Tooltip from "@/ui/tooltip";
 import type { WorkflowRunDetails } from "../types/github";
+import { GITHUB_ACTION_DETAILS_TTL_MS, githubActionDetailsCache } from "../utils/github-data-cache";
 import { copyToClipboard } from "../utils/pr-viewer-utils";
 
 interface GitHubActionViewerProps {
@@ -13,9 +14,6 @@ interface GitHubActionViewerProps {
   repoPath?: string;
   bufferId: string;
 }
-
-const ACTION_CACHE_TTL_MS = 120_000;
-const workflowRunCache = new Map<string, { fetchedAt: number; details: WorkflowRunDetails }>();
 
 const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionViewerProps) => {
   const buffers = useBufferStore.use.buffers();
@@ -34,23 +32,32 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
       }
 
       const cacheKey = `${repoPath}::${runId}`;
-      const cached = workflowRunCache.get(cacheKey);
-      if (cached && !force && Date.now() - cached.fetchedAt < ACTION_CACHE_TTL_MS) {
-        setDetails(cached.details);
+      const cached = githubActionDetailsCache.getFreshValue(cacheKey, GITHUB_ACTION_DETAILS_TTL_MS);
+      if (cached && !force) {
+        setDetails(cached);
         setError(null);
         setIsLoading(false);
         return;
+      }
+
+      const stale = githubActionDetailsCache.getSnapshot(cacheKey)?.value;
+      if (stale && !force) {
+        setDetails(stale);
       }
 
       setIsLoading(true);
       setError(null);
 
       try {
-        const nextDetails = await invoke<WorkflowRunDetails>("github_get_workflow_run_details", {
-          repoPath,
-          runId,
-        });
-        workflowRunCache.set(cacheKey, { fetchedAt: Date.now(), details: nextDetails });
+        const nextDetails = await githubActionDetailsCache.load(
+          cacheKey,
+          () =>
+            invoke<WorkflowRunDetails>("github_get_workflow_run_details", {
+              repoPath,
+              runId,
+            }),
+          { force, ttlMs: GITHUB_ACTION_DETAILS_TTL_MS },
+        );
         setDetails(nextDetails);
         setError(null);
       } catch (nextError) {

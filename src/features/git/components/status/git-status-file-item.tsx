@@ -1,8 +1,6 @@
-import { Archive, Minus, Plus, Trash2 } from "lucide-react";
 import type { MouseEvent } from "react";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import { useSettingsStore } from "@/features/settings/store";
-import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
 import { cn } from "@/utils/cn";
 import type { GitFile } from "../../types/git-types";
@@ -17,8 +15,6 @@ interface GitFileItemProps {
   onContextMenu?: (e: MouseEvent) => void;
   onStage?: () => void;
   onUnstage?: () => void;
-  onDiscard?: () => void;
-  onStash?: () => void;
   disabled?: boolean;
   showDirectory?: boolean;
   showFileIcon?: boolean;
@@ -33,8 +29,6 @@ export const GitFileItem = ({
   onContextMenu,
   onStage,
   onUnstage,
-  onDiscard,
-  onStash,
   disabled,
   showDirectory = true,
   showFileIcon = false,
@@ -121,76 +115,6 @@ export const GitFileItem = ({
             ariaLabel={file.staged ? `Unstage ${fileName}` : `Stage ${fileName}`}
           />
         </div>
-      </div>
-      <div
-        className={cn(
-          "absolute top-0.5 right-1 z-10 flex gap-0.5 rounded-md border border-border/70 bg-secondary-bg/95 p-0.5 shadow-[0_8px_18px_-14px_rgba(0,0,0,0.65)] backdrop-blur-sm",
-          "opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100",
-        )}
-      >
-        {file.staged ? (
-          <Button
-            onClick={(e) => {
-              e.stopPropagation();
-              onUnstage?.();
-            }}
-            disabled={disabled}
-            variant="ghost"
-            size="icon-xs"
-            className="bg-primary-bg/70 text-text-lighter hover:bg-primary-bg disabled:opacity-50"
-            title="Unstage"
-            aria-label="Unstage file"
-          >
-            <Minus />
-          </Button>
-        ) : (
-          <>
-            <Button
-              onClick={(e) => {
-                e.stopPropagation();
-                onStage?.();
-              }}
-              disabled={disabled}
-              variant="ghost"
-              size="icon-xs"
-              className="bg-primary-bg/70 text-text-lighter hover:bg-primary-bg disabled:opacity-50"
-              title="Stage"
-              aria-label="Stage file"
-            >
-              <Plus />
-            </Button>
-            <Button
-              onClick={(e) => {
-                e.stopPropagation();
-                onStash?.();
-              }}
-              disabled={disabled}
-              variant="ghost"
-              size="icon-xs"
-              className="bg-primary-bg/70 text-text-lighter hover:bg-primary-bg disabled:opacity-50"
-              title="Stash file"
-              aria-label="Stash file"
-            >
-              <Archive />
-            </Button>
-            {file.status !== "untracked" && (
-              <Button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDiscard?.();
-                }}
-                disabled={disabled}
-                variant="ghost"
-                size="icon-xs"
-                className="bg-primary-bg/70 text-git-deleted hover:bg-git-deleted/10 hover:text-git-deleted disabled:opacity-50"
-                title="Discard changes"
-                aria-label="Discard changes"
-              >
-                <Trash2 />
-              </Button>
-            )}
-          </>
-        )}
       </div>
     </div>
   );

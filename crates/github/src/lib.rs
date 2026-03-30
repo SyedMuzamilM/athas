@@ -10,28 +10,40 @@ use tauri::{AppHandle, Manager};
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PullRequest {
    pub number: i64,
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub title: String,
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub state: String,
+   #[serde(default, deserialize_with = "deserialize_author_or_default")]
    pub author: PullRequestAuthor,
    #[serde(rename = "createdAt")]
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub created_at: String,
    #[serde(rename = "updatedAt")]
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub updated_at: String,
    #[serde(rename = "isDraft")]
+   #[serde(default, deserialize_with = "deserialize_bool_or_default")]
    pub is_draft: bool,
    #[serde(rename = "reviewDecision")]
    pub review_decision: Option<String>,
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub url: String,
    #[serde(rename(serialize = "headRef", deserialize = "headRefName"))]
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub head_ref: String,
    #[serde(rename(serialize = "baseRef", deserialize = "baseRefName"))]
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub base_ref: String,
+   #[serde(default, deserialize_with = "deserialize_i64_or_default")]
    pub additions: i64,
+   #[serde(default, deserialize_with = "deserialize_i64_or_default")]
    pub deletions: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PullRequestAuthor {
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub login: String,
    #[serde(rename = "avatarUrl", default)]
    pub avatar_url: Option<String>,
@@ -51,12 +63,15 @@ pub struct StatusCheck {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct LinkedIssue {
+   #[serde(default)]
    pub number: i64,
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub url: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ReviewRequest {
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub login: String,
    #[serde(rename = "avatarUrl", default)]
    pub avatar_url: Option<String>,
@@ -64,34 +79,50 @@ pub struct ReviewRequest {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Label {
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub name: String,
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub color: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PullRequestDetails {
    pub number: i64,
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub title: String,
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub body: String,
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub state: String,
+   #[serde(default, deserialize_with = "deserialize_author_or_default")]
    pub author: PullRequestAuthor,
    #[serde(rename = "createdAt")]
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub created_at: String,
    #[serde(rename = "updatedAt")]
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub updated_at: String,
    #[serde(rename = "isDraft")]
+   #[serde(default, deserialize_with = "deserialize_bool_or_default")]
    pub is_draft: bool,
    #[serde(rename = "reviewDecision")]
    pub review_decision: Option<String>,
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub url: String,
    #[serde(rename(serialize = "headRef", deserialize = "headRefName"))]
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub head_ref: String,
    #[serde(rename(serialize = "baseRef", deserialize = "baseRefName"))]
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub base_ref: String,
+   #[serde(default, deserialize_with = "deserialize_i64_or_default")]
    pub additions: i64,
+   #[serde(default, deserialize_with = "deserialize_i64_or_default")]
    pub deletions: i64,
    #[serde(rename = "changedFiles")]
+   #[serde(default, deserialize_with = "deserialize_i64_or_default")]
    pub changed_files: i64,
+   #[serde(default, deserialize_with = "deserialize_vec_or_default")]
    pub commits: Vec<serde_json::Value>,
    // New fields for enhanced PR info
    #[serde(
@@ -112,70 +143,92 @@ pub struct PullRequestDetails {
    pub merge_state_status: Option<String>,
    #[serde(default)]
    pub mergeable: Option<String>,
-   #[serde(default)]
+   #[serde(default, deserialize_with = "deserialize_vec_or_default")]
    pub labels: Vec<Label>,
-   #[serde(default)]
+   #[serde(default, deserialize_with = "deserialize_vec_or_default")]
    pub assignees: Vec<PullRequestAuthor>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PullRequestFile {
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub path: String,
+   #[serde(default, deserialize_with = "deserialize_i64_or_default")]
    pub additions: i64,
+   #[serde(default, deserialize_with = "deserialize_i64_or_default")]
    pub deletions: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PullRequestComment {
+   #[serde(default, deserialize_with = "deserialize_author_or_default")]
    pub author: PullRequestAuthor,
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub body: String,
    #[serde(rename = "createdAt")]
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub created_at: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct IssueListItem {
    pub number: i64,
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub title: String,
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub state: String,
+   #[serde(default, deserialize_with = "deserialize_author_or_default")]
    pub author: PullRequestAuthor,
    #[serde(rename = "updatedAt")]
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub updated_at: String,
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub url: String,
-   #[serde(default)]
+   #[serde(default, deserialize_with = "deserialize_vec_or_default")]
    pub labels: Vec<Label>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct IssueComment {
+   #[serde(default, deserialize_with = "deserialize_author_or_default")]
    pub author: PullRequestAuthor,
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub body: String,
    #[serde(rename = "createdAt")]
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub created_at: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct IssueDetails {
    pub number: i64,
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub title: String,
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub body: String,
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub state: String,
+   #[serde(default, deserialize_with = "deserialize_author_or_default")]
    pub author: PullRequestAuthor,
    #[serde(rename = "createdAt")]
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub created_at: String,
    #[serde(rename = "updatedAt")]
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub updated_at: String,
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub url: String,
-   #[serde(default)]
+   #[serde(default, deserialize_with = "deserialize_vec_or_default")]
    pub labels: Vec<Label>,
-   #[serde(default)]
+   #[serde(default, deserialize_with = "deserialize_vec_or_default")]
    pub assignees: Vec<PullRequestAuthor>,
-   #[serde(default)]
+   #[serde(default, deserialize_with = "deserialize_vec_or_default")]
    pub comments: Vec<IssueComment>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct WorkflowRunStep {
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub name: String,
    #[serde(default)]
    pub status: Option<String>,
@@ -187,6 +240,7 @@ pub struct WorkflowRunStep {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct WorkflowRunJob {
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub name: String,
    #[serde(default)]
    pub status: Option<String>,
@@ -222,6 +276,7 @@ pub struct WorkflowRunDetails {
    pub created_at: Option<String>,
    #[serde(rename = "updatedAt", default)]
    pub updated_at: Option<String>,
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub url: String,
    #[serde(rename = "headBranch", default)]
    pub head_branch: Option<String>,
@@ -249,11 +304,48 @@ pub struct WorkflowRunListItem {
    pub conclusion: Option<String>,
    #[serde(rename = "updatedAt", default)]
    pub updated_at: Option<String>,
+   #[serde(default, deserialize_with = "deserialize_string_or_default")]
    pub url: String,
    #[serde(rename = "headBranch", default)]
    pub head_branch: Option<String>,
    #[serde(rename = "headSha", default)]
    pub head_sha: Option<String>,
+}
+
+fn deserialize_string_or_default<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+   D: Deserializer<'de>,
+{
+   Ok(Option::<String>::deserialize(deserializer)?.unwrap_or_default())
+}
+
+fn deserialize_author_or_default<'de, D>(deserializer: D) -> Result<PullRequestAuthor, D::Error>
+where
+   D: Deserializer<'de>,
+{
+   Ok(Option::<PullRequestAuthor>::deserialize(deserializer)?.unwrap_or_default())
+}
+
+fn deserialize_bool_or_default<'de, D>(deserializer: D) -> Result<bool, D::Error>
+where
+   D: Deserializer<'de>,
+{
+   Ok(Option::<bool>::deserialize(deserializer)?.unwrap_or_default())
+}
+
+fn deserialize_i64_or_default<'de, D>(deserializer: D) -> Result<i64, D::Error>
+where
+   D: Deserializer<'de>,
+{
+   Ok(Option::<i64>::deserialize(deserializer)?.unwrap_or_default())
+}
+
+fn deserialize_vec_or_default<'de, D, T>(deserializer: D) -> Result<Vec<T>, D::Error>
+where
+   D: Deserializer<'de>,
+   T: Deserialize<'de>,
+{
+   Ok(Option::<Vec<T>>::deserialize(deserializer)?.unwrap_or_default())
 }
 
 fn deserialize_status_checks<'de, D>(deserializer: D) -> Result<Vec<StatusCheck>, D::Error>
@@ -330,6 +422,15 @@ where
    }
 
    Ok(review_requests)
+}
+
+impl Default for PullRequestAuthor {
+   fn default() -> Self {
+      Self {
+         login: "unknown".to_string(),
+         avatar_url: None,
+      }
+   }
 }
 
 pub fn github_check_cli_auth(app: AppHandle) -> Result<bool, String> {
@@ -730,7 +831,11 @@ fn resolve_gh_config_dir_from_sources(
 
 #[cfg(test)]
 mod tests {
-   use super::resolve_gh_config_dir_from_sources;
+   use super::{
+      IssueDetails, PullRequest, PullRequestComment, PullRequestDetails,
+      resolve_gh_config_dir_from_sources,
+   };
+   use serde_json::json;
    use std::{
       ffi::OsStr,
       path::{Path, PathBuf},
@@ -784,5 +889,127 @@ mod tests {
          resolve_gh_config_dir_from_sources(None, None, None, Some(Path::new("/home/fsos")), false);
 
       assert_eq!(config_dir, Some("/home/fsos/.config/gh".into()));
+   }
+
+   #[test]
+   fn parses_pull_request_list_items_with_nullish_fields() {
+      let payload = json!({
+         "number": 570,
+         "title": null,
+         "state": "OPEN",
+         "author": null,
+         "createdAt": null,
+         "updatedAt": "2026-03-27T10:00:00Z",
+         "isDraft": null,
+         "reviewDecision": null,
+         "url": "https://github.com/athasdev/athas/pull/570",
+         "headRefName": null,
+         "baseRefName": "master",
+         "additions": null,
+         "deletions": 4
+      });
+
+      let pr: PullRequest =
+         serde_json::from_value(payload).expect("PR list item should deserialize");
+
+      assert_eq!(pr.title, "");
+      assert_eq!(pr.author.login, "unknown");
+      assert_eq!(pr.created_at, "");
+      assert!(!pr.is_draft);
+      assert_eq!(pr.head_ref, "");
+      assert_eq!(pr.base_ref, "master");
+      assert_eq!(pr.additions, 0);
+      assert_eq!(pr.deletions, 4);
+   }
+
+   #[test]
+   fn parses_pull_request_details_with_sparse_fields() {
+      let payload = json!({
+         "number": 568,
+         "title": "Example",
+         "body": null,
+         "state": "OPEN",
+         "author": {"login": null, "avatarUrl": null},
+         "createdAt": "2026-03-10T20:16:17Z",
+         "updatedAt": null,
+         "isDraft": false,
+         "reviewDecision": null,
+         "url": null,
+         "headRefName": "fix/example",
+         "baseRefName": null,
+         "additions": 5,
+         "deletions": null,
+         "changedFiles": null,
+         "commits": null,
+         "statusCheckRollup": null,
+         "reviewRequests": null,
+         "mergeStateStatus": null,
+         "mergeable": null,
+         "labels": null,
+         "assignees": null
+      });
+
+      let details: PullRequestDetails =
+         serde_json::from_value(payload).expect("PR details should deserialize");
+
+      assert_eq!(details.body, "");
+      assert_eq!(details.author.login, "");
+      assert_eq!(details.updated_at, "");
+      assert_eq!(details.url, "");
+      assert_eq!(details.base_ref, "");
+      assert_eq!(details.deletions, 0);
+      assert_eq!(details.changed_files, 0);
+      assert!(details.commits.is_empty());
+      assert!(details.status_checks.is_empty());
+      assert!(details.review_requests.is_empty());
+      assert!(details.labels.is_empty());
+      assert!(details.assignees.is_empty());
+   }
+
+   #[test]
+   fn parses_pull_request_comments_with_missing_author_or_body() {
+      let payload = json!({
+         "author": null,
+         "body": null,
+         "createdAt": null
+      });
+
+      let comment: PullRequestComment =
+         serde_json::from_value(payload).expect("PR comment should deserialize");
+
+      assert_eq!(comment.author.login, "unknown");
+      assert_eq!(comment.body, "");
+      assert_eq!(comment.created_at, "");
+   }
+
+   #[test]
+   fn parses_issue_details_with_missing_nested_data() {
+      let payload = json!({
+         "number": 570,
+         "title": null,
+         "body": null,
+         "state": null,
+         "author": null,
+         "createdAt": null,
+         "updatedAt": null,
+         "url": null,
+         "labels": null,
+         "assignees": null,
+         "comments": null
+      });
+
+      let issue: IssueDetails =
+         serde_json::from_value(payload).expect("Issue details should deserialize");
+
+      assert_eq!(issue.title, "");
+      assert_eq!(issue.body, "");
+      assert_eq!(issue.state, "");
+      assert_eq!(issue.author.login, "unknown");
+      assert_eq!(issue.created_at, "");
+      assert_eq!(issue.updated_at, "");
+      assert_eq!(issue.url, "");
+      assert!(issue.labels.is_empty());
+      assert!(issue.assignees.is_empty());
+      assert!(issue.comments.is_empty());
    }
 }

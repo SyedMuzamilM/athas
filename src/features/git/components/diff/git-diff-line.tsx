@@ -70,20 +70,24 @@ const renderHighlightedContent = (
   const result: React.ReactNode[] = [];
   let lastEnd = 0;
 
-  for (const token of tokens) {
+  for (const [tokenIndex, token] of tokens.entries()) {
     const start = token.startPosition.column;
     const end = token.endPosition.column;
 
     if (start > lastEnd) {
       const text = content.slice(lastEnd, start);
-      result.push(<span key={`plain-${lastEnd}`}>{renderWhitespace(text, showWhitespace)}</span>);
+      result.push(
+        <span key={`plain-${lastEnd}-${tokenIndex}`}>
+          {renderWhitespace(text, showWhitespace)}
+        </span>,
+      );
     }
 
     const tokenText = content.slice(start, end);
     const scopeClass = token.type;
 
     result.push(
-      <span key={`token-${start}`} className={scopeClass}>
+      <span key={`token-${start}-${end}-${tokenIndex}`} className={scopeClass}>
         {renderWhitespace(tokenText, showWhitespace)}
       </span>,
     );
@@ -93,7 +97,9 @@ const renderHighlightedContent = (
 
   if (lastEnd < content.length) {
     const text = content.slice(lastEnd);
-    result.push(<span key={`plain-${lastEnd}`}>{renderWhitespace(text, showWhitespace)}</span>);
+    result.push(
+      <span key={`plain-tail-${lastEnd}`}>{renderWhitespace(text, showWhitespace)}</span>,
+    );
   }
 
   return <>{result}</>;
@@ -101,7 +107,7 @@ const renderHighlightedContent = (
 
 const DiffLine = memo(
   ({ line, viewMode, showWhitespace, tokens, fontSize, lineHeight, tabSize }: DiffLineProps) => {
-    const rowStyle = { height: `${lineHeight}px` };
+    const rowStyle = { minHeight: `${lineHeight}px` };
     const gutterStyle = { fontSize: `${fontSize}px`, lineHeight: `${lineHeight}px` };
     const contentStyle = {
       fontSize: `${fontSize}px`,
@@ -115,17 +121,17 @@ const DiffLine = memo(
 
     if (viewMode === "split") {
       return (
-        <div className="flex" style={rowStyle}>
+        <div className="flex min-w-full w-fit" style={rowStyle}>
           <div
             className={cn(
-              "flex w-1/2 border-border border-r",
+              "flex min-h-0 w-1/2 border-border border-r",
               line.line_type === "removed" ? getLineBackground("removed") : "",
             )}
           >
             <div
               className={cn(
-                "w-10 shrink-0 select-none border-border border-r px-2 text-right",
-                "editor-font text-text-lighter tabular-nums",
+                "w-11 shrink-0 select-none border-border border-r px-2 py-0.5 text-right",
+                "editor-font code-editor-font-override text-text-lighter tabular-nums",
                 getGutterBackground(line.line_type === "removed" ? "removed" : ""),
               )}
               style={gutterStyle}
@@ -134,7 +140,7 @@ const DiffLine = memo(
             </div>
             <div
               className={cn(
-                "editor-font m-0 flex-1 whitespace-pre px-2",
+                "editor-font code-editor-font-override m-0 flex-1 whitespace-pre px-2.5 py-0.5 antialiased",
                 line.line_type === "removed" ? getContentColor("removed") : "text-text",
               )}
               style={contentStyle}
@@ -145,14 +151,14 @@ const DiffLine = memo(
 
           <div
             className={cn(
-              "flex w-1/2",
+              "flex min-h-0 w-1/2",
               line.line_type === "added" ? getLineBackground("added") : "",
             )}
           >
             <div
               className={cn(
-                "w-10 shrink-0 select-none border-border border-r px-2 text-right",
-                "editor-font text-text-lighter tabular-nums",
+                "w-11 shrink-0 select-none border-border border-r px-2 py-0.5 text-right",
+                "editor-font code-editor-font-override text-text-lighter tabular-nums",
                 getGutterBackground(line.line_type === "added" ? "added" : ""),
               )}
               style={gutterStyle}
@@ -161,7 +167,7 @@ const DiffLine = memo(
             </div>
             <div
               className={cn(
-                "editor-font m-0 flex-1 whitespace-pre px-2",
+                "editor-font code-editor-font-override m-0 flex-1 whitespace-pre px-2.5 py-0.5 antialiased",
                 line.line_type === "added" ? getContentColor("added") : "text-text",
               )}
               style={contentStyle}
@@ -174,11 +180,14 @@ const DiffLine = memo(
     }
 
     return (
-      <div className={cn("flex", getLineBackground(line.line_type))} style={rowStyle}>
+      <div
+        className={cn("flex min-w-full w-fit", getLineBackground(line.line_type))}
+        style={rowStyle}
+      >
         <div
           className={cn(
-            "w-10 shrink-0 select-none border-border border-r px-2 text-right",
-            "editor-font text-text-lighter tabular-nums",
+            "w-11 shrink-0 select-none border-border border-r px-2 py-0.5 text-right",
+            "editor-font code-editor-font-override text-text-lighter tabular-nums",
             getGutterBackground(line.line_type),
           )}
           style={gutterStyle}
@@ -187,8 +196,8 @@ const DiffLine = memo(
         </div>
         <div
           className={cn(
-            "w-10 shrink-0 select-none border-border border-r px-2 text-right",
-            "editor-font text-text-lighter tabular-nums",
+            "w-11 shrink-0 select-none border-border border-r px-2 py-0.5 text-right",
+            "editor-font code-editor-font-override text-text-lighter tabular-nums",
             getGutterBackground(line.line_type),
           )}
           style={gutterStyle}
@@ -198,7 +207,7 @@ const DiffLine = memo(
 
         <div
           className={cn(
-            "editor-font m-0 flex-1 whitespace-pre px-2",
+            "editor-font code-editor-font-override m-0 flex-1 whitespace-pre px-2.5 py-0.5 antialiased",
             getContentColor(line.line_type),
           )}
           style={contentStyle}
