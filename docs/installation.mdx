@@ -4,17 +4,52 @@ description: Download and install Athas on your platform
 ---
 
 import { Tabs, Tab } from "fumadocs-ui/components/tabs";
+import { Callout } from "fumadocs-ui/components/callout";
 
 ## Quick Install
 
-**macOS / Linux:**
+<Tabs items={["macOS / Linux", "Windows"]}>
+  <Tab value="macOS / Linux">
+    ```bash
+    curl -fsSL https://athas.dev/install.sh | sh
+    ```
+
+    If you prefer `wget`:
+
+    ```bash
+    wget -qO- https://athas.dev/install.sh | sh
+    ```
+
+  </Tab>
+  <Tab value="Windows">
+    ```powershell
+    powershell -ExecutionPolicy ByPass -c "irm https://athas.dev/install.ps1 | iex"
+    ```
+  </Tab>
+</Tabs>
+
+The install script detects your OS and architecture, downloads the correct
+release from GitHub, verifies the SHA256 checksum, and installs it.
+
+<Callout type="info">
+You can inspect the script before running it:
 
 ```bash
-curl -fsSL https://athas.dev/install.sh | sh
+curl -fsSL https://athas.dev/install.sh | less
 ```
 
-The script detects your OS and architecture, downloads the correct release from
-GitHub, verifies the SHA256 checksum, and installs it.
+</Callout>
+
+## Package Managers
+
+<Tabs items={["Homebrew", "WinGet", "Scoop"]}>
+  <Tab value="Homebrew">```bash brew install --cask athasdev/tap/athas ```</Tab>
+  <Tab value="WinGet">```powershell winget install --id=athasdev.Athas -e ```</Tab>
+  <Tab value="Scoop">
+    ```powershell scoop bucket add athas https://github.com/athasdev/scoop-athas scoop install athas
+    ```
+  </Tab>
+</Tabs>
 
 ## Manual Download
 
@@ -52,6 +87,46 @@ Download the latest version from GitHub releases:
     ```bash
     chmod +x Athas-*.AppImage
     ./Athas-*.AppImage
+    ```
+
+  </Tab>
+</Tabs>
+
+## Uninstall
+
+<Tabs items={["macOS", "Windows", "Linux"]}>
+  <Tab value="macOS">
+    ```bash
+    rm -rf /Applications/Athas.app
+    rm -rf ~/Library/Application\ Support/com.code.athas
+    rm -rf ~/Library/Caches/com.code.athas
+    ```
+  </Tab>
+  <Tab value="Windows">
+    Uninstall from **Settings > Apps > Installed apps** or run the uninstaller
+    from the Start Menu.
+
+    To remove remaining data:
+    ```powershell
+    Remove-Item -Recurse -Force "$env:APPDATA\com.code.athas"
+    ```
+
+  </Tab>
+  <Tab value="Linux">
+    **If installed via dpkg:**
+    ```bash
+    sudo dpkg -r athas
+    ```
+
+    **If installed via the install script:**
+    ```bash
+    rm ~/.local/bin/athas
+    ```
+
+    Remove application data:
+    ```bash
+    rm -rf ~/.local/share/com.code.athas
+    rm -rf ~/.config/com.code.athas
     ```
 
   </Tab>
