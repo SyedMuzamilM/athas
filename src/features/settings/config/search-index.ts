@@ -837,4 +837,12 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     description: "Reset all settings to defaults",
     keywords: ["reset", "settings", "defaults", "restore"],
   },
+  {
+    id: "advanced-telemetry",
+    tab: "advanced",
+    section: "Telemetry",
+    label: "Usage Analytics",
+    description: "Send anonymous usage data to help improve Athas",
+    keywords: ["telemetry", "analytics", "tracking", "privacy", "usage", "data"],
+  },
 ];
