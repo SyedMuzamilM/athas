@@ -204,13 +204,13 @@ export const AISettings = () => {
                 placeholder={DEFAULT_OLLAMA_BASE_URL}
                 spellCheck={false}
                 leftIcon={Globe}
-                className={cn("w-56", ollamaStatus === "error" && "border-red-500/60")}
+                className={cn("w-56", ollamaStatus === "error" && "border-error/60")}
               />
               {ollamaStatus === "checking" && (
                 <RefreshCw className="animate-spin text-text-lighter" />
               )}
-              {ollamaStatus === "ok" && <CheckCircle className="text-green-500" />}
-              {ollamaStatus === "error" && <AlertCircle className="text-red-400" />}
+              {ollamaStatus === "ok" && <CheckCircle className="text-success" />}
+              {ollamaStatus === "error" && <AlertCircle className="text-error" />}
               {ollamaUrl !== DEFAULT_OLLAMA_BASE_URL && (
                 <Button
                   type="button"
@@ -226,7 +226,7 @@ export const AISettings = () => {
             </div>
           </SettingRow>
           {ollamaStatus === "error" && (
-            <div className="ui-font ui-text-sm flex items-center gap-1.5 px-1 text-red-400">
+            <div className="ui-font ui-text-sm flex items-center gap-1.5 px-1 text-error">
               <AlertCircle className="shrink-0" />
               <span>Could not connect. Check that Ollama is running at this address.</span>
             </div>
@@ -361,7 +361,7 @@ export const AISettings = () => {
           </div>
         </SettingRow>
         {autocompleteModelError && (
-          <div className="ui-font ui-text-sm mt-1 flex items-center gap-1.5 px-1 text-red-500">
+          <div className="ui-font ui-text-sm mt-1 flex items-center gap-1.5 px-1 text-error">
             <AlertCircle />
             <span>{autocompleteModelError}</span>
           </div>
@@ -400,7 +400,7 @@ export const AISettings = () => {
               }
             }}
             disabled={isClearingChats}
-            className="gap-1.5 text-red-500 hover:bg-red-500/10"
+            className="gap-1.5 text-error hover:bg-error/10"
           >
             <Trash2 />
             {isClearingChats ? "Clearing..." : "Clear All"}

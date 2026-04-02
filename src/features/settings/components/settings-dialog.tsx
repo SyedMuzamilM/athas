@@ -26,7 +26,7 @@ interface SettingsDialogProps {
 }
 
 const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
-  const { settingsInitialTab } = useUIState();
+  const { settingsInitialTab, setSettingsInitialTab } = useUIState();
   const [activeTab, setActiveTab] = useState<SettingsTab>("general");
   const subscription = useAuthStore((state) => state.subscription);
   const hasEnterpriseAccess = Boolean(subscription?.enterprise?.has_access);
@@ -44,7 +44,13 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
     }
   }, [settingsInitialTab, isOpen, hasEnterpriseAccess]);
 
-  // Clear search and reset tab when dialog closes
+  // Remember the last active tab so it persists across open/close
+  const handleTabChange = (tab: SettingsTab) => {
+    setActiveTab(tab);
+    setSettingsInitialTab(tab);
+  };
+
+  // Clear search when dialog closes
   useEffect(() => {
     if (!isOpen) {
       clearSearch();
@@ -101,7 +107,7 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
       <div className="flex h-full w-full overflow-hidden">
         {/* Sidebar */}
         <div className="w-52">
-          <SettingsVerticalTabs activeTab={activeTab} onTabChange={setActiveTab} />
+          <SettingsVerticalTabs activeTab={activeTab} onTabChange={handleTabChange} />
         </div>
 
         {/* Main content area */}

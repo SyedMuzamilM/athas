@@ -29,6 +29,7 @@ export const AdvancedSettings = () => {
           <Switch
             checked={settings.telemetry}
             onChange={(checked) => updateSetting("telemetry", checked)}
+            size="sm"
           />
         </SettingRow>
       </Section>
@@ -39,7 +40,7 @@ export const AdvancedSettings = () => {
             variant="outline"
             size="xs"
             onClick={handleResetSettings}
-            className="text-red-500 hover:bg-red-500/10"
+            className="text-error hover:bg-error/10"
           >
             Reset
           </Button>
