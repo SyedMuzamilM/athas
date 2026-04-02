@@ -4,22 +4,27 @@ import CodeEditor from "@/features/editor/components/code-editor";
 import Breadcrumb from "@/features/editor/components/toolbar/breadcrumb";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
 import { calculateLineHeight, splitLines } from "@/features/editor/utils/lines";
 import { useZoomStore } from "@/features/window/stores/zoom-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
+import { getGitStatus } from "../../api/git-status-api";
 import { useDiffEditorBuffer } from "../../hooks/use-diff-editor-buffer";
 import type { MultiFileDiff } from "../../types/git-diff-types";
 import type { GitDiff } from "../../types/git-types";
+import { gitDiffCache } from "../../utils/git-diff-cache";
 import { getFileStatus } from "../../utils/git-diff-helpers";
+import { buildWorkingTreeMultiDiff } from "../../utils/working-tree-multi-diff";
 import {
   serializeGitDiffSourceForEditor,
   serializeGitDiffSourceForSplitEditor,
 } from "../../utils/diff-editor-content";
 import DiffLineBackgroundLayer from "./diff-line-background-layer";
 import ImageDiffViewer from "./git-diff-image";
+import TextDiffViewer from "./git-diff-text";
 
 function countStats(diff: GitDiff) {
   let additions = 0;
@@ -262,12 +267,16 @@ const DiffFileSection = memo(function DiffFileSection({
   expanded,
   onToggle,
   viewMode,
+  showWhitespace,
+  enableHunkActions,
 }: {
   diff: GitDiff;
   sectionKey: string;
   expanded: boolean;
   onToggle: (sectionKey: string) => void;
   viewMode: "unified" | "split";
+  showWhitespace: boolean;
+  enableHunkActions: boolean;
 }) {
   const filePath = diff.new_path || diff.old_path || diff.file_path;
   const fileName = filePath.split("/").pop() || filePath;
@@ -318,7 +327,17 @@ const DiffFileSection = memo(function DiffFileSection({
           </LazyDiffSectionBody>
         ) : (
           <LazyDiffSectionBody expanded={expanded}>
-            <DiffSectionEditor diff={diff} cacheKey={sectionKey} viewMode={viewMode} />
+            {enableHunkActions && viewMode === "unified" ? (
+              <TextDiffViewer
+                diff={diff}
+                isStaged={sectionKey.startsWith("staged:")}
+                viewMode={viewMode}
+                showWhitespace={showWhitespace}
+                isEmbeddedInScrollView={true}
+              />
+            ) : (
+              <DiffSectionEditor diff={diff} cacheKey={sectionKey} viewMode={viewMode} />
+            )}
           </LazyDiffSectionBody>
         )
       ) : null}
@@ -331,8 +350,17 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
 }: {
   multiDiff: MultiFileDiff;
 }) {
+  const buffers = useBufferStore.use.buffers();
+  const activeBufferId = useBufferStore.use.activeBufferId();
+  const updateBufferContent = useBufferStore.use.actions().updateBufferContent;
+  const closeBuffer = useBufferStore.use.actions().closeBuffer;
+  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const [viewMode, setViewMode] = useState<"unified" | "split">("unified");
   const [showWhitespace, setShowWhitespace] = useState(false);
+  const isWorkingTree = multiDiff.commitHash === "working-tree";
+  const activeBuffer = buffers.find((buffer) => buffer.id === activeBufferId) || null;
+  const isWorkingTreeBuffer = activeBuffer?.path === "diff://working-tree/all-files";
+  const isRefreshingRef = useRef(false);
   const [expandedFiles, setExpandedFiles] = useState<Set<string>>(
     () =>
       new Set(
@@ -359,6 +387,55 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
       ),
     );
   }, [multiDiff]);
+
+  const refreshWorkingTreeBuffer = useCallback(async () => {
+    if (!isWorkingTree || !isWorkingTreeBuffer || !rootFolderPath || !activeBuffer) return;
+    if (isRefreshingRef.current) return;
+
+    isRefreshingRef.current = true;
+
+    try {
+      gitDiffCache.invalidate(rootFolderPath);
+      const gitStatus = await getGitStatus(rootFolderPath);
+      const nextMultiDiff = await buildWorkingTreeMultiDiff({
+        repoPath: rootFolderPath,
+        status: gitStatus,
+        previousFileKeys: multiDiff.fileKeys,
+      });
+
+      if (nextMultiDiff.files.length === 0) {
+        closeBuffer(activeBuffer.id);
+        return;
+      }
+
+      updateBufferContent(activeBuffer.id, "", false, nextMultiDiff);
+    } finally {
+      isRefreshingRef.current = false;
+    }
+  }, [
+    activeBuffer,
+    closeBuffer,
+    isWorkingTree,
+    isWorkingTreeBuffer,
+    multiDiff.fileKeys,
+    rootFolderPath,
+    updateBufferContent,
+  ]);
+
+  useEffect(() => {
+    if (!isWorkingTree) return;
+
+    const handleGitStatusChanged = () => {
+      window.setTimeout(() => {
+        void refreshWorkingTreeBuffer();
+      }, 50);
+    };
+
+    window.addEventListener("git-status-changed", handleGitStatusChanged);
+    return () => {
+      window.removeEventListener("git-status-changed", handleGitStatusChanged);
+    };
+  }, [isWorkingTree, refreshWorkingTreeBuffer]);
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-primary-bg">
@@ -429,6 +506,8 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
                 sectionKey={sectionKey}
                 expanded={expandedFiles.has(sectionKey)}
                 viewMode={viewMode}
+                showWhitespace={showWhitespace}
+                enableHunkActions={isWorkingTree}
                 onToggle={handleToggleSection}
               />
             );

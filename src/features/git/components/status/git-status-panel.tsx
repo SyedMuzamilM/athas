@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
-import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import { useSettingsStore } from "@/features/settings/store";
 import { useContextMenu } from "@/hooks/use-context-menu";
 import { Button } from "@/ui/button";
@@ -379,17 +378,10 @@ const GitStatusPanel = ({
               style={{ paddingLeft: `${paddingLeft}px`, paddingRight: "8px" }}
             >
               {isCollapsed ? (
-                <ChevronRight className="shrink-0 text-text-lighter" />
+                <ChevronRight size={12} className="shrink-0 text-text-lighter" />
               ) : (
-                <ChevronDown className="shrink-0 text-text-lighter" />
+                <ChevronDown size={12} className="shrink-0 text-text-lighter" />
               )}
-              <FileExplorerIcon
-                fileName={folderNode.name}
-                isDir
-                isExpanded={!isCollapsed}
-                className="shrink-0 text-text-lighter"
-                size={12}
-              />
               <span className="truncate leading-none">{folderNode.name}</span>
               <div className="ml-auto shrink-0" onClick={(e) => e.stopPropagation()}>
                 <Checkbox

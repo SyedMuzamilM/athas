@@ -73,6 +73,7 @@ export interface TextDiffViewerProps {
   onStageHunk?: (hunk: GitHunk) => void;
   onUnstageHunk?: (hunk: GitHunk) => void;
   isInMultiFileView?: boolean;
+  isEmbeddedInScrollView?: boolean;
 }
 
 export interface ImageDiffViewerProps {

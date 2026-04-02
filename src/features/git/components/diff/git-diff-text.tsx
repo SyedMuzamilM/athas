@@ -94,6 +94,7 @@ const TextDiffViewer = memo(
     onStageHunk,
     onUnstageHunk,
     isInMultiFileView = false,
+    isEmbeddedInScrollView = false,
   }: TextDiffViewerProps) => {
     const selectionScopeRef = useRef<HTMLDivElement>(null);
     const editorFontSize = useEditorSettingsStore.use.fontSize();
@@ -194,9 +195,11 @@ const TextDiffViewer = memo(
       <div
         ref={selectionScopeRef}
         className={
-          viewMode === "split"
-            ? "min-w-0 overflow-x-hidden overflow-y-hidden"
-            : "min-w-0 overflow-x-auto overflow-y-hidden"
+          isEmbeddedInScrollView
+            ? "min-w-0 overflow-visible"
+            : viewMode === "split"
+              ? "min-w-0 overflow-x-hidden overflow-y-hidden"
+              : "min-w-0 overflow-x-auto overflow-y-hidden"
         }
       >
         <div
