@@ -129,12 +129,41 @@ const SHORTCUT_INTERCEPTOR_SCRIPT: &str = r#"
 
   document.addEventListener('keydown', function(e) {
     const isMod = e.metaKey || e.ctrlKey;
+    const isShift = e.shiftKey;
     let shortcut = null;
 
+    // Global app shortcuts - these should always be forwarded to main app
+    if (isMod && e.key === 'Tab') {
+      shortcut = 'global:switch-tab';
+    } else if (isMod && e.key === 'j') {
+      shortcut = 'global:toggle-terminal';
+    } else if (isMod && e.key === 'b') {
+      shortcut = 'global:toggle-sidebar';
+    } else if (isMod && e.key === 'k') {
+      shortcut = 'global:command-palette';
+    } else if (isMod && e.key === 'p') {
+      shortcut = 'global:quick-open';
+    } else if (isMod && e.key === 'w') {
+      shortcut = 'global:close-tab';
+    } else if (isMod && isShift && e.key === 'T') {
+      shortcut = 'global:reopen-tab';
+    } else if (isMod && e.key === 't') {
+      shortcut = 'global:new-tab';
+    } else if (isMod && e.key === 'n') {
+      shortcut = 'global:new-window';
+    } else if (isMod && isShift && e.key === 'N') {
+      shortcut = 'global:new-private-window';
+    } else if (isMod && e.key === 'f') {
+      shortcut = 'global:find';
+    } else if (isMod && isShift && e.key === 'F') {
+      shortcut = 'global:find-in-files';
+    } else if (isMod && e.key === ',') {
+      shortcut = 'global:settings';
+    }
     // Web viewer specific shortcuts
-    if (isMod && e.key === 'l') {
+    else if (isMod && e.key === 'l') {
       shortcut = 'focus-url';
-    } else if (isMod && e.key === 'r' && !e.shiftKey) {
+    } else if (isMod && e.key === 'r' && !isShift) {
       shortcut = 'refresh';
     } else if (isMod && e.key === '[') {
       shortcut = 'go-back';
