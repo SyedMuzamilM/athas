@@ -209,14 +209,16 @@ const GitHubIssuesView = memo(({ refreshNonce = 0 }: GitHubIssuesViewProps) => {
                   );
                 }}
                 onSelect={() =>
-                  openGitHubIssueBuffer({
-                    issueNumber: issue.number,
-                    repoPath: repoPath ?? undefined,
-                    title: issue.title,
-                    authorAvatarUrl:
-                      issue.author.avatarUrl ||
-                      `https://github.com/${encodeURIComponent(issue.author.login || "github")}.png?size=32`,
-                    url: issue.url,
+                  startTransition(() => {
+                    openGitHubIssueBuffer({
+                      issueNumber: issue.number,
+                      repoPath: repoPath ?? undefined,
+                      title: issue.title,
+                      authorAvatarUrl:
+                        issue.author.avatarUrl ||
+                        `https://github.com/${encodeURIComponent(issue.author.login || "github")}.png?size=32`,
+                      url: issue.url,
+                    });
                   })
                 }
               />

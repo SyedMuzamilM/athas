@@ -26,10 +26,15 @@ const CommitItem = memo(({ commit, onViewCommitDiff }: CommitItemProps) => {
   return (
     <div
       onClick={handleCommitClick}
-      className="ui-text-sm mx-1 mb-1 cursor-pointer rounded-lg px-2 py-1.5 hover:bg-hover"
+      className="ui-text-sm mx-1 mb-1 cursor-pointer rounded-lg px-2.5 py-2 hover:bg-hover"
     >
       <div className="truncate text-inherit text-text leading-tight">{commit.message}</div>
-      <div className="ui-text-sm flex items-center gap-2 text-text-lighter">
+      {commit.description && (
+        <div className="ui-text-sm mt-1 line-clamp-2 whitespace-pre-wrap text-text-lighter">
+          {commit.description}
+        </div>
+      )}
+      <div className="ui-text-sm mt-1 flex items-center gap-2 text-text-lighter">
         <span className="truncate">{commit.author}</span>
         <span className="shrink-0">{formatRelativeDate(commit.date)}</span>
       </div>
@@ -168,13 +173,13 @@ const GitCommitHistory = ({
         {!isCollapsed && (
           <div
             className={cn(
-              "scrollbar-none relative min-h-0 flex-1 overflow-y-scroll p-1",
+              "scrollbar-none relative min-h-0 flex-1 overflow-y-scroll px-1 py-1",
               showHeader ? "bg-primary-bg/70" : "bg-transparent",
             )}
             ref={scrollContainerRef}
           >
             {commits.length === 0 ? (
-              <div className="ui-text-sm px-2.5 py-1.5 text-text-lighter italic">No commits</div>
+              <div className="ui-text-sm px-2.5 py-2 text-text-lighter italic">No commits</div>
             ) : (
               <>
                 {commits.map((commit) => (

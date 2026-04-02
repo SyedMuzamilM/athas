@@ -104,24 +104,27 @@ const GitStashPanel = ({
         {!isCollapsed && (
           <div
             className={cn(
-              "scrollbar-none min-h-0 flex-1 overflow-y-scroll p-1",
+              "scrollbar-none min-h-0 flex-1 overflow-y-scroll px-1 py-1",
               showHeader ? "bg-primary-bg/70" : "bg-transparent",
             )}
           >
             {stashes.length === 0 ? (
-              <div className="ui-text-sm px-2.5 py-1.5 text-text-lighter italic">No stashes</div>
+              <div className="ui-text-sm px-2.5 py-2 text-text-lighter italic">No stashes</div>
             ) : (
               stashes.map((stash) => (
                 <div
                   key={stash.index}
                   onClick={() => handleStashClick(stash.index)}
-                  className="group mb-1 flex cursor-pointer items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-hover"
+                  className="group mb-1 flex cursor-pointer items-center justify-between gap-2 rounded-lg px-2.5 py-2 hover:bg-hover"
                 >
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-inherit text-text" title={stash.message}>
+                    <div
+                      className="ui-text-sm truncate leading-tight text-text"
+                      title={stash.message}
+                    >
                       {stash.message || "Stashed changes"}
                     </div>
-                    <div className="ui-text-sm text-text-lighter">
+                    <div className="ui-text-sm mt-1 text-text-lighter">
                       {formatRelativeDate(stash.date)}
                     </div>
                   </div>

@@ -12,7 +12,16 @@ import {
   MessageSquare,
   RefreshCw,
 } from "lucide-react";
-import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import {
+  memo,
+  startTransition,
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { isNotGitRepositoryError, resolveRepositoryPath } from "@/features/git/api/git-repo-api";
@@ -275,11 +284,13 @@ const GitHubPRsView = memo(() => {
 
   const handleSelectPR = useCallback(
     (pr: PullRequest) => {
-      openPRBuffer(pr.number, {
-        title: pr.title,
-        authorAvatarUrl:
-          pr.author.avatarUrl ||
-          `https://github.com/${encodeURIComponent(pr.author.login || "github")}.png?size=32`,
+      startTransition(() => {
+        openPRBuffer(pr.number, {
+          title: pr.title,
+          authorAvatarUrl:
+            pr.author.avatarUrl ||
+            `https://github.com/${encodeURIComponent(pr.author.login || "github")}.png?size=32`,
+        });
       });
     },
     [openPRBuffer],

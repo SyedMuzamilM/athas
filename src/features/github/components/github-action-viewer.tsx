@@ -21,7 +21,12 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
   const [details, setDetails] = useState<WorkflowRunDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [visibleJobCount, setVisibleJobCount] = useState(10);
   const buffer = buffers.find((item) => item.id === bufferId);
+  const visibleJobs = useMemo(
+    () => details?.jobs.slice(0, visibleJobCount) ?? [],
+    [details?.jobs, visibleJobCount],
+  );
 
   const fetchWorkflowRun = useCallback(
     async (force = false) => {
@@ -86,6 +91,41 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
       url: details.url,
     });
   }, [buffer, details, runId, updateBuffer]);
+
+  useEffect(() => {
+    setVisibleJobCount(10);
+  }, [details?.databaseId]);
+
+  useEffect(() => {
+    const totalJobs = details?.jobs.length ?? 0;
+    if (totalJobs <= visibleJobCount) return;
+
+    let cancelled = false;
+    const idleApi = window as Window & {
+      requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    const schedule = idleApi.requestIdleCallback;
+
+    const revealMore = () => {
+      if (cancelled) return;
+      setVisibleJobCount((current) => Math.min(current + 10, totalJobs));
+    };
+
+    if (typeof schedule === "function") {
+      const idleId = schedule(revealMore, { timeout: 200 });
+      return () => {
+        cancelled = true;
+        idleApi.cancelIdleCallback?.(idleId);
+      };
+    }
+
+    const timeoutId = window.setTimeout(revealMore, 16);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [details?.jobs.length, visibleJobCount]);
 
   const handleOpenInBrowser = useCallback(() => {
     if (!details?.url) {
@@ -221,7 +261,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
             </div>
 
             <div className="space-y-2">
-              {details.jobs.map((job) => (
+              {visibleJobs.map((job) => (
                 <div
                   key={`${job.name}-${job.startedAt ?? ""}`}
                   className="rounded-lg bg-secondary-bg/20 px-3 py-2"
@@ -253,6 +293,11 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                   )}
                 </div>
               ))}
+              {details.jobs.length > visibleJobs.length ? (
+                <div className="ui-font ui-text-sm px-1 py-2 text-text-lighter">
+                  {`Loading ${details.jobs.length - visibleJobs.length} more jobs...`}
+                </div>
+              ) : null}
             </div>
           </div>
         ) : null}

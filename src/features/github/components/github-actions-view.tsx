@@ -212,12 +212,17 @@ const GitHubActionsView = memo(({ refreshNonce = 0 }: GitHubActionsViewProps) =>
                   );
                 }}
                 onSelect={() =>
-                  openGitHubActionBuffer({
-                    runId: run.databaseId,
-                    repoPath: repoPath ?? undefined,
-                    title:
-                      run.displayTitle || run.name || run.workflowName || `Run #${run.databaseId}`,
-                    url: run.url,
+                  startTransition(() => {
+                    openGitHubActionBuffer({
+                      runId: run.databaseId,
+                      repoPath: repoPath ?? undefined,
+                      title:
+                        run.displayTitle ||
+                        run.name ||
+                        run.workflowName ||
+                        `Run #${run.databaseId}`,
+                      url: run.url,
+                    });
                   })
                 }
               />

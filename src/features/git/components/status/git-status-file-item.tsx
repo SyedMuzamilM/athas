@@ -39,7 +39,7 @@ export const GitFileItem = ({
   const pathParts = file.path.split("/");
   const fileName = pathParts.pop() || file.path;
   const directory = pathParts.join("/");
-  const indentPx = 14 + indentLevel * 20;
+  const indentPx = 14 + indentLevel * 12;
   const hasDiffStats = !!diffStats && (diffStats.additions > 0 || diffStats.deletions > 0);
 
   return (
@@ -80,7 +80,7 @@ export const GitFileItem = ({
         {hasDiffStats && (
           <div
             className={cn(
-              "hidden items-center leading-none sm:flex",
+              "flex items-center leading-none",
               compactGitStatusBadges ? "ui-text-sm gap-0.5" : "ui-text-sm gap-1",
             )}
           >
@@ -91,11 +91,6 @@ export const GitFileItem = ({
               <span className="text-git-deleted">-{diffStats.deletions}</span>
             )}
           </div>
-        )}
-        {file.staged && !compactGitStatusBadges && (
-          <span className="ui-text-sm hidden shrink-0 text-git-added opacity-60 md:inline">
-            staged
-          </span>
         )}
         <div
           className="shrink-0"

@@ -364,7 +364,7 @@ const GitStatusPanel = ({
       const folderRows = sortFoldersByName(node.folders.values()).map((folderNode) => {
         const collapseKey = `${section}:${folderNode.fullPath}`;
         const isCollapsed = collapsedFolders.has(collapseKey);
-        const paddingLeft = 14 + depth * 20;
+        const paddingLeft = 14 + depth * 12;
         const folderFiles = collectNodeFiles(folderNode);
         const areAllFolderFilesStaged =
           folderFiles.length > 0 && folderFiles.every((file) => file.staged);
