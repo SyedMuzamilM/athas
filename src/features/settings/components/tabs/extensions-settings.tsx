@@ -1,8 +1,11 @@
-import { Database, Languages, Package, Palette, RefreshCw, Search } from "lucide-react";
+import { Blocks, Database, Languages, Package, Palette, Plus, RefreshCw, Search } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { CreateExtensionWizard } from "@/extensions/ui/components/create-extension-wizard";
+import { useUIExtensionStore } from "@/extensions/ui/stores/ui-extension-store";
 import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
+import { uiExtensionHost } from "@/extensions/ui/services/ui-extension-host";
 import { extensionManager } from "@/features/editor/extensions/manager";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useSettingsStore } from "@/features/settings/store";
@@ -14,7 +17,7 @@ interface UnifiedExtension {
   id: string;
   name: string;
   description: string;
-  category: "language" | "theme" | "icon-theme" | "database";
+  category: "language" | "theme" | "icon-theme" | "database" | "ui";
   isInstalled: boolean;
   version?: string;
   extensions?: string[];
@@ -33,6 +36,8 @@ const getCategoryLabel = (category: UnifiedExtension["category"]) => {
       return "Icon Theme";
     case "database":
       return "Database";
+    case "ui":
+      return "UI Extension";
     default:
       return category;
   }
@@ -118,7 +123,9 @@ export const ExtensionsSettings = () => {
   const { settings, updateSetting } = useSettingsStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [extensions, setExtensions] = useState<UnifiedExtension[]>([]);
+  const [showCreateWizard, setShowCreateWizard] = useState(false);
   const { showToast } = useToast();
+  const uiExtensions = useUIExtensionStore.use.extensions();
 
   // Get extension store state
   const availableExtensions = useExtensionStore.use.availableExtensions();
@@ -191,6 +198,24 @@ export const ExtensionsSettings = () => {
       version: "1.0.0",
     });
 
+    // Load UI extensions from extension store
+    for (const [, ext] of availableExtensions) {
+      if (ext.manifest.categories.includes("UI")) {
+        const isBundled = !ext.manifest.installation;
+        allExtensions.push({
+          id: ext.manifest.id,
+          name: ext.manifest.displayName,
+          description: ext.manifest.description,
+          category: "ui",
+          isInstalled: ext.isInstalled,
+          version: ext.manifest.version,
+          publisher: ext.manifest.publisher,
+          isMarketplace: !isBundled,
+          isBundled,
+        });
+      }
+    }
+
     setExtensions(allExtensions);
   }, [availableExtensions]);
 
@@ -221,8 +246,11 @@ export const ExtensionsSettings = () => {
       // Use extension store methods for marketplace extensions
       if (extension.isInstalled) {
         try {
+          // Unload UI extension if it was active
+          if (extension.category === "ui") {
+            await uiExtensionHost.unloadExtension(extension.id);
+          }
           await uninstallExtension(extension.id);
-          // UI will update automatically via useEffect when availableExtensions changes
           showToast({
             message: `${extension.name} uninstalled successfully`,
             type: "success",
@@ -239,7 +267,13 @@ export const ExtensionsSettings = () => {
       } else {
         try {
           await installExtension(extension.id);
-          // UI will update automatically via useEffect when availableExtensions changes
+          // Load UI extension after install
+          if (extension.category === "ui") {
+            const ext = availableExtensions.get(extension.id);
+            if (ext) {
+              await uiExtensionHost.loadExtension(ext.manifest, "");
+            }
+          }
           showToast({
             message: `${extension.name} installed successfully`,
             type: "success",
@@ -355,6 +389,16 @@ export const ExtensionsSettings = () => {
         >
           <Database />
           Databases
+        </Button>
+        <Button
+          onClick={() => updateSetting("extensionsActiveTab", "ui")}
+          variant="secondary"
+          size="xs"
+          data-active={settings.extensionsActiveTab === "ui"}
+          className="gap-1"
+        >
+          <Blocks />
+          UI Extensions
         </Button>
       </div>
 

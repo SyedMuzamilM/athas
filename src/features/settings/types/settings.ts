@@ -80,7 +80,8 @@ export interface Settings {
     | "theme"
     | "icon-theme"
     | "snippet"
-    | "database";
+    | "database"
+    | "ui";
   maxOpenTabs: number;
   horizontalTabScroll: boolean;
   //// File tree

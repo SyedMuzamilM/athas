@@ -8,6 +8,7 @@ import {
   EyeOff,
   Globe,
   Key,
+  Lock,
   RefreshCw,
   Search,
   Trash2,
@@ -29,6 +30,8 @@ import {
   getModelById,
   getProviderById,
 } from "@/features/ai/types/providers";
+import { useProFeature } from "@/extensions/ui/hooks/use-pro-feature";
+import { ProBadge } from "@/extensions/ui/components/pro-badge";
 import { useSettingsStore } from "@/features/settings/store";
 import Input from "@/ui/input";
 import { Button } from "@/ui/button";
@@ -64,6 +67,7 @@ interface FilteredItem {
   requiresApiKey?: boolean;
   hasKey?: boolean;
   isCurrent?: boolean;
+  proOnly?: boolean;
 }
 
 export function ProviderModelSelector({
@@ -93,6 +97,7 @@ export function ProviderModelSelector({
     "idle",
   );
 
+  const { isPro } = useProFeature();
   const { dynamicModels, setDynamicModels } = useAIChatStore();
   const hasProviderApiKey = useAIChatStore((state) => state.hasProviderApiKey);
   const saveApiKey = useAIChatStore((state) => state.saveApiKey);
@@ -191,6 +196,7 @@ export function ProviderModelSelector({
             name: model.name,
             providerId: provider.id,
             isCurrent: providerId === provider.id && modelId === model.id,
+            proOnly: "proOnly" in model ? Boolean(model.proOnly) : false,
           });
         }
       }
@@ -783,21 +789,27 @@ export function ProviderModelSelector({
               const itemIndex = selectableIndex;
               const isHighlighted = itemIndex === selectedIndex;
 
+              const isLocked = item.proOnly && !isPro;
+
               return (
                 <Button
                   key={`${item.providerId}-${item.id}`}
                   type="button"
-                  onClick={() => handleModelSelect(item.providerId, item.id)}
+                  onClick={() => !isLocked && handleModelSelect(item.providerId, item.id)}
                   onMouseEnter={() => setSelectedIndex(itemIndex)}
                   variant="ghost"
                   size="sm"
+                  disabled={isLocked}
                   className={cn(
                     "mb-1 h-auto w-full justify-start rounded-lg px-2.5 py-2 text-left text-xs last:mb-0",
                     isHighlighted ? "bg-hover" : "bg-transparent",
                     item.isCurrent && "bg-accent/10",
+                    isLocked && "opacity-60",
                   )}
                 >
+                  {isLocked && <Lock className="shrink-0 text-text-lighter" />}
                   <span className="flex-1 truncate text-text">{item.name}</span>
+                  {item.proOnly && <ProBadge />}
                   {item.isCurrent && <Check className="shrink-0 text-accent" />}
                 </Button>
               );

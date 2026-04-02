@@ -25,6 +25,7 @@ import { useMenuEventsWrapper } from "@/features/window/hooks/use-menu-events-wr
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { parseDroppedPaths } from "@/features/file-system/utils/file-system-dropped-paths";
+import { ExtensionDialogs } from "@/extensions/ui/components/extension-dialog";
 import { VimSearchBar } from "../../vim/components/vim-search-bar";
 import CustomTitleBarWithSettings from "../../window/components/custom-title-bar";
 import BottomPane from "./bottom-pane/bottom-pane";
@@ -340,6 +341,7 @@ export function MainLayout() {
         isOpen={isDatabaseConnectionVisible}
         onClose={() => setIsDatabaseConnectionVisible(false)}
       />
+      <ExtensionDialogs />
     </div>
   );
 }

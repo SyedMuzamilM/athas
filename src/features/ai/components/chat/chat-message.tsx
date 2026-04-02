@@ -8,6 +8,7 @@ import { Button } from "@/ui/button";
 import Tooltip from "@/ui/tooltip";
 import { isAcpAgent } from "@/features/ai/services/ai-chat-service";
 import { useAIChatStore } from "../../store/store";
+import { GenerativeUIRenderer } from "@/extensions/ui/components/generative-ui-renderer";
 import MarkdownRenderer from "../messages/markdown-renderer";
 import { PlanBlockDisplay } from "../messages/plan-block-display";
 import ToolCallDisplay from "../messages/tool-call-display";
@@ -212,6 +213,14 @@ export const ChatMessage = memo(function ChatMessage({
             >
               <span className="truncate">{resource.name || resource.uri}</span>
             </a>
+          ))}
+        </div>
+      )}
+
+      {message.ui && message.ui.length > 0 && (
+        <div className="mb-2 space-y-2">
+          {message.ui.map((component, index) => (
+            <GenerativeUIRenderer key={`${message.id}-ui-${index}`} component={component} />
           ))}
         </div>
       )}

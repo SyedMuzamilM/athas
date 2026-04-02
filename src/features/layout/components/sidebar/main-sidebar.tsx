@@ -6,11 +6,14 @@ import GitHubPRsView from "@/features/github/components/github-prs-view";
 import { useSettingsStore } from "@/features/settings/store";
 import { useSidebarStore } from "@/features/layout/stores/sidebar-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
+import { ExtensionErrorBoundary } from "@/extensions/ui/components/extension-error-boundary";
 import { cn } from "@/utils/cn";
 
 export const MainSidebar = memo(() => {
   // Get state from stores
-  const { isGitViewActive, isGitHubPRsViewActive } = useUIState();
+  const { isGitViewActive, isGitHubPRsViewActive, activeSidebarView } = useUIState();
+  const extensionViews = useExtensionViews();
 
   // file system store
   const setFiles = useFileSystemStore.use.setFiles?.();
@@ -87,6 +90,14 @@ export const MainSidebar = memo(() => {
             </div>
           )}
         </div>
+
+        {Array.from(extensionViews).map(([viewId, view]) => (
+          <div key={viewId} className={cn("h-full", activeSidebarView !== viewId && "hidden")}>
+            <ExtensionErrorBoundary extensionId={view.extensionId} name={view.title}>
+              {view.render()}
+            </ExtensionErrorBoundary>
+          </div>
+        ))}
       </div>
     </div>
   );
