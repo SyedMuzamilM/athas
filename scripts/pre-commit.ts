@@ -9,8 +9,35 @@ async function getStagedFiles(): Promise<string[]> {
     .filter(Boolean);
 }
 
+async function getUntrackedFiles(): Promise<string[]> {
+  const output = await $`git ls-files --others --exclude-standard`.text();
+  return output
+    .split("\n")
+    .map((file) => file.trim())
+    .filter(Boolean);
+}
+
+function isUntrackedSourceFile(file: string): boolean {
+  const sourceRoots = ["src/", "src-tauri/", "crates/", "scripts/"];
+  const sourceExtensions = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".rs", ".toml"];
+
+  return (
+    sourceRoots.some((root) => file.startsWith(root)) &&
+    sourceExtensions.some((extension) => file.endsWith(extension))
+  );
+}
+
 async function main() {
   const stagedFiles = await getStagedFiles();
+  const untrackedSourceFiles = (await getUntrackedFiles()).filter(isUntrackedSourceFile);
+
+  if (untrackedSourceFiles.length > 0) {
+    console.error("Untracked source files detected. Stage or remove them before committing:");
+    for (const file of untrackedSourceFiles) {
+      console.error(`  - ${file}`);
+    }
+    process.exit(1);
+  }
 
   if (stagedFiles.length === 0) {
     console.log("No staged files to validate.");
