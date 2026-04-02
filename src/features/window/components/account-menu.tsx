@@ -13,7 +13,7 @@ import { useAuthStore } from "@/features/window/stores/auth-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { toast } from "@/ui/toast";
 import { Button } from "@/ui/button";
-import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
+import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import Tooltip from "@/ui/tooltip";
 import {
   beginDesktopAuthSession,
@@ -46,34 +46,7 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
   );
 
   const [isOpen, setIsOpen] = useState(false);
-  const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const closedByOutsideClickRef = useRef(false);
-
-  const handleClick = () => {
-    // If the menu was just closed by outside click (which includes clicking this button),
-    // skip reopening it
-    if (closedByOutsideClickRef.current) {
-      closedByOutsideClickRef.current = false;
-      return;
-    }
-    if (!buttonRef.current) return;
-    const rect = buttonRef.current.getBoundingClientRect();
-    setMenuPosition({
-      x: rect.right - 190,
-      y: rect.bottom + 8,
-    });
-    setIsOpen(true);
-  };
-
-  const handleClose = () => {
-    closedByOutsideClickRef.current = isOpen;
-    setIsOpen(false);
-    // Reset the flag after the click event finishes
-    requestAnimationFrame(() => {
-      closedByOutsideClickRef.current = false;
-    });
-  };
 
   const handleSignIn = async () => {
     try {
@@ -123,7 +96,7 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
   const subscriptionStatus = subscription?.status ?? "free";
   const isEnterprise = subscription?.subscription?.plan === "enterprise";
 
-  const signedOutItems: ContextMenuItem[] = [
+  const signedOutItems: MenuItem[] = [
     {
       id: "settings",
       label: "Settings",
@@ -150,7 +123,7 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
     },
   ];
 
-  const signedInItems: ContextMenuItem[] = [
+  const signedInItems: MenuItem[] = [
     {
       id: "user-info",
       label: user?.name || user?.email || "Account",
@@ -218,11 +191,13 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
       <Tooltip content={tooltipLabel} side="bottom">
         <Button
           ref={buttonRef}
-          onClick={handleClick}
+          onClick={() => setIsOpen((open) => !open)}
           type="button"
           variant="secondary"
           size="icon-sm"
           className={className}
+          aria-expanded={isOpen}
+          aria-haspopup="menu"
         >
           {isAuthenticated && user?.avatar_url ? (
             <img
@@ -236,11 +211,12 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
           )}
         </Button>
       </Tooltip>
-      <ContextMenu
+      <Dropdown
         isOpen={isOpen}
-        position={menuPosition}
+        anchorRef={buttonRef}
+        anchorAlign="end"
         items={isAuthenticated ? signedInItems : signedOutItems}
-        onClose={handleClose}
+        onClose={() => setIsOpen(false)}
       />
     </>
   );
