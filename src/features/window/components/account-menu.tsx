@@ -48,8 +48,15 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const closedByOutsideClickRef = useRef(false);
 
   const handleClick = () => {
+    // If the menu was just closed by outside click (which includes clicking this button),
+    // skip reopening it
+    if (closedByOutsideClickRef.current) {
+      closedByOutsideClickRef.current = false;
+      return;
+    }
     if (!buttonRef.current) return;
     const rect = buttonRef.current.getBoundingClientRect();
     setMenuPosition({
@@ -57,6 +64,15 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
       y: rect.bottom + 8,
     });
     setIsOpen(true);
+  };
+
+  const handleClose = () => {
+    closedByOutsideClickRef.current = isOpen;
+    setIsOpen(false);
+    // Reset the flag after the click event finishes
+    requestAnimationFrame(() => {
+      closedByOutsideClickRef.current = false;
+    });
   };
 
   const handleSignIn = async () => {
@@ -224,7 +240,7 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
         isOpen={isOpen}
         position={menuPosition}
         items={isAuthenticated ? signedInItems : signedOutItems}
-        onClose={() => setIsOpen(false)}
+        onClose={handleClose}
       />
     </>
   );
