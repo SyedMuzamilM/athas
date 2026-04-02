@@ -292,9 +292,7 @@ impl AcpWorker {
       };
 
       let auth_methods = init_response.auth_methods.clone();
-      let prompt_auth_method_id = auth_methods
-         .first()
-         .map(|method| method.id.to_string());
+      let prompt_auth_method_id = auth_methods.first().map(|method| method.id.to_string());
 
       // Create or load session with timeout
       let cwd = workspace_path
@@ -576,8 +574,11 @@ impl AcpWorker {
 
       let send_prompt = |connection: Arc<acp::ClientSideConnection>,
                          prompt_request: acp::PromptRequest| async move {
-         tokio::time::timeout(std::time::Duration::from_secs(30), connection.prompt(prompt_request))
-            .await
+         tokio::time::timeout(
+            std::time::Duration::from_secs(30),
+            connection.prompt(prompt_request),
+         )
+         .await
       };
 
       let mut prompt_result = send_prompt(connection.clone(), prompt_request.clone()).await;
