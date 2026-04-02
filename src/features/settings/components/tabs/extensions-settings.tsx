@@ -1,4 +1,13 @@
-import { Blocks, Database, Languages, Package, Palette, Plus, RefreshCw, Search } from "lucide-react";
+import {
+  Blocks,
+  Database,
+  Languages,
+  Package,
+  Palette,
+  Plus,
+  RefreshCw,
+  Search,
+} from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { CreateExtensionWizard } from "@/extensions/ui/components/create-extension-wizard";
 import { useUIExtensionStore } from "@/extensions/ui/stores/ui-extension-store";
