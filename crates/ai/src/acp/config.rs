@@ -75,7 +75,7 @@ impl AgentRegistry {
             .with_description("Alibaba Qwen Code")
             .with_args(vec!["--acp"])
             .with_install(AgentRuntime::Node, "@qwen-code/qwen-code")
-            .with_install_command("qwen-code"),
+            .with_install_command("qwen"),
       );
 
       Self {
