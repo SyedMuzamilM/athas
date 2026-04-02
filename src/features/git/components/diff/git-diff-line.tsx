@@ -3,7 +3,7 @@ import type { HighlightToken } from "@/features/editor/lib/wasm-parser/types";
 import { cn } from "@/utils/cn";
 import type { DiffLineProps } from "../../types/git-diff-types";
 
-const getLineBackground = (type: string) => {
+export const getLineBackground = (type: string) => {
   switch (type) {
     case "added":
       return "bg-git-added/15";
@@ -14,7 +14,7 @@ const getLineBackground = (type: string) => {
   }
 };
 
-const getGutterBackground = (type: string) => {
+export const getGutterBackground = (type: string) => {
   switch (type) {
     case "added":
       return "bg-git-added/25";
@@ -25,7 +25,7 @@ const getGutterBackground = (type: string) => {
   }
 };
 
-const getContentColor = (type: string) => {
+export const getContentColor = (type: string) => {
   switch (type) {
     case "added":
       return "text-git-added";
@@ -105,26 +105,107 @@ const renderHighlightedContent = (
   return <>{result}</>;
 };
 
+export function renderDiffLineContent(
+  content: string,
+  tokens: HighlightToken[] | undefined,
+  showWhitespace: boolean,
+) {
+  return renderHighlightedContent(content, tokens, showWhitespace);
+}
+
+export function getSplitLineMeta(line: DiffLineProps["line"], splitSide: "left" | "right") {
+  const isLeft = splitSide === "left";
+  const isVisible = isLeft ? line.line_type !== "added" : line.line_type !== "removed";
+  const gutterNumber = isLeft ? line.old_line_number : line.new_line_number;
+  const diffType = isLeft
+    ? line.line_type === "removed"
+      ? "removed"
+      : "context"
+    : line.line_type === "added"
+      ? "added"
+      : "context";
+
+  return {
+    isVisible,
+    gutterNumber,
+    diffType,
+  };
+}
+
 const DiffLine = memo(
-  ({ line, viewMode, showWhitespace, tokens, fontSize, lineHeight, tabSize }: DiffLineProps) => {
+  ({
+    line,
+    viewMode,
+    splitSide,
+    wordWrap,
+    showWhitespace,
+    tokens,
+    fontSize,
+    lineHeight,
+    tabSize,
+  }: DiffLineProps) => {
     const rowStyle = { minHeight: `${lineHeight}px` };
     const gutterStyle = { fontSize: `${fontSize}px`, lineHeight: `${lineHeight}px` };
     const contentStyle = {
       fontSize: `${fontSize}px`,
       lineHeight: `${lineHeight}px`,
       tabSize,
+      whiteSpace: wordWrap ? ("pre-wrap" as const) : ("pre" as const),
+      overflowWrap: wordWrap ? ("anywhere" as const) : ("normal" as const),
+      wordBreak: wordWrap ? ("break-word" as const) : ("normal" as const),
     };
 
     const lineContent = useMemo(() => {
       return renderHighlightedContent(line.content, tokens, showWhitespace);
     }, [line.content, tokens, showWhitespace]);
 
-    if (viewMode === "split") {
+    if (viewMode === "split" && splitSide) {
+      const isLeft = splitSide === "left";
+      const isVisible = isLeft ? line.line_type !== "added" : line.line_type !== "removed";
+      const gutterNumber = isLeft ? line.old_line_number : line.new_line_number;
+      const diffType = isLeft
+        ? line.line_type === "removed"
+          ? "removed"
+          : "context"
+        : line.line_type === "added"
+          ? "added"
+          : "context";
+
       return (
-        <div className="flex min-w-full w-fit" style={rowStyle}>
+        <div className={cn("flex min-w-max", getLineBackground(diffType))} style={rowStyle}>
           <div
             className={cn(
-              "flex min-h-0 w-1/2 border-border border-r",
+              "w-11 shrink-0 select-none border-border border-r px-2 py-0.5 text-right",
+              "editor-font code-editor-font-override text-text-lighter tabular-nums",
+              getGutterBackground(diffType),
+            )}
+            style={gutterStyle}
+          >
+            {isVisible ? gutterNumber : ""}
+          </div>
+          <div
+            className={cn(
+              "editor-font code-editor-font-override m-0 min-w-0 flex-1 px-2.5 py-0.5 antialiased",
+              diffType === "added"
+                ? getContentColor("added")
+                : diffType === "removed"
+                  ? getContentColor("removed")
+                  : "text-text",
+            )}
+            style={contentStyle}
+          >
+            {isVisible ? lineContent : ""}
+          </div>
+        </div>
+      );
+    }
+
+    if (viewMode === "split") {
+      return (
+        <div className="flex min-w-0 w-full" style={rowStyle}>
+          <div
+            className={cn(
+              "flex min-h-0 min-w-0 basis-1/2 overflow-hidden border-border border-r",
               line.line_type === "removed" ? getLineBackground("removed") : "",
             )}
           >
@@ -140,7 +221,7 @@ const DiffLine = memo(
             </div>
             <div
               className={cn(
-                "editor-font code-editor-font-override m-0 flex-1 whitespace-pre px-2.5 py-0.5 antialiased",
+                "editor-font code-editor-font-override m-0 min-w-0 flex-1 overflow-x-auto overflow-y-hidden px-2.5 py-0.5 antialiased",
                 line.line_type === "removed" ? getContentColor("removed") : "text-text",
               )}
               style={contentStyle}
@@ -151,7 +232,7 @@ const DiffLine = memo(
 
           <div
             className={cn(
-              "flex min-h-0 w-1/2",
+              "flex min-h-0 min-w-0 basis-1/2 overflow-hidden",
               line.line_type === "added" ? getLineBackground("added") : "",
             )}
           >
@@ -167,7 +248,7 @@ const DiffLine = memo(
             </div>
             <div
               className={cn(
-                "editor-font code-editor-font-override m-0 flex-1 whitespace-pre px-2.5 py-0.5 antialiased",
+                "editor-font code-editor-font-override m-0 min-w-0 flex-1 overflow-x-auto overflow-y-hidden px-2.5 py-0.5 antialiased",
                 line.line_type === "added" ? getContentColor("added") : "text-text",
               )}
               style={contentStyle}
@@ -207,7 +288,7 @@ const DiffLine = memo(
 
         <div
           className={cn(
-            "editor-font code-editor-font-override m-0 flex-1 whitespace-pre px-2.5 py-0.5 antialiased",
+            "editor-font code-editor-font-override m-0 min-w-0 flex-1 px-2.5 py-0.5 antialiased",
             getContentColor(line.line_type),
           )}
           style={contentStyle}

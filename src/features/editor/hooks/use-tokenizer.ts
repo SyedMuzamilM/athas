@@ -16,6 +16,7 @@ import type { ViewportRange } from "./use-viewport-lines";
 interface TokenizerOptions {
   filePath: string | undefined;
   bufferId?: string;
+  languageIdOverride?: string;
   enabled?: boolean;
   incremental?: boolean;
 }
@@ -51,6 +52,7 @@ const BACKGROUND_FULL_TOKENIZE_LINE_THRESHOLD = 4_000;
 export function useTokenizer({
   filePath,
   bufferId,
+  languageIdOverride,
   enabled = true,
   incremental = true,
 }: TokenizerOptions) {
@@ -88,7 +90,7 @@ export function useTokenizer({
     async (text: string) => {
       if (!enabled || !filePath || !bufferId) return;
 
-      const languageId = getLanguageId(filePath);
+      const languageId = languageIdOverride || getLanguageId(filePath);
       if (!languageId) {
         logger.warn("Editor", `[Tokenizer] No language mapping for ${filePath}`);
         setTokens([]);
@@ -130,14 +132,14 @@ export function useTokenizer({
         endMeasure(`tokenizeFull (len: ${normalizedText.length})`);
       }
     },
-    [enabled, filePath, bufferId, startMeasure, endMeasure],
+    [enabled, filePath, bufferId, languageIdOverride, startMeasure, endMeasure],
   );
 
   const tokenizeRangeInternal = useCallback(
     async (text: string, viewportRange: ViewportRange) => {
       if (!enabled || !filePath || !bufferId) return;
 
-      const languageId = getLanguageId(filePath);
+      const languageId = languageIdOverride || getLanguageId(filePath);
       if (!languageId) return;
 
       const requestVersion = ++requestVersionRef.current;
@@ -211,7 +213,16 @@ export function useTokenizer({
         endMeasure("tokenizeRangeInternal");
       }
     },
-    [enabled, filePath, bufferId, getTextMetrics, tokenizeFull, startMeasure, endMeasure],
+    [
+      enabled,
+      filePath,
+      bufferId,
+      languageIdOverride,
+      getTextMetrics,
+      tokenizeFull,
+      startMeasure,
+      endMeasure,
+    ],
   );
 
   const tokenize = useCallback(

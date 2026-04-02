@@ -7,6 +7,7 @@ import { useJumpListStore } from "@/features/editor/stores/jump-list-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { formatDiffBufferLabel } from "@/features/git/utils/diff-buffer-label";
 import { findPaneGroup } from "@/features/panes/utils/pane-tree";
 import { usePaneStore } from "@/features/panes/stores/pane-store";
 import { useSettingsStore } from "@/features/settings/store";
@@ -785,7 +786,11 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
               <TabBarItem
                 key={buffer.id}
                 buffer={buffer}
-                displayName={displayNames.get(buffer.id) || buffer.name}
+                displayName={
+                  buffer.type === "diff"
+                    ? formatDiffBufferLabel(displayNames.get(buffer.id) || buffer.name, buffer.path)
+                    : (displayNames.get(buffer.id) ?? buffer.name)
+                }
                 index={index}
                 isActive={isActive}
                 isDraggedTab={isDraggedTab}

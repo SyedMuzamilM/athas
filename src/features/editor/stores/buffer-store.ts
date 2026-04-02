@@ -904,10 +904,30 @@ export const useBufferStore = createSelectors(
               if (existing) {
                 set((state) => {
                   state.activeBufferId = existing.id;
-                  state.buffers = state.buffers.map((b) => ({
-                    ...b,
-                    isActive: b.id === existing.id,
-                  }));
+                  state.buffers = state.buffers.map((b) => {
+                    if (b.id !== existing.id) {
+                      return {
+                        ...b,
+                        isActive: false,
+                      };
+                    }
+
+                    if (spec.type === "diff" && b.type === "diff") {
+                      return {
+                        ...b,
+                        isActive: true,
+                        name: spec.name,
+                        content: spec.content,
+                        savedContent: spec.content,
+                        diffData: spec.diffData,
+                      };
+                    }
+
+                    return {
+                      ...b,
+                      isActive: true,
+                    };
+                  });
                 });
                 syncBufferToPane(existing.id);
                 return existing.id;

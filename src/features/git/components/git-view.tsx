@@ -2,7 +2,6 @@ import { open } from "@tauri-apps/plugin-dialog";
 import {
   Archive,
   Check,
-  ChevronDown,
   FolderGit2,
   FolderOpen,
   GitFork,
@@ -14,9 +13,10 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useSettingsStore } from "@/features/settings/store";
 import { Button } from "@/ui/button";
-import { Dropdown, dropdownTriggerClassName } from "@/ui/dropdown";
+import { Dropdown } from "@/ui/dropdown";
 import { PANE_GROUP_BASE, paneHeaderClassName, paneIconButtonClassName } from "@/ui/pane";
 import { Tab, TabsList } from "@/ui/tabs";
+import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import { getFolderName } from "@/utils/path-helpers";
 import { getBranches } from "../api/git-branches-api";
@@ -705,8 +705,8 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   return (
     <>
       <div className="ui-font ui-text-sm flex h-full select-none flex-col gap-2 p-2">
-        <div className={paneHeaderClassName("justify-between rounded-lg")}>
-          <div className={cn(PANE_GROUP_BASE, "min-w-0")}>
+        <div className={paneHeaderClassName("rounded-lg")}>
+          <div className={cn(PANE_GROUP_BASE, "min-w-0 flex-1")}>
             <GitBranchManager
               currentBranch={gitStatus.branch}
               repoPath={activeRepoPath}
@@ -714,7 +714,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
               compact
             />
             {(gitStatus.ahead > 0 || gitStatus.behind > 0) && (
-              <span className="ui-text-sm text-text-lighter">
+              <span className="ui-text-sm shrink-0 text-text-lighter">
                 {gitStatus.ahead > 0 && <span className="text-git-added">↑{gitStatus.ahead}</span>}
                 {gitStatus.behind > 0 && (
                   <span className="text-git-deleted">↓{gitStatus.behind}</span>
@@ -723,7 +723,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
             )}
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex shrink-0 items-center gap-1">
             <Button
               ref={repoTriggerRef}
               onClick={() => {
@@ -737,13 +737,12 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                 setShowGitActionsMenu(false);
               }}
               variant="ghost"
-              size="sm"
-              className={dropdownTriggerClassName("ui-text-sm max-w-40")}
+              size="icon-sm"
+              className={cn(paneIconButtonClassName(), "size-6")}
               title={activeRepoPath}
+              aria-label={`Repository: ${getFolderName(activeRepoPath)}`}
             >
-              <FolderOpen className="shrink-0" />
-              <span className="truncate">{getFolderName(activeRepoPath)}</span>
-              <ChevronDown />
+              <FolderOpen />
             </Button>
             <Button
               onClick={handleManualRefresh}
@@ -760,7 +759,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           </div>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
+        <div className="@container flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
           <TabsList
             variant="segmented"
             className="grid h-auto shrink-0 grid-cols-4 border-border/60 bg-secondary-bg/40"
@@ -770,22 +769,25 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
               const isSelected = activeTab === tab.id;
 
               return (
-                <Tab
-                  key={tab.id}
-                  role="tab"
-                  aria-selected={isSelected}
-                  onClick={() => setActiveTab(tab.id)}
-                  isActive={isSelected}
-                  size="md"
-                  variant="segmented"
-                  contentLayout="stacked"
-                  className="h-auto min-h-12 min-w-0 px-1 py-1.5 whitespace-normal transition-colors"
-                >
-                  <div className="relative flex items-center justify-center">
-                    <Icon strokeWidth={2.2} />
-                  </div>
-                  <span className="ui-text-sm text-center leading-none">{tab.label}</span>
-                </Tab>
+                <Tooltip key={tab.id} content={tab.label} side="bottom">
+                  <Tab
+                    role="tab"
+                    aria-selected={isSelected}
+                    onClick={() => setActiveTab(tab.id)}
+                    isActive={isSelected}
+                    size="md"
+                    variant="segmented"
+                    contentLayout="stacked"
+                    className="h-full min-h-8 min-w-0 px-1 py-1.5 transition-colors"
+                  >
+                    <div className="relative flex items-center justify-center">
+                      <Icon strokeWidth={2.2} />
+                    </div>
+                    <span className="ui-text-sm hidden text-center leading-none @[220px]:block">
+                      {tab.label}
+                    </span>
+                  </Tab>
+                </Tooltip>
               );
             })}
           </TabsList>

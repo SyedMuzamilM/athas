@@ -229,6 +229,7 @@ interface DropdownBaseProps {
   isOpen: boolean;
   onClose: () => void;
   className?: string;
+  menuClassName?: string;
   style?: CSSProperties;
 }
 
@@ -306,7 +307,7 @@ function getViewportBounds() {
 }
 
 export function Dropdown(props: DropdownProps) {
-  const { isOpen, onClose, className, style, searchable, searchPlaceholder } = props;
+  const { isOpen, onClose, className, menuClassName, style, searchable, searchPlaceholder } = props;
 
   const menuRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -608,7 +609,7 @@ export function Dropdown(props: DropdownProps) {
       exit={{ opacity: 0, scale: 0.95, y: yDir }}
       transition={{ duration: 0.12, ease: "easeOut" }}
     >
-      <div role="menu" onKeyDown={handleKeyDown}>
+      <div role="menu" className={menuClassName} onKeyDown={handleKeyDown}>
         {searchable && (
           <div className="px-1 pb-1">
             <Input
