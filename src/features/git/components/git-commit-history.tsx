@@ -1,9 +1,8 @@
-import { ChevronDown, ChevronRight } from "lucide-react";
 import { memo, useCallback, useEffect, useRef } from "react";
-import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { formatRelativeDate } from "@/utils/date";
 import { useGitStore } from "../stores/git-store";
+import GitSidebarSectionHeader from "./git-sidebar-section-header";
 
 interface GitCommitHistoryProps {
   isCollapsed: boolean;
@@ -155,25 +154,23 @@ const GitCommitHistory = ({
           showHeader && "rounded-lg border border-border/60 bg-primary-bg/55",
         )}
       >
-        {showHeader && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="sticky top-0 z-20 w-full shrink-0 justify-start gap-1 rounded-none border-border/50 border-b bg-secondary-bg/90 px-2.5 py-1.5 text-text-lighter backdrop-blur-sm"
-            onClick={onToggle}
-          >
-            {isCollapsed ? <ChevronRight /> : <ChevronDown />}
-            <span className="ui-text-sm font-medium text-text">History</span>
-            <div className="flex-1" />
-            <span className="ui-text-sm rounded-full bg-primary-bg px-1.5">{commits.length}</span>
-          </Button>
-        )}
+        <div className="shrink-0 px-1 py-1">
+          {showHeader ? (
+            <GitSidebarSectionHeader
+              title="History"
+              collapsible
+              isCollapsed={isCollapsed}
+              onToggle={onToggle}
+            />
+          ) : (
+            <GitSidebarSectionHeader title="History" />
+          )}
+        </div>
 
         {!isCollapsed && (
           <div
             className={cn(
-              "scrollbar-none relative min-h-0 flex-1 overflow-y-scroll px-1 py-1",
+              "scrollbar-none relative min-h-0 flex-1 overflow-y-scroll px-1 pb-1",
               showHeader ? "bg-primary-bg/70" : "bg-transparent",
             )}
             ref={scrollContainerRef}

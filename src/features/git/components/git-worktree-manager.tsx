@@ -15,6 +15,9 @@ import {
   removeWorktree,
 } from "../api/git-worktrees-api";
 import type { GitWorktree } from "../types/git-types";
+import GitSidebarSectionHeader, {
+  gitSidebarSectionActionButtonClassName,
+} from "./git-sidebar-section-header";
 
 interface GitWorktreeManagerProps {
   isOpen?: boolean;
@@ -181,25 +184,39 @@ const GitWorktreeManager = ({
         embedded ? "ui-font flex h-full min-h-0 flex-col" : "ui-font flex max-h-[70vh] flex-col"
       }
     >
-      <div className="flex items-center justify-end gap-1 px-1 py-1">
-        <Button
-          onClick={() => setIsAddFormOpen((value) => !value)}
-          variant={isAddFormOpen ? "secondary" : "ghost"}
-          size="icon-sm"
-          data-active={isAddFormOpen}
-          aria-label={isAddFormOpen ? "Hide add form" : "Add worktree"}
-        >
-          <Plus />
-        </Button>
-        <Button
-          onClick={() => void handlePruneWorktrees()}
-          disabled={isLoading}
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Prune worktrees"
-        >
-          <RefreshCw className={cn(isLoading && "animate-spin")} />
-        </Button>
+      <div className="shrink-0 px-1 py-1">
+        <GitSidebarSectionHeader
+          title="Worktrees"
+          actions={
+            <>
+              <Button
+                onClick={() => setIsAddFormOpen((value) => !value)}
+                variant="ghost"
+                size="icon-sm"
+                className={cn(
+                  gitSidebarSectionActionButtonClassName(),
+                  isAddFormOpen && "bg-hover text-text",
+                )}
+                data-active={isAddFormOpen}
+                aria-label={isAddFormOpen ? "Hide add form" : "Add worktree"}
+                title={isAddFormOpen ? "Hide add form" : "Add worktree"}
+              >
+                <Plus />
+              </Button>
+              <Button
+                onClick={() => void handlePruneWorktrees()}
+                disabled={isLoading}
+                variant="ghost"
+                size="icon-sm"
+                className={gitSidebarSectionActionButtonClassName("disabled:opacity-50")}
+                aria-label="Prune worktrees"
+                title="Prune worktrees"
+              >
+                <RefreshCw className={cn(isLoading && "animate-spin")} />
+              </Button>
+            </>
+          }
+        />
       </div>
 
       {isAddFormOpen && (
@@ -283,12 +300,14 @@ const GitWorktreeManager = ({
                   contextMenu.open(e, { path: worktree.path, isCurrent: worktree.is_current })
                 }
                 className={cn(
-                  "mb-1 cursor-pointer rounded-lg px-2.5 py-2 transition-colors hover:bg-hover",
-                  worktree.is_current && "bg-hover/70",
+                  "mb-1 cursor-pointer rounded-xl border border-transparent px-2.5 py-2.5 transition-colors",
+                  worktree.is_current
+                    ? "border-border/60 bg-primary-bg/55"
+                    : "bg-primary-bg/20 hover:bg-hover/70",
                 )}
               >
                 <div className="min-w-0">
-                  <div className="flex min-w-0 items-center gap-1.5">
+                  <div className="flex min-w-0 items-center gap-2">
                     <span
                       className="truncate ui-text-sm font-medium text-text"
                       title={worktree.path}
@@ -296,7 +315,7 @@ const GitWorktreeManager = ({
                       {worktreeName}
                     </span>
                     {worktree.is_current && (
-                      <span className="ui-text-sm shrink-0 rounded-full bg-primary-bg px-1.5 py-0.5 text-text">
+                      <span className="ui-text-sm shrink-0 rounded-md border border-border/60 bg-primary-bg/80 px-1.5 py-0.5 text-text-lighter">
                         Current
                       </span>
                     )}
@@ -304,21 +323,25 @@ const GitWorktreeManager = ({
                       <span className="ui-text-sm shrink-0 text-text-lighter">Removing...</span>
                     )}
                   </div>
-                  <div className="ui-text-sm mt-1 truncate text-text-lighter">
+                  <div className="ui-text-sm mt-1 truncate text-text-lighter/90">
                     {relativePath === worktree.path ? worktree.path : relativePath}
                   </div>
 
-                  <div className="ui-text-sm mt-1 flex flex-wrap items-center gap-2 text-text-lighter">
-                    <span className="inline-flex items-center gap-1">
-                      <GitBranch />
+                  <div className="ui-text-sm mt-2 flex flex-wrap items-center gap-1.5 text-text-lighter">
+                    <span className="inline-flex items-center gap-1 rounded-md bg-secondary-bg/45 px-1.5 py-0.5">
+                      <GitBranch className="size-3.5" />
                       <span>{branchLabel}</span>
                     </span>
-                    <span className="inline-flex items-center gap-1">
-                      <GitCommit />
+                    <span className="inline-flex items-center gap-1 rounded-md bg-secondary-bg/45 px-1.5 py-0.5">
+                      <GitCommit className="size-3.5" />
                       <span>{worktree.head.slice(0, 7)}</span>
                     </span>
-                    {worktree.prunable_reason && <span>Prunable</span>}
-                    {worktree.locked_reason && <span>Locked</span>}
+                    {worktree.prunable_reason && (
+                      <span className="rounded-md bg-secondary-bg/45 px-1.5 py-0.5">Prunable</span>
+                    )}
+                    {worktree.locked_reason && (
+                      <span className="rounded-md bg-secondary-bg/45 px-1.5 py-0.5">Locked</span>
+                    )}
                   </div>
                 </div>
               </div>

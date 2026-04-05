@@ -25,6 +25,9 @@ import {
   unstageFile,
 } from "../../api/git-status-api";
 import type { GitFile } from "../../types/git-types";
+import GitSidebarSectionHeader, {
+  gitSidebarSectionActionButtonClassName,
+} from "../git-sidebar-section-header";
 import { StashMessageModal } from "../stash/git-stash-modal";
 import { GitFileItem } from "./git-status-file-item";
 
@@ -126,8 +129,6 @@ const collectNodeFiles = (node: GitFolderNode): GitFile[] => [
   ...node.files,
   ...Array.from(node.folders.values()).flatMap((child) => collectNodeFiles(child)),
 ];
-
-const formatChangeCount = (count: number) => `${count} ${count === 1 ? "change" : "changes"}`;
 
 const GitStatusPanel = ({
   files,
@@ -351,7 +352,7 @@ const GitStatusPanel = ({
   };
 
   const renderSectionHeader = (title: string) => (
-    <div className="ui-text-sm mx-1 mb-1 mt-2 flex items-center gap-2 px-2 py-1 text-text-lighter">
+    <div className="ui-text-sm mx-1 mb-1 mt-2 flex items-center gap-2 px-2.5 py-1 text-text-lighter">
       <span>{title}</span>
     </div>
   );
@@ -468,61 +469,60 @@ const GitStatusPanel = ({
 
   return (
     <div className="flex h-full min-h-0 flex-col select-none">
-      {hasFiles && (
-        <div className="shrink-0 px-1 pb-1">
-          <div className="ui-text-sm flex items-center gap-1 px-2 py-1.5 text-text-lighter">
-            <span className="ui-text-sm font-medium text-text">
-              {formatChangeCount(displayFiles.length)}
-            </span>
-            <div className="flex-1" />
-            {unstagedFiles.length > 0 && (
-              <>
+      <div className="shrink-0 px-1 pb-1">
+        <GitSidebarSectionHeader
+          title="Changes"
+          actions={
+            <>
+              {unstagedFiles.length > 0 && (
                 <Tooltip content="Stash all unstaged changes" side="bottom">
                   <Button
                     onClick={handleStashAllUnstaged}
                     disabled={isLoading}
                     variant="ghost"
-                    size="icon-xs"
-                    className="text-text-lighter disabled:opacity-50"
+                    size="icon-sm"
+                    className={gitSidebarSectionActionButtonClassName("disabled:opacity-50")}
                     title="Stash all unstaged changes"
                     aria-label="Stash all unstaged changes"
                   >
                     <Archive />
                   </Button>
                 </Tooltip>
+              )}
+              {unstagedFiles.length > 0 && (
                 <Tooltip content="Stage all changes" side="bottom">
                   <Button
                     onClick={handleStageAll}
                     disabled={isLoading}
                     variant="ghost"
-                    size="icon-xs"
-                    className="text-text-lighter disabled:opacity-50"
+                    size="icon-sm"
+                    className={gitSidebarSectionActionButtonClassName("disabled:opacity-50")}
                     title="Stage all changes"
                     aria-label="Stage all changes"
                   >
                     <Plus />
                   </Button>
                 </Tooltip>
-              </>
-            )}
-            {stagedFiles.length > 0 && (
-              <Tooltip content="Unstage all changes" side="bottom">
-                <Button
-                  onClick={handleUnstageAll}
-                  disabled={isLoading}
-                  variant="ghost"
-                  size="icon-xs"
-                  className="text-text-lighter disabled:opacity-50"
-                  title="Unstage all changes"
-                  aria-label="Unstage all changes"
-                >
-                  <Minus />
-                </Button>
-              </Tooltip>
-            )}
-          </div>
-        </div>
-      )}
+              )}
+              {stagedFiles.length > 0 && (
+                <Tooltip content="Unstage all changes" side="bottom">
+                  <Button
+                    onClick={handleUnstageAll}
+                    disabled={isLoading}
+                    variant="ghost"
+                    size="icon-sm"
+                    className={gitSidebarSectionActionButtonClassName("disabled:opacity-50")}
+                    title="Unstage all changes"
+                    aria-label="Unstage all changes"
+                  >
+                    <Minus />
+                  </Button>
+                </Tooltip>
+              )}
+            </>
+          }
+        />
+      </div>
 
       {hasFiles ? (
         <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto px-1 pb-1">
