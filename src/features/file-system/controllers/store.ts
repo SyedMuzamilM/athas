@@ -24,6 +24,10 @@ import { useSettingsStore } from "@/features/settings/store";
 import { useSidebarStore } from "@/features/layout/stores/sidebar-store";
 import { useProjectStore } from "@/features/window/stores/project-store";
 import { useSessionStore } from "@/features/window/stores/session-store";
+import {
+  persistCurrentProjectUiState,
+  restoreProjectUiState,
+} from "@/features/window/stores/workspace-ui-session";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { loadWorkspaceTerminalsFromStorage } from "@/features/terminal/lib/terminal-session-storage";
@@ -141,6 +145,8 @@ export const useFileSystemStore = createSelectors(
           });
           return true;
         }
+
+        persistCurrentProjectUiState(get().rootFolderPath);
 
         set((state) => {
           state.isFileTreeLoading = true;
@@ -293,6 +299,8 @@ export const useFileSystemStore = createSelectors(
       },
 
       handleOpenFolderByPath: async (path: string) => {
+        persistCurrentProjectUiState(get().rootFolderPath);
+
         set((state) => {
           state.isFileTreeLoading = true;
         });
@@ -312,6 +320,7 @@ export const useFileSystemStore = createSelectors(
         const { setRootFolderPath, setProjectName } = useProjectStore.getState();
         setRootFolderPath(path);
         setProjectName(projectName);
+        restoreProjectUiState(path);
 
         // Add to recent folders
         useRecentFoldersStore.getState().addToRecents(path);
@@ -341,6 +350,8 @@ export const useFileSystemStore = createSelectors(
       },
 
       handleOpenRemoteProject: async (connectionId: string, _connectionName: string) => {
+        persistCurrentProjectUiState(get().rootFolderPath);
+
         set((state) => {
           state.isFileTreeLoading = true;
         });
@@ -390,6 +401,7 @@ export const useFileSystemStore = createSelectors(
           setRootFolderPath(remotePath);
           setProjectName(connection.name);
           setActiveProjectId(activeProjectTab?.id);
+          restoreProjectUiState(remotePath);
 
           await useFileWatcherStore.getState().setProjectRoot("");
           useGitStore.getState().actions.setWorkspaceGitStatus(null, null);
@@ -1626,6 +1638,7 @@ export const useFileSystemStore = createSelectors(
 
         try {
           if (currentRootPath) {
+            persistCurrentProjectUiState(currentRootPath);
             clearQueuedWorkspaceSessionSave(currentRootPath);
             useSessionStore.getState().saveSession(
               currentRootPath,
@@ -1664,6 +1677,7 @@ export const useFileSystemStore = createSelectors(
             setRootFolderPath(tab.path);
             setProjectName(tab.name);
             setActiveProjectId(projectId);
+            restoreProjectUiState(tab.path);
 
             gitDiffCache.clear();
 
@@ -1746,6 +1760,7 @@ export const useFileSystemStore = createSelectors(
 
         // Save session before closing if it's the active project
         if (wasActive) {
+          persistCurrentProjectUiState(tab.path);
           const { buffers, activeBufferId } = useBufferStore.getState();
           const activeBuffer = buffers.find((b) => b.id === activeBufferId);
 
@@ -1797,6 +1812,7 @@ export const useFileSystemStore = createSelectors(
           const { setRootFolderPath, setProjectName } = useProjectStore.getState();
           setRootFolderPath(undefined);
           setProjectName("Explorer");
+          restoreProjectUiState(undefined);
 
           // Reset file system state
           set((state) => {
