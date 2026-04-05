@@ -41,8 +41,8 @@ interface FileExplorerTreeProps {
   activePath?: string;
   updateActivePath?: (path: string) => void;
   rootFolderPath?: string;
-  onFileSelect: (path: string, isDir: boolean) => void;
-  onFileOpen?: (path: string, isDir: boolean) => void;
+  onFileSelect: (path: string, isDir: boolean) => void | Promise<void>;
+  onFileOpen?: (path: string, isDir: boolean) => void | Promise<void>;
   onCreateNewFileInDirectory: (directoryPath: string, fileName: string) => void;
   onCreateNewFolderInDirectory?: (directoryPath: string, folderName: string) => void;
   onDeletePath?: (path: string, isDir: boolean) => void;
@@ -521,6 +521,13 @@ function FileExplorerTreeComponent({
     return { path, isDir, file };
   };
 
+  const toggleDirectory = useCallback(
+    async (path: string) => {
+      await Promise.resolve(onFileSelect(path, true));
+    },
+    [onFileSelect],
+  );
+
   const handleContainerClick = useCallback(
     (e: React.MouseEvent) => {
       const t = getTargetItem(e.target);
@@ -536,12 +543,14 @@ function FileExplorerTreeComponent({
         fileOpenBenchmark.ensureStarted(t.path, "explorer-click");
         fileOpenBenchmark.mark(t.path, "explorer-click");
       }
-      onFileSelect(t.path, t.isDir);
       if (t.isDir) {
+        void toggleDirectory(t.path);
         updateActivePath?.(t.path);
+      } else {
+        void Promise.resolve(onFileSelect(t.path, false));
       }
     },
-    [onFileSelect, updateActivePath, pathToFile],
+    [onFileSelect, toggleDirectory, updateActivePath, pathToFile],
   );
 
   const handleContainerDoubleClick = useCallback(
@@ -554,7 +563,7 @@ function FileExplorerTreeComponent({
         fileOpenBenchmark.ensureStarted(t.path, "explorer-double-click");
         fileOpenBenchmark.mark(t.path, "explorer-double-click");
       }
-      onFileOpen?.(t.path, t.isDir);
+      void Promise.resolve(onFileOpen?.(t.path, t.isDir));
       if (t.isDir) {
         updateActivePath?.(t.path);
       }
@@ -667,9 +676,7 @@ function FileExplorerTreeComponent({
         const current = visibleRows[curIndex]?.file;
         const isDir = visibleRows[curIndex]?.file.isDir;
 
-        const toggle = (path: string) => useFileTreeStore.getState().toggleFolder(path);
         const clipboardActions = useFileClipboardStore.getState().actions;
-
         const mod = e.metaKey || e.ctrlKey;
         if (mod && current) {
           if (e.key === "c") {
@@ -750,7 +757,7 @@ function FileExplorerTreeComponent({
             if (isDir) {
               const expanded = useFileTreeStore.getState().isExpanded(current.path);
               if (!expanded) {
-                toggle(current.path);
+                void toggleDirectory(current.path);
               } else {
                 const child = visibleRows[curIndex + 1];
                 if (child && child.depth === visibleRows[curIndex].depth + 1) {
@@ -765,7 +772,7 @@ function FileExplorerTreeComponent({
             if (!current) break;
             e.preventDefault();
             if (isDir && useFileTreeStore.getState().isExpanded(current.path)) {
-              toggle(current.path);
+              void toggleDirectory(current.path);
             } else {
               const sep = current.path.includes("\\") ? "\\" : "/";
               const parentPath = current.path.split(sep).slice(0, -1).join(sep);
@@ -781,9 +788,9 @@ function FileExplorerTreeComponent({
             if (!current) break;
             e.preventDefault();
             if (isDir) {
-              toggle(current.path);
+              void toggleDirectory(current.path);
             } else {
-              onFileOpen?.(current.path, false);
+              void Promise.resolve(onFileOpen?.(current.path, false));
             }
             break;
           }
