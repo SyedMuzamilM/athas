@@ -12,6 +12,7 @@ import { buildSearchRegex, findAllMatches } from "@/features/editor/utils/search
 import { hasTextContent } from "@/features/panes/types/pane-content";
 import { useSettingsStore } from "@/features/settings/store";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useZoomStore } from "@/features/window/stores/zoom-store";
 import { CompletionDropdown } from "../completion/completion-dropdown";
 import { HoverTooltip } from "../lsp/hover-tooltip";
@@ -81,6 +82,7 @@ const CodeEditor = ({
   const searchOptions = useEditorUIStore.use.searchOptions();
   const { setSearchMatches, setCurrentMatchIndex } = useEditorUIStore.use.actions();
   const { settings } = useSettingsStore();
+  const isFindVisible = useUIState((state) => state.isFindVisible);
 
   // Apply zoom to font size for position calculations (must match editor.tsx)
   const zoomedFontSize = settings.fontSize * zoomLevel;
@@ -247,7 +249,7 @@ const CodeEditor = ({
       clearTimeout(searchTimerRef.current);
     }
 
-    if (!enableInteractiveServices) {
+    if (!enableInteractiveServices || !isFindVisible) {
       setSearchMatches([]);
       setCurrentMatchIndex(-1);
       return;
@@ -281,6 +283,7 @@ const CodeEditor = ({
     };
   }, [
     enableInteractiveServices,
+    isFindVisible,
     searchQuery,
     searchOptions,
     value,

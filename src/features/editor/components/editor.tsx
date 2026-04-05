@@ -1006,16 +1006,27 @@ export function Editor({
           <div ref={inlineEditOverlayRef} className="pointer-events-none absolute inset-0 z-[200]">
             <div
               ref={inlineEditState.inlineEditPopoverRef}
-              className="pointer-events-auto absolute w-[360px] overflow-hidden rounded-lg border border-border/60 bg-primary-bg/95"
+              role="dialog"
+              aria-modal="false"
+              aria-labelledby="inline-edit-title"
+              aria-describedby="inline-edit-description"
+              className="pointer-events-auto absolute w-[360px] overflow-hidden rounded-lg border border-border/60 bg-primary-bg shadow-lg"
               style={{
                 top: `${inlineEditState.popoverPosition.top}px`,
                 left: `${inlineEditState.popoverPosition.left}px`,
               }}
             >
               <div className="px-2 py-1.5">
+                <div className="sr-only">
+                  <div id="inline-edit-title">Inline edit</div>
+                  <div id="inline-edit-description">
+                    Describe the code change, then press Enter to apply or Escape to close.
+                  </div>
+                </div>
                 <div className="flex items-center gap-2">
                   <Input
                     ref={inlineEditState.inlineEditInstructionRef}
+                    autoFocus
                     value={inlineEditState.inlineEditInstruction}
                     onChange={(e) => {
                       inlineEditState.setInlineEditInstruction(e.target.value);
@@ -1037,6 +1048,13 @@ export function Editor({
                     }}
                     variant="ghost"
                     size="sm"
+                    aria-label="Inline edit instruction"
+                    aria-describedby={
+                      inlineEditState.inlineEditError
+                        ? "inline-edit-description inline-edit-error"
+                        : "inline-edit-description"
+                    }
+                    aria-invalid={inlineEditState.inlineEditError ? true : undefined}
                     className="ui-font h-8 flex-1 bg-transparent px-0 text-xs placeholder:text-text-lighter/80 focus:bg-transparent"
                     placeholder={
                       selection && selection.start.offset !== selection.end.offset
@@ -1051,12 +1069,18 @@ export function Editor({
                     onClick={() => inlineEditState.inlineEditToolbarActions.hide()}
                     className="text-text-lighter hover:text-text"
                     aria-label="Close inline edit"
+                    title="Close inline edit (Escape)"
                   >
                     <X />
                   </Button>
                 </div>
                 {inlineEditState.inlineEditError && (
-                  <div className="ui-font mt-1.5 rounded-md bg-red-500/10 px-2 py-1.5 text-[11px] text-red-300">
+                  <div
+                    id="inline-edit-error"
+                    role="alert"
+                    aria-live="assertive"
+                    className="ui-font mt-1.5 rounded-md bg-red-500/10 px-2 py-1.5 text-[11px] text-red-300"
+                  >
                     {inlineEditState.inlineEditError}
                   </div>
                 )}
@@ -1083,6 +1107,12 @@ export function Editor({
                     onClick={() => void inlineEditState.handleApplyInlineEdit()}
                     disabled={inlineEditState.isInlineEditRunning}
                     className="gap-1 px-1 text-accent hover:bg-transparent hover:text-accent/80"
+                    aria-label={
+                      inlineEditState.isInlineEditRunning
+                        ? "Applying inline edit"
+                        : "Apply inline edit"
+                    }
+                    title="Apply inline edit (Enter)"
                   >
                     <CornerDownLeft />
                     {inlineEditState.isInlineEditRunning ? "Applying..." : "Send"}

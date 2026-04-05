@@ -24,32 +24,32 @@ export const HoverTooltip = memo(() => {
       actions.setHoverInfo(null);
     };
 
-    const onVisibilityChange = () => {
-      if (document.visibilityState !== "visible") {
+    const isInsideTooltip = (target: EventTarget | null) =>
+      !!containerRef.current?.contains(target as Node);
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
         clearHover();
       }
     };
 
-    const onGlobalInteraction = () => {
+    const onPointerDown = (event: PointerEvent) => {
+      if (isInsideTooltip(event.target)) return;
       clearHover();
     };
 
     const onWheel = (e: WheelEvent) => {
-      if (containerRef.current?.contains(e.target as Node)) return;
+      if (isInsideTooltip(e.target)) return;
       clearHover();
     };
 
-    window.addEventListener("blur", clearHover);
-    window.addEventListener("keydown", onGlobalInteraction, true);
-    window.addEventListener("pointerdown", onGlobalInteraction, true);
+    window.addEventListener("keydown", onKeyDown, true);
+    window.addEventListener("pointerdown", onPointerDown, true);
     window.addEventListener("wheel", onWheel, { capture: true, passive: true });
-    document.addEventListener("visibilitychange", onVisibilityChange);
     return () => {
-      window.removeEventListener("blur", clearHover);
-      window.removeEventListener("keydown", onGlobalInteraction, true);
-      window.removeEventListener("pointerdown", onGlobalInteraction, true);
+      window.removeEventListener("keydown", onKeyDown, true);
+      window.removeEventListener("pointerdown", onPointerDown, true);
       window.removeEventListener("wheel", onWheel, true);
-      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [actions]);
 
