@@ -6,7 +6,10 @@ import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { CodeEditorRef } from "@/features/editor/components/code-editor";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import {
+  clearQueuedWorkspaceSessionSave,
+  useBufferStore,
+} from "@/features/editor/stores/buffer-store";
 import { fileOpenBenchmark } from "@/features/editor/utils/file-open-benchmark";
 import { getAncestorDirectoryPaths } from "@/features/file-explorer/utils/file-explorer-tree-utils";
 import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree-store";
@@ -23,6 +26,7 @@ import { useProjectStore } from "@/features/window/stores/project-store";
 import { useSessionStore } from "@/features/window/stores/session-store";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
+import { loadWorkspaceTerminalsFromStorage } from "@/features/terminal/lib/terminal-session-storage";
 import { toast } from "@/ui/toast";
 import { createSelectors } from "@/utils/zustand-selectors";
 import type { FileEntry } from "../types/app";
@@ -74,10 +78,9 @@ const wrapWithRootFolder = (
 
 let latestFileOpenRequestId = 0;
 
-const readPersistedTerminalSessions = () => {
+const readPersistedTerminalSessions = (workspacePath: string | undefined) => {
   try {
-    const stored = localStorage.getItem("terminal-sessions");
-    return stored ? JSON.parse(stored) : [];
+    return loadWorkspaceTerminalsFromStorage(workspacePath);
   } catch (error) {
     console.error("Failed to read terminal sessions", error);
     return [];
@@ -1623,6 +1626,7 @@ export const useFileSystemStore = createSelectors(
 
         try {
           if (currentRootPath) {
+            clearQueuedWorkspaceSessionSave(currentRootPath);
             useSessionStore.getState().saveSession(
               currentRootPath,
               currentBuffers.map((buffer) => ({
@@ -1632,7 +1636,7 @@ export const useFileSystemStore = createSelectors(
                 isPinned: buffer.isPinned,
               })),
               activeBuffer?.path || null,
-              readPersistedTerminalSessions(),
+              readPersistedTerminalSessions(currentRootPath),
               readPersistedAiWorkspaceSession(),
             );
           }
@@ -1745,6 +1749,7 @@ export const useFileSystemStore = createSelectors(
           const { buffers, activeBufferId } = useBufferStore.getState();
           const activeBuffer = buffers.find((b) => b.id === activeBufferId);
 
+          clearQueuedWorkspaceSessionSave(tab.path);
           useSessionStore.getState().saveSession(
             tab.path,
             buffers.map((b) => ({
@@ -1754,7 +1759,7 @@ export const useFileSystemStore = createSelectors(
               isPinned: b.isPinned,
             })),
             activeBuffer?.path || null,
-            readPersistedTerminalSessions(),
+            readPersistedTerminalSessions(tab.path),
             readPersistedAiWorkspaceSession(),
           );
         }
