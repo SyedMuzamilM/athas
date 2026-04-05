@@ -3,17 +3,20 @@ import {
   ArrowRight,
   Check,
   Columns3,
+  LogIn,
   Loader2,
   MousePointerClick,
   Puzzle,
   Sparkles,
   Terminal,
 } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
-import { getChatCompletionStream } from "@/features/ai/services/ai-chat-service";
-import type { ContextInfo } from "@/features/ai/types/ai-chat";
-import { useSettingsStore } from "@/features/settings/store";
+import { createElement, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
+import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
+import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useProFeature } from "../hooks/use-pro-feature";
+import { requestUIExtensionGeneration } from "../services/ui-extension-generation-service";
 import { useUIExtensionStore } from "../stores/ui-extension-store";
 
 type ContributionType = "sidebar" | "toolbar" | "command";
@@ -48,6 +51,13 @@ const CONTRIBUTION_OPTIONS: ContributionOption[] = [
 
 type WizardStep = "type" | "describe" | "generating" | "done";
 
+const GENERATING_MESSAGES = [
+  "Sketching the first pass...",
+  "Laying out the interface...",
+  "Tightening the structure...",
+  "Preparing installable code...",
+];
+
 interface GeneratedExtension {
   id: string;
   name: string;
@@ -56,46 +66,33 @@ interface GeneratedExtension {
   code: string;
 }
 
-const SYSTEM_PROMPT = `You are an extension generator for Athas code editor. The user wants to create a UI extension.
-You must respond with ONLY a valid JSON object (no markdown, no code fences, no explanation). The JSON must have this exact structure:
-
-{
-  "id": "extension-id",
-  "name": "Extension Name",
-  "description": "Short description",
-  "code": "the javascript code as a string"
-}
-
-The "code" field should be a JavaScript string that will be evaluated. It receives an "api" object with these methods:
-
-For sidebar views:
-- api.sidebar.registerView({ id, title, icon, render }) - icon is a lucide icon name like "box", "database", "git-branch"
-- render() must return a string of HTML content
-
-For toolbar actions:
-- api.toolbar.registerAction({ id, title, icon, position: "left"|"right", onClick }) - onClick is a function
-
-For commands:
-- api.commands.register(id, title, handler, category?)
-
-The code should call the appropriate api methods. Keep it simple and functional. Use only standard JavaScript.
-For render functions, return a simple HTML string like: "<div style='padding:12px'><h3>Title</h3><p>Content</p></div>"
-
-Example for a sidebar timer extension:
-{"id":"timer","name":"Timer","description":"A simple timer","code":"api.sidebar.registerView({id:'timer.view',title:'Timer',icon:'clock',render:()=>'<div style="padding:16px"><h3 style="margin:0 0 8px">Timer</h3><p>00:00:00</p></div>'});"}`;
-
 export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
+  const { isAuthenticated, isPro } = useProFeature();
+  const { signIn, isSigningIn } = useDesktopSignIn();
+  const setActiveView = useUIState((state) => state.setActiveView);
+  const setIsSidebarVisible = useUIState((state) => state.setIsSidebarVisible);
   const [step, setStep] = useState<WizardStep>("type");
   const [selectedType, setSelectedType] = useState<ContributionType | null>(null);
   const [description, setDescription] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedExtension, setGeneratedExtension] = useState<GeneratedExtension | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [streamingText, setStreamingText] = useState("");
+  const [generationMessageIndex, setGenerationMessageIndex] = useState(0);
   const [isInstalled, setIsInstalled] = useState(false);
   const abortRef = useRef(false);
 
-  const { settings } = useSettingsStore();
+  useEffect(() => {
+    if (step !== "generating") {
+      setGenerationMessageIndex(0);
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setGenerationMessageIndex((current) => (current + 1) % GENERATING_MESSAGES.length);
+    }, 1800);
+
+    return () => window.clearInterval(intervalId);
+  }, [step]);
 
   const handleSelectType = (type: ContributionType) => {
     setSelectedType(type);
@@ -120,69 +117,32 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
     setStep("generating");
     setIsGenerating(true);
     setError(null);
-    setStreamingText("");
+    setGenerationMessageIndex(0);
     abortRef.current = false;
 
-    const typeLabel =
-      CONTRIBUTION_OPTIONS.find((o) => o.id === selectedType)?.label ?? selectedType;
-    const prompt = `Create a ${typeLabel} extension for Athas code editor. The user's description: "${description.trim()}"`;
-
-    let fullResponse = "";
-
     try {
-      const context: ContextInfo = {};
+      const parsed = await requestUIExtensionGeneration({
+        contributionType: selectedType,
+        description: description.trim(),
+      });
 
-      await getChatCompletionStream(
-        "custom",
-        settings.aiProviderId,
-        settings.aiModelId,
-        prompt,
-        context,
-        (chunk) => {
-          if (abortRef.current) return;
-          fullResponse += chunk;
-          setStreamingText(fullResponse);
-        },
-        () => {
-          if (abortRef.current) return;
+      if (abortRef.current) return;
 
-          try {
-            // Extract JSON from response (handle possible markdown wrapping)
-            let jsonStr = fullResponse.trim();
-            const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-              jsonStr = jsonMatch[0];
-            }
-
-            const parsed = JSON.parse(jsonStr);
-            setGeneratedExtension({
-              id: parsed.id || `ext-${Date.now()}`,
-              name: parsed.name || "Untitled Extension",
-              description: parsed.description || "",
-              contributionType: selectedType,
-              code: parsed.code || "",
-            });
-            setStep("done");
-          } catch {
-            setError("Failed to parse AI response. Try again with a different description.");
-            setStep("done");
-          }
-          setIsGenerating(false);
-        },
-        (errorMsg) => {
-          if (abortRef.current) return;
-          setError(errorMsg);
-          setStep("done");
-          setIsGenerating(false);
-        },
-        [{ role: "system", content: SYSTEM_PROMPT }],
-      );
+      setGeneratedExtension({
+        id: parsed.id || `ext-${Date.now()}`,
+        name: parsed.name || "Untitled Extension",
+        description: parsed.description || "",
+        contributionType: selectedType,
+        code: parsed.code || "",
+      });
+      setStep("done");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Generation failed");
       setStep("done");
+    } finally {
       setIsGenerating(false);
     }
-  }, [selectedType, description, settings.aiProviderId, settings.aiModelId]);
+  }, [selectedType, description]);
 
   const handleInstall = useCallback(() => {
     if (!generatedExtension) return;
@@ -193,25 +153,36 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
     store.registerExtension({
       extensionId,
       manifestId: extensionId,
+      name: generatedExtension.name,
+      description: generatedExtension.description,
+      contributionType: generatedExtension.contributionType,
       state: "loading",
     });
 
     try {
-      // Create a simple API that wraps the store
+      const toChildrenArray = (children: unknown) =>
+        (Array.isArray(children) ? children : [children]).filter((child) => child != null);
+
       const api = {
         sidebar: {
           registerView(config: { id: string; title: string; icon: string; render: () => string }) {
-            const { createElement } = require("react");
             store.registerSidebarView({
               id: config.id,
               extensionId,
               title: config.title,
-              icon: config.icon,
-              render: () =>
-                createElement("div", {
-                  dangerouslySetInnerHTML: { __html: config.render() },
-                  style: { height: "100%", overflow: "auto" },
-                }),
+              icon: config.icon || "puzzle",
+              render: () => {
+                const content = config.render();
+
+                if (typeof content === "string") {
+                  return createElement("div", {
+                    dangerouslySetInnerHTML: { __html: content },
+                    style: { height: "100%", overflow: "auto" },
+                  });
+                }
+
+                return content;
+              },
             });
           },
         },
@@ -249,13 +220,411 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
             });
           },
         },
+        ui: {
+          stack(config: {
+            children?: unknown[] | unknown;
+            gap?: number;
+            padding?: number;
+            style?: Record<string, unknown>;
+          }) {
+            const { children, gap = 12, padding = 0, style } = config;
+            return createElement(
+              "div",
+              {
+                className: "ui-font",
+                style: {
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: `${gap}px`,
+                  padding: `${padding}px`,
+                  color: "var(--color-text)",
+                  ...style,
+                },
+              },
+              ...toChildrenArray(children),
+            );
+          },
+          row(config: {
+            children?: unknown[] | unknown;
+            gap?: number;
+            align?: string;
+            justify?: string;
+            style?: Record<string, unknown>;
+          }) {
+            const {
+              children,
+              gap = 8,
+              align = "center",
+              justify = "space-between",
+              style,
+            } = config;
+            return createElement(
+              "div",
+              {
+                className: "ui-font",
+                style: {
+                  display: "flex",
+                  alignItems: align,
+                  justifyContent: justify,
+                  gap: `${gap}px`,
+                  color: "var(--color-text)",
+                  ...style,
+                },
+              },
+              ...toChildrenArray(children),
+            );
+          },
+          card(config: {
+            children?: unknown[] | unknown;
+            padding?: number;
+            style?: Record<string, unknown>;
+          }) {
+            const { children, padding = 12, style } = config;
+            return createElement(
+              "div",
+              {
+                className: "ui-font",
+                style: {
+                  border: "1px solid var(--color-border)",
+                  background: "color-mix(in srgb, var(--color-secondary-bg) 92%, transparent)",
+                  borderRadius: "12px",
+                  padding: `${padding}px`,
+                  color: "var(--color-text)",
+                  ...style,
+                },
+              },
+              ...toChildrenArray(children),
+            );
+          },
+          text(config: {
+            children?: unknown[] | unknown;
+            tone?: "default" | "muted" | "accent";
+            size?: "xs" | "sm" | "md" | "lg";
+            weight?: number;
+            style?: Record<string, unknown>;
+          }) {
+            const { children, tone = "default", size = "sm", weight = 400, style } = config;
+            const color =
+              tone === "muted"
+                ? "var(--color-text-lighter)"
+                : tone === "accent"
+                  ? "var(--color-accent)"
+                  : "var(--color-text)";
+            const fontSize =
+              size === "xs" ? "12px" : size === "md" ? "14px" : size === "lg" ? "16px" : "13px";
+
+            return createElement(
+              "div",
+              {
+                className: "ui-font",
+                style: {
+                  color,
+                  fontSize,
+                  fontWeight: weight,
+                  lineHeight: 1.45,
+                  ...style,
+                },
+              },
+              ...toChildrenArray(children),
+            );
+          },
+          badge(config: {
+            label: string;
+            tone?: "default" | "accent" | "muted";
+            style?: Record<string, unknown>;
+          }) {
+            const { label, tone = "default", style } = config;
+            const palette =
+              tone === "accent"
+                ? {
+                    color: "var(--color-accent)",
+                    background: "color-mix(in srgb, var(--color-accent) 14%, transparent)",
+                    border: "1px solid color-mix(in srgb, var(--color-accent) 28%, transparent)",
+                  }
+                : tone === "muted"
+                  ? {
+                      color: "var(--color-text-lighter)",
+                      background: "color-mix(in srgb, var(--color-secondary-bg) 72%, transparent)",
+                      border: "1px solid var(--color-border)",
+                    }
+                  : {
+                      color: "var(--color-text)",
+                      background: "color-mix(in srgb, var(--color-secondary-bg) 72%, transparent)",
+                      border: "1px solid var(--color-border)",
+                    };
+
+            return createElement(
+              "span",
+              {
+                className: "ui-font",
+                style: {
+                  display: "inline-flex",
+                  alignItems: "center",
+                  borderRadius: "999px",
+                  padding: "4px 8px",
+                  fontSize: "12px",
+                  fontWeight: 500,
+                  ...palette,
+                  ...style,
+                },
+              },
+              label,
+            );
+          },
+          button(config: {
+            label: string;
+            onClick: () => void;
+            variant?: "primary" | "secondary";
+          }) {
+            const { label, onClick, variant = "secondary" } = config;
+            return createElement(
+              Button,
+              {
+                onClick,
+                variant,
+                size: "xs",
+              },
+              label,
+            );
+          },
+          input(config: {
+            value?: string;
+            placeholder?: string;
+            type?: string;
+            readOnly?: boolean;
+            style?: Record<string, unknown>;
+          }) {
+            const { value = "", placeholder, type = "text", readOnly = true, style } = config;
+            return createElement("input", {
+              className: "ui-font",
+              defaultValue: value,
+              placeholder,
+              type,
+              readOnly,
+              style: {
+                width: "100%",
+                height: "30px",
+                borderRadius: "10px",
+                border: "1px solid var(--color-border)",
+                background: "var(--color-secondary-bg)",
+                color: "var(--color-text)",
+                padding: "0 10px",
+                outline: "none",
+                ...style,
+              },
+            });
+          },
+          metric(config: {
+            label: string;
+            value: string;
+            tone?: "default" | "accent" | "muted";
+            style?: Record<string, unknown>;
+          }) {
+            const { label, value, tone = "default", style } = config;
+            return createElement(
+              "div",
+              {
+                className: "ui-font",
+                style: {
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "4px",
+                  border: "1px solid var(--color-border)",
+                  borderRadius: "12px",
+                  padding: "10px 12px",
+                  background:
+                    tone === "accent"
+                      ? "color-mix(in srgb, var(--color-accent) 10%, var(--color-secondary-bg))"
+                      : "color-mix(in srgb, var(--color-secondary-bg) 92%, transparent)",
+                  ...style,
+                },
+              },
+              createElement(
+                "div",
+                {
+                  style: { color: "var(--color-text-lighter)", fontSize: "12px", lineHeight: 1.4 },
+                },
+                label,
+              ),
+              createElement(
+                "div",
+                {
+                  style: {
+                    color: tone === "accent" ? "var(--color-accent)" : "var(--color-text)",
+                    fontSize: "18px",
+                    fontWeight: 600,
+                    lineHeight: 1.2,
+                  },
+                },
+                value,
+              ),
+            );
+          },
+          sectionHeader(config: {
+            title: string;
+            subtitle?: string;
+            action?: ReactNode;
+            style?: Record<string, unknown>;
+          }) {
+            const { title, subtitle, action, style } = config;
+            return createElement(
+              "div",
+              {
+                className: "ui-font",
+                style: {
+                  display: "flex",
+                  alignItems: "flex-start",
+                  justifyContent: "space-between",
+                  gap: "12px",
+                  ...style,
+                },
+              },
+              createElement(
+                "div",
+                { style: { minWidth: 0, display: "flex", flexDirection: "column", gap: "4px" } },
+                createElement(
+                  "div",
+                  { style: { color: "var(--color-text)", fontSize: "14px", fontWeight: 600 } },
+                  title,
+                ),
+                subtitle
+                  ? createElement(
+                      "div",
+                      {
+                        style: {
+                          color: "var(--color-text-lighter)",
+                          fontSize: "12px",
+                          lineHeight: 1.45,
+                        },
+                      },
+                      subtitle,
+                    )
+                  : null,
+              ),
+              action ?? null,
+            );
+          },
+          listItem(config: {
+            title: string;
+            subtitle?: string;
+            trailing?: ReactNode;
+            tone?: "default" | "accent";
+            style?: Record<string, unknown>;
+          }) {
+            const { title, subtitle, trailing, tone = "default", style } = config;
+            return createElement(
+              "div",
+              {
+                className: "ui-font",
+                style: {
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "12px",
+                  border: "1px solid var(--color-border)",
+                  borderRadius: "10px",
+                  padding: "10px 12px",
+                  background:
+                    tone === "accent"
+                      ? "color-mix(in srgb, var(--color-accent) 8%, var(--color-secondary-bg))"
+                      : "color-mix(in srgb, var(--color-secondary-bg) 88%, transparent)",
+                  ...style,
+                },
+              },
+              createElement(
+                "div",
+                { style: { minWidth: 0, display: "flex", flexDirection: "column", gap: "4px" } },
+                createElement(
+                  "div",
+                  { style: { color: "var(--color-text)", fontSize: "13px", fontWeight: 500 } },
+                  title,
+                ),
+                subtitle
+                  ? createElement(
+                      "div",
+                      {
+                        style: {
+                          color: "var(--color-text-lighter)",
+                          fontSize: "12px",
+                          lineHeight: 1.4,
+                        },
+                      },
+                      subtitle,
+                    )
+                  : null,
+              ),
+              trailing ?? null,
+            );
+          },
+          emptyState(config: {
+            title: string;
+            description?: string;
+            action?: ReactNode;
+            style?: Record<string, unknown>;
+          }) {
+            const { title, description, action, style } = config;
+            return createElement(
+              "div",
+              {
+                className: "ui-font",
+                style: {
+                  border: "1px dashed var(--color-border)",
+                  borderRadius: "12px",
+                  padding: "16px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "8px",
+                  alignItems: "flex-start",
+                  background: "color-mix(in srgb, var(--color-secondary-bg) 70%, transparent)",
+                  ...style,
+                },
+              },
+              createElement(
+                "div",
+                { style: { color: "var(--color-text)", fontSize: "13px", fontWeight: 600 } },
+                title,
+              ),
+              description
+                ? createElement(
+                    "div",
+                    {
+                      style: {
+                        color: "var(--color-text-lighter)",
+                        fontSize: "12px",
+                        lineHeight: 1.45,
+                      },
+                    },
+                    description,
+                  )
+                : null,
+              action ?? null,
+            );
+          },
+          divider() {
+            return createElement("div", {
+              style: {
+                height: "1px",
+                width: "100%",
+                background: "var(--color-border)",
+              },
+            });
+          },
+        },
       };
 
-      // Execute the generated code
       const fn = new Function("api", generatedExtension.code);
       fn(api);
 
       store.updateExtensionState(extensionId, "active");
+      if (generatedExtension.contributionType === "sidebar") {
+        const generatedView = Array.from(store.sidebarViews.values()).find(
+          (view) => view.extensionId === extensionId,
+        );
+        if (generatedView) {
+          setActiveView(generatedView.id);
+          setIsSidebarVisible(true);
+        }
+      }
       setIsInstalled(true);
     } catch (err) {
       store.updateExtensionState(
@@ -265,48 +634,130 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
       );
       setError(`Installation failed: ${err instanceof Error ? err.message : "Unknown error"}`);
     }
-  }, [generatedExtension]);
+  }, [generatedExtension, setActiveView, setIsSidebarVisible]);
+
+  const renderLockedState = () => {
+    const title = isAuthenticated ? "Upgrade to generate extensions" : "Sign in to continue";
+    const description = isAuthenticated
+      ? "Hosted UI generation is available on Athas Pro. Upgrade your account to generate and install extensions directly in the app."
+      : "Sign in with your Athas account to generate and install extensions directly in the app.";
+
+    return (
+      <div className="flex h-full flex-col">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Puzzle className="size-4 text-accent" />
+            <h3 className="font-medium text-sm text-text">Create UI Extension</h3>
+          </div>
+          <Badge variant="muted" size="compact">
+            Hosted
+          </Badge>
+        </div>
+
+        <div className="flex flex-1 flex-col justify-center gap-4">
+          <div className="rounded-xl border border-border/60 bg-secondary-bg/40 p-4">
+            <p className="font-medium text-sm text-text">{title}</p>
+            <p className="mt-1 text-text-lighter text-xs">{description}</p>
+          </div>
+
+          <div className="grid gap-2 text-xs text-text-lighter">
+            <div className="rounded-lg border border-border/50 bg-primary-bg/30 p-3">
+              Sidebar views for custom tools and dashboards
+            </div>
+            <div className="rounded-lg border border-border/50 bg-primary-bg/30 p-3">
+              Toolbar actions for file and editor workflows
+            </div>
+            <div className="rounded-lg border border-border/50 bg-primary-bg/30 p-3">
+              Commands for quick actions in the command palette
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2">
+            <Button onClick={onClose} variant="ghost" size="sm">
+              Close
+            </Button>
+            {isAuthenticated ? (
+              <Button
+                onClick={() =>
+                  window.open("https://athas.dev/pricing", "_blank", "noopener,noreferrer")
+                }
+                variant="primary"
+                size="sm"
+              >
+                Upgrade to Pro
+              </Button>
+            ) : (
+              <Button
+                onClick={() => void signIn()}
+                variant="primary"
+                size="sm"
+                disabled={isSigningIn}
+                className="gap-1.5"
+              >
+                <LogIn className="size-3.5" />
+                {isSigningIn ? "Signing in..." : "Sign in"}
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  if (!isAuthenticated || !isPro) {
+    return renderLockedState();
+  }
 
   return (
     <div className="flex h-full flex-col">
-      {/* Header */}
-      <div className="mb-4 flex items-center gap-3">
-        {step !== "type" && (
-          <Button
-            onClick={handleBack}
-            variant="ghost"
-            size="icon-xs"
-            aria-label="Go back"
-            disabled={isGenerating}
-          >
-            <ArrowLeft />
-          </Button>
-        )}
-        <div className="flex items-center gap-2">
-          <Puzzle className="size-4 text-accent" />
-          <h3 className="font-medium text-sm text-text">
-            {step === "type" && "What do you want to create?"}
-            {step === "describe" && "Describe your extension"}
-            {step === "generating" && "Generating extension..."}
-            {step === "done" && (error ? "Something went wrong" : "Extension ready")}
-          </h3>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          {step !== "type" && (
+            <Button
+              onClick={handleBack}
+              variant="ghost"
+              size="icon-xs"
+              aria-label="Go back"
+              disabled={isGenerating}
+            >
+              <ArrowLeft />
+            </Button>
+          )}
+          <div className="flex items-center gap-2">
+            <Puzzle className="size-4 text-accent" />
+            <h3 className="font-medium text-sm text-text">
+              {step === "type" && "Create UI Extension"}
+              {step === "describe" && "Describe your extension"}
+              {step === "generating" && "Generating extension"}
+              {step === "done" && (error ? "Something went wrong" : "Extension ready")}
+            </h3>
+          </div>
         </div>
+        <Badge variant="muted" size="compact">
+          Hosted
+        </Badge>
       </div>
 
-      {/* Step: Select Type */}
       {step === "type" && (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3">
+          <div className="rounded-xl border border-border/60 bg-secondary-bg/40 p-4">
+            <p className="font-medium text-sm text-text">Build a UI extension from a prompt</p>
+            <p className="mt-1 text-text-lighter text-xs">
+              Choose where it should live, describe the workflow, then install it directly into
+              Athas.
+            </p>
+          </div>
           {CONTRIBUTION_OPTIONS.map((option) => (
             <button
               key={option.id}
               type="button"
               onClick={() => handleSelectType(option.id)}
-              className="flex items-center gap-3 rounded-lg border border-border/60 bg-secondary-bg/40 p-3 text-left transition-colors hover:border-accent/40 hover:bg-hover"
+              className="flex items-center gap-3 rounded-xl border border-border/60 bg-secondary-bg/40 p-3 text-left transition-colors hover:border-border-strong hover:bg-hover"
             >
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent/10">
-                <option.icon className="size-4 text-accent" />
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-bg/60">
+                <option.icon className="size-4 text-text" />
               </div>
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="font-medium text-sm text-text">{option.label}</p>
                 <p className="text-text-lighter text-xs">{option.description}</p>
               </div>
@@ -316,57 +767,58 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
         </div>
       )}
 
-      {/* Step: Describe */}
       {step === "describe" && (
         <div className="flex flex-1 flex-col gap-3">
-          <p className="text-text-lighter text-xs">
-            Describe what your{" "}
-            {CONTRIBUTION_OPTIONS.find((o) => o.id === selectedType)?.label.toLowerCase()} should
-            do. Be specific about functionality and content.
-          </p>
+          <div className="rounded-lg border border-border/60 bg-secondary-bg/30 p-3">
+            <p className="font-medium text-sm text-text">
+              {CONTRIBUTION_OPTIONS.find((o) => o.id === selectedType)?.label}
+            </p>
+            <p className="mt-1 text-text-lighter text-xs">
+              Describe what it should show, what actions it should support, and how the user should
+              interact with it.
+            </p>
+          </div>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder={
               selectedType === "sidebar"
-                ? "e.g., A Docker container manager that shows running containers with start/stop buttons"
+                ? "e.g., A project releases panel that lists recent builds, deployment status, and quick rollback actions."
                 : selectedType === "toolbar"
-                  ? "e.g., A button that formats the current file with prettier"
-                  : "e.g., A command that generates a UUID and copies it to clipboard"
+                  ? "e.g., A toolbar button that summarizes the current file and opens the result in a side panel."
+                  : "e.g., A command that generates a changelog draft from the current git diff."
             }
-            className="min-h-[100px] flex-1 resize-none rounded-lg border border-border/60 bg-secondary-bg/40 p-3 text-sm text-text placeholder:text-text-lighter/60 focus:border-accent/50 focus:outline-none"
+            className="min-h-[120px] flex-1 resize-none rounded-lg border border-border bg-secondary-bg px-3 py-2 text-sm text-text placeholder:text-text-lighter/60 transition-[border-color,box-shadow,background-color] focus:border-border-strong focus:bg-secondary-bg focus:outline-none focus:ring-1 focus:ring-border-strong/35"
             autoFocus
           />
-          <Button
-            onClick={handleGenerate}
-            variant="primary"
-            size="sm"
-            disabled={!description.trim()}
-            className="gap-1.5 self-end"
-          >
-            <Sparkles className="size-3.5" />
-            Generate with AI
-          </Button>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-text-lighter text-xs">
+              Hosted generation. No user API key required.
+            </p>
+            <Button
+              onClick={handleGenerate}
+              variant="primary"
+              size="sm"
+              disabled={!description.trim()}
+              className="gap-1.5"
+            >
+              <Sparkles className="size-3.5" />
+              Generate
+            </Button>
+          </div>
         </div>
       )}
 
-      {/* Step: Generating */}
       {step === "generating" && (
-        <div className="flex flex-1 flex-col items-center justify-center gap-3">
+        <div className="flex flex-1 flex-col items-center justify-center gap-4">
+          <p className="font-medium text-sm text-text">Generating</p>
           <Loader2 className="size-6 animate-spin text-accent" />
-          <p className="text-text-lighter text-xs">AI is creating your extension...</p>
-          {streamingText && (
-            <div className="mt-2 max-h-32 w-full overflow-auto rounded-lg bg-secondary-bg/60 p-2">
-              <pre className="whitespace-pre-wrap text-text-lighter text-[11px]">
-                {streamingText.slice(0, 300)}
-                {streamingText.length > 300 && "..."}
-              </pre>
-            </div>
-          )}
+          <p className="min-h-4 text-center text-text-lighter text-xs">
+            {GENERATING_MESSAGES[generationMessageIndex]}
+          </p>
         </div>
       )}
 
-      {/* Step: Done */}
       {step === "done" && (
         <div className="flex flex-1 flex-col gap-3">
           {error ? (
@@ -387,7 +839,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                 <div className="flex items-center gap-2 rounded-lg border border-green-500/30 bg-green-500/10 p-3">
                   <Check className="size-4 text-green-500" />
                   <p className="text-green-400 text-sm">
-                    Extension installed and active!
+                    Extension installed and active.
                     {generatedExtension.contributionType === "sidebar" &&
                       " Check the sidebar for your new view."}
                     {generatedExtension.contributionType === "toolbar" &&
@@ -398,10 +850,10 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                 <div className="flex gap-2">
                   <Button onClick={handleInstall} variant="primary" size="sm" className="gap-1.5">
                     <Puzzle className="size-3.5" />
-                    Install Extension
+                    Install
                   </Button>
                   <Button onClick={handleBack} variant="secondary" size="sm">
-                    Regenerate
+                    Try another prompt
                   </Button>
                 </div>
               )}

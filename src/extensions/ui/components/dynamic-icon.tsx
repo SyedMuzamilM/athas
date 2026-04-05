@@ -1,4 +1,4 @@
-import { icons, type LucideIcon } from "lucide-react";
+import { icons, type LucideIcon, Puzzle } from "lucide-react";
 
 interface DynamicIconProps {
   name: string;
@@ -18,7 +18,7 @@ export function DynamicIcon({ name, className, size }: DynamicIconProps) {
   const Icon: LucideIcon | undefined = icons[key as keyof typeof icons];
 
   if (!Icon) {
-    return <span className={className} style={{ width: size, height: size }} />;
+    return <Puzzle className={className} size={size} />;
   }
 
   return <Icon className={className} size={size} />;

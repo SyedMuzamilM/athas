@@ -3,6 +3,9 @@ import type { ReactNode } from "react";
 export interface UIExtensionRegistration {
   extensionId: string;
   manifestId: string;
+  name?: string;
+  description?: string;
+  contributionType?: "sidebar" | "toolbar" | "command";
   state: "loading" | "active" | "error" | "disabled";
   error?: string;
 }

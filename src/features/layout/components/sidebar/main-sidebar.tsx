@@ -39,6 +39,8 @@ export const MainSidebar = memo(() => {
   const updateActivePath = useSidebarStore.use.updateActivePath?.();
 
   const { settings } = useSettingsStore();
+  const isFilesViewActive =
+    !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "files";
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -60,7 +62,10 @@ export const MainSidebar = memo(() => {
         )}
 
         <div
-          className={cn("relative h-full", (isGitViewActive || isGitHubPRsViewActive) && "hidden")}
+          className={cn(
+            "relative h-full",
+            (!isFilesViewActive || isGitViewActive || isGitHubPRsViewActive) && "hidden",
+          )}
         >
           {(!isFileTreeLoading || isSwitchingProject) && (
             <FileExplorerTree
