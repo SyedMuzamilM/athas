@@ -11,15 +11,10 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { useAuthStore } from "@/features/window/stores/auth-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
-import { toast } from "@/ui/toast";
 import { Button } from "@/ui/button";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import Tooltip from "@/ui/tooltip";
-import {
-  beginDesktopAuthSession,
-  DesktopAuthError,
-  waitForDesktopAuthToken,
-} from "@/features/window/services/auth-api";
+import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
 
 interface AccountMenuProps {
   iconSize?: number;
@@ -31,7 +26,6 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const subscription = useAuthStore((s) => s.subscription);
   const logout = useAuthStore((s) => s.logout);
-  const handleAuthCallback = useAuthStore((s) => s.handleAuthCallback);
   const setIsSettingsDialogVisible = useUIState((state) => state.setIsSettingsDialogVisible);
   const hasBlockingModalOpen = useUIState(
     (state) =>
@@ -47,30 +41,15 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
 
   const [isOpen, setIsOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const { signIn } = useDesktopSignIn({
+    onSuccess: () => setIsOpen(false),
+  });
 
   const handleSignIn = async () => {
-    try {
-      const { sessionId, pollSecret, loginUrl } = await beginDesktopAuthSession();
-      if (import.meta.env.DEV) {
-        console.log("[Auth] Opening desktop login URL:", loginUrl);
-      }
-      await openUrl(loginUrl);
-      toast.info("Complete sign-in in your browser. Waiting for confirmation...");
-
-      const token = await waitForDesktopAuthToken(sessionId, pollSecret);
-      await handleAuthCallback(token);
-      toast.success("Signed in successfully!");
-    } catch (error) {
-      if (error instanceof DesktopAuthError && error.code === "endpoint_unavailable") {
-        toast.error(
-          "Desktop sign-in endpoint is unavailable on this server. Please use the local dev www server.",
-        );
-        return;
-      }
-
-      const message = error instanceof Error ? error.message : "Authentication failed.";
-      toast.error(message);
+    if (import.meta.env.DEV) {
+      console.log("[Auth] Starting desktop sign-in flow from account menu");
     }
+    await signIn();
   };
 
   const handleSignOut = async () => {

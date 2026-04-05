@@ -138,7 +138,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
   {
     id: "file-tree-hidden-file-patterns",
     tab: "file-explorer",
-    section: "File Explorer Filters",
+    section: "Filters",
     label: "Hidden File Patterns",
     description: "Files matching these glob patterns will be hidden from the file tree",
     keywords: ["hidden", "files", "patterns", "glob", "filter", "exclude"],
@@ -146,7 +146,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
   {
     id: "file-tree-hidden-directory-patterns",
     tab: "file-explorer",
-    section: "File Explorer Filters",
+    section: "Filters",
     label: "Hidden Directory Patterns",
     description: "Directories matching these glob patterns will be hidden from the file tree",
     keywords: ["hidden", "directories", "folders", "patterns", "glob", "filter", "exclude"],

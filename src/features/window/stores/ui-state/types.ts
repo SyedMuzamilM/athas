@@ -1,4 +1,5 @@
 export type SettingsTab =
+  | "account"
   | "general"
   | "editor"
   | "git"
