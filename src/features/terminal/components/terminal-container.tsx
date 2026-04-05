@@ -631,7 +631,7 @@ const TerminalContainer = ({
     >
       {/* Vertical-only actions header */}
       {isVertical && (
-        <div className="flex min-h-8 shrink-0 items-center justify-end gap-1 bg-primary-bg px-1.5 py-1">
+        <div className="flex min-h-8 shrink-0 items-center justify-end gap-1 rounded-t-lg bg-primary-bg px-1.5 py-1">
           <Tooltip content="Find in Terminal (Cmd/Ctrl+F)" side="bottom">
             <Button
               type="button"
@@ -701,7 +701,7 @@ const TerminalContainer = ({
 
         <div
           className={cn(
-            "flex min-h-0 min-w-0 flex-1 flex-col",
+            "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-primary-bg",
             isVertical &&
               (tabSidebarPosition === "left"
                 ? "rounded-tl-lg border-border/60 border-t border-l"

@@ -29,7 +29,7 @@ const fileCommands: Command[] = [
     id: "workbench.newTab",
     title: "New Tab",
     category: "File",
-    keybinding: "cmd+t",
+    keybinding: "cmd+n",
     execute: () => {
       if (useKeymapStore.getState().contexts.terminalFocus) return;
       useBufferStore.getState().actions.showNewTabView();
@@ -117,7 +117,6 @@ const fileCommands: Command[] = [
     id: "file.new",
     title: "New File",
     category: "File",
-    keybinding: "cmd+n",
     execute: () => {
       if (useKeymapStore.getState().contexts.terminalFocus) return;
 

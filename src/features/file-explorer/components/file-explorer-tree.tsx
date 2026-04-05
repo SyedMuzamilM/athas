@@ -582,8 +582,15 @@ function FileExplorerTreeComponent({
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent, file: FileEntry) => {
-      if (e.key === "Enter") finishInlineEditing(file, editingValue);
-      else if (e.key === "Escape") cancelInlineEditing(file);
+      if (e.key === "Enter") {
+        e.preventDefault();
+        e.stopPropagation();
+        finishInlineEditing(file, editingValue);
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        cancelInlineEditing(file);
+      }
     },
     [editingValue],
   );
@@ -707,10 +714,6 @@ function FileExplorerTreeComponent({
             e.preventDefault();
             e.stopPropagation();
             setContextMenu(null);
-            updateActivePath?.("");
-            if (document.activeElement instanceof HTMLElement) {
-              document.activeElement.blur();
-            }
             containerRef.current?.focus();
             break;
           }

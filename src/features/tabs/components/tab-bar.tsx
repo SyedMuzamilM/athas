@@ -14,6 +14,7 @@ import { useSettingsStore } from "@/features/settings/store";
 import type { PaneContent } from "@/features/panes/types/pane-content";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
 import { useSidebarStore } from "@/features/layout/stores/sidebar-store";
+import { useTerminalStore } from "@/features/terminal/stores/terminal-store";
 import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-dialog";
 import { Button } from "@/ui/button";
 import Tooltip from "@/ui/tooltip";
@@ -109,6 +110,37 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
   const dragStateRef = useRef(dragState);
   const handleRevealInFolder = useFileSystemStore.use.handleRevealInFolder?.();
   const { clearPositionCache } = useEditorStateStore.getState().actions;
+  const terminalSessions = useTerminalStore((state) => state.sessions);
+
+  const getDirectoryLabel = useCallback((directory?: string) => {
+    if (!directory) return "";
+    const normalized = directory.replace(/[\\/]+$/, "");
+    return normalized.split(/[\\/]/).pop() || directory;
+  }, []);
+
+  const getCommandLabel = useCallback((command?: string) => {
+    if (!command) return "";
+    const firstSegment = command.trim().split(/\s+/)[0];
+    return firstSegment?.split(/[\\/]/).pop() || "";
+  }, []);
+
+  const isUsefulTerminalTitle = useCallback((title?: string) => {
+    if (!title) return false;
+    const trimmed = title.trim();
+    if (!trimmed || trimmed === "Default Terminal") return false;
+    if (trimmed.length > 28) return false;
+    if (trimmed.includes("@")) return false;
+    if (trimmed.includes("/") || trimmed.includes("\\")) return false;
+
+    for (const char of trimmed) {
+      const code = char.charCodeAt(0);
+      if ((code >= 0 && code <= 31) || code === 127 || code === 155) {
+        return false;
+      }
+    }
+
+    return true;
+  }, []);
 
   const handleJumpBack = useCallback(async () => {
     const bufferStore = useBufferStore.getState();
@@ -208,6 +240,29 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
   const displayNames = useMemo(() => {
     return calculateDisplayNames(buffers, rootFolderPath);
   }, [buffers, rootFolderPath]);
+
+  const getBufferDisplayName = useCallback(
+    (buffer: PaneContent) => {
+      if (buffer.type === "terminal") {
+        const session = terminalSessions.get(buffer.sessionId);
+        const title = session?.title?.trim();
+        if (isUsefulTerminalTitle(title)) return title!;
+
+        const commandLabel = getCommandLabel(buffer.initialCommand);
+        if (commandLabel) return commandLabel;
+
+        const dirLabel = getDirectoryLabel(session?.currentDirectory || buffer.workingDirectory);
+        if (dirLabel) return dirLabel;
+      }
+
+      if (buffer.type === "diff") {
+        return formatDiffBufferLabel(displayNames.get(buffer.id) || buffer.name, buffer.path);
+      }
+
+      return displayNames.get(buffer.id) ?? buffer.name;
+    },
+    [displayNames, getCommandLabel, getDirectoryLabel, isUsefulTerminalTitle, terminalSessions],
+  );
 
   useEffect(() => {
     if (settings.maxOpenTabs > 0 && buffers.length > settings.maxOpenTabs && handleTabClose) {
@@ -786,11 +841,7 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
               <TabBarItem
                 key={buffer.id}
                 buffer={buffer}
-                displayName={
-                  buffer.type === "diff"
-                    ? formatDiffBufferLabel(displayNames.get(buffer.id) || buffer.name, buffer.path)
-                    : (displayNames.get(buffer.id) ?? buffer.name)
-                }
+                displayName={getBufferDisplayName(buffer)}
                 index={index}
                 isActive={isActive}
                 isDraggedTab={isDraggedTab}
