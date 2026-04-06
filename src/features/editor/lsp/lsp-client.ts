@@ -551,6 +551,40 @@ export class LspClient {
     }
   }
 
+  async getDocumentSymbols(filePath: string): Promise<
+    {
+      name: string;
+      kind: string;
+      detail?: string;
+      line: number;
+      character: number;
+      endLine: number;
+      endCharacter: number;
+      containerName?: string;
+    }[]
+  > {
+    try {
+      logger.debug("LSPClient", `Getting document symbols for ${filePath}`);
+      const symbols = await invoke<
+        {
+          name: string;
+          kind: string;
+          detail?: string;
+          line: number;
+          character: number;
+          endLine: number;
+          endCharacter: number;
+          containerName?: string;
+        }[]
+      >("lsp_get_document_symbols", { filePath });
+      logger.debug("LSPClient", `Got ${symbols.length} document symbols`);
+      return symbols;
+    } catch (error) {
+      logger.error("LSPClient", "LSP document symbols error:", error);
+      return [];
+    }
+  }
+
   async getSignatureHelp(
     filePath: string,
     line: number,

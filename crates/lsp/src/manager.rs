@@ -488,6 +488,40 @@ impl LspManager {
       }
    }
 
+   pub async fn get_document_symbols(
+      &self,
+      file_path: &str,
+   ) -> Result<Option<DocumentSymbolResponse>> {
+      let Some(client) = self.get_client_for_file(file_path) else {
+         return Ok(None);
+      };
+
+      let text_document = TextDocumentIdentifier {
+         uri: Url::from_file_path(file_path).map_err(|_| anyhow::anyhow!("Invalid file path"))?,
+      };
+
+      let params = DocumentSymbolParams {
+         text_document,
+         work_done_progress_params: Default::default(),
+         partial_result_params: Default::default(),
+      };
+
+      match client.text_document_document_symbol(params).await {
+         Ok(value) => Ok(value),
+         Err(error) => {
+            let message = error.to_string();
+            if message.contains("-32601")
+               || message.contains("Method not found")
+               || message.contains("Unhandled method textDocument/documentSymbol")
+            {
+               log::debug!("DocumentSymbol method is not supported by this language server");
+               return Ok(None);
+            }
+            Err(error)
+         }
+      }
+   }
+
    pub async fn get_signature_help(
       &self,
       file_path: &str,

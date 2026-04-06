@@ -246,6 +246,12 @@ impl LspClient {
             dynamic_registration: Some(true),
             link_support: Some(true),
          }),
+         document_symbol: Some(DocumentSymbolClientCapabilities {
+            dynamic_registration: Some(true),
+            symbol_kind: None,
+            hierarchical_document_symbol_support: Some(true),
+            tag_support: None,
+         }),
          references: Some(DynamicRegistrationClientCapabilities {
             dynamic_registration: Some(true),
          }),
@@ -488,6 +494,13 @@ impl LspClient {
       params: CodeActionParams,
    ) -> Result<Option<CodeActionResponse>> {
       self.request::<request::CodeActionRequest>(params).await
+   }
+
+   pub async fn text_document_document_symbol(
+      &self,
+      params: DocumentSymbolParams,
+   ) -> Result<Option<DocumentSymbolResponse>> {
+      self.request::<request::DocumentSymbolRequest>(params).await
    }
 
    pub async fn text_document_signature_help(

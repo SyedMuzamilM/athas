@@ -1,8 +1,8 @@
 use athas_lsp::{LspError, LspManager, LspResult};
 use lsp_types::{
    CodeActionOrCommand, CompletionItem, Diagnostic as LspDiagnostic, DiagnosticSeverity,
-   GotoDefinitionResponse, Hover, Location, NumberOrString, Position, Range, SignatureHelp,
-   WorkspaceEdit,
+   DocumentSymbol, DocumentSymbolResponse, GotoDefinitionResponse, Hover, Location, NumberOrString,
+   Position, Range, SignatureHelp, SymbolKind, WorkspaceEdit,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -40,6 +40,75 @@ pub struct LspCodeActionItem {
 pub struct LspApplyCodeActionResult {
    pub applied: bool,
    pub reason: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FlatSymbol {
+   pub name: String,
+   pub kind: String,
+   pub detail: Option<String>,
+   pub line: u32,
+   pub character: u32,
+   pub end_line: u32,
+   pub end_character: u32,
+   pub container_name: Option<String>,
+}
+
+fn symbol_kind_to_string(kind: SymbolKind) -> String {
+   match kind {
+      SymbolKind::FILE => "file",
+      SymbolKind::MODULE => "module",
+      SymbolKind::NAMESPACE => "namespace",
+      SymbolKind::PACKAGE => "package",
+      SymbolKind::CLASS => "class",
+      SymbolKind::METHOD => "method",
+      SymbolKind::PROPERTY => "property",
+      SymbolKind::FIELD => "field",
+      SymbolKind::CONSTRUCTOR => "constructor",
+      SymbolKind::ENUM => "enum",
+      SymbolKind::INTERFACE => "interface",
+      SymbolKind::FUNCTION => "function",
+      SymbolKind::VARIABLE => "variable",
+      SymbolKind::CONSTANT => "constant",
+      SymbolKind::STRING => "string",
+      SymbolKind::NUMBER => "number",
+      SymbolKind::BOOLEAN => "boolean",
+      SymbolKind::ARRAY => "array",
+      SymbolKind::OBJECT => "object",
+      SymbolKind::KEY => "key",
+      SymbolKind::NULL => "null",
+      SymbolKind::ENUM_MEMBER => "enum-member",
+      SymbolKind::STRUCT => "struct",
+      SymbolKind::EVENT => "event",
+      SymbolKind::OPERATOR => "operator",
+      SymbolKind::TYPE_PARAMETER => "type-parameter",
+      _ => "unknown",
+   }
+   .to_string()
+}
+
+fn flatten_document_symbols(
+   symbols: &[DocumentSymbol],
+   container: Option<&str>,
+) -> Vec<FlatSymbol> {
+   let mut result = Vec::new();
+   for symbol in symbols {
+      result.push(FlatSymbol {
+         name: symbol.name.clone(),
+         kind: symbol_kind_to_string(symbol.kind),
+         detail: symbol.detail.clone(),
+         line: symbol.selection_range.start.line,
+         character: symbol.selection_range.start.character,
+         end_line: symbol.selection_range.end.line,
+         end_character: symbol.selection_range.end.character,
+         container_name: container.map(|s| s.to_string()),
+      });
+      if let Some(children) = &symbol.children {
+         result.extend(flatten_document_symbols(children, Some(&symbol.name)));
+      }
+   }
+   result
 }
 
 fn convert_diagnostic_context_to_lsp(context: LspDiagnosticContext) -> LspDiagnostic {
@@ -284,6 +353,42 @@ pub async fn lsp_apply_code_action(
       })?;
 
    Ok(LspApplyCodeActionResult { applied, reason })
+}
+
+#[tauri::command]
+pub async fn lsp_get_document_symbols(
+   lsp_manager: State<'_, LspManager>,
+   file_path: String,
+) -> LspResult<Vec<FlatSymbol>> {
+   let response = lsp_manager
+      .get_document_symbols(&file_path)
+      .await
+      .map_err(|e| {
+         log::error!("Failed to get document symbols: {}", e);
+         LspError::from(e)
+      })?;
+
+   let symbols = match response {
+      Some(DocumentSymbolResponse::Flat(infos)) => infos
+         .into_iter()
+         .map(|info| FlatSymbol {
+            name: info.name,
+            kind: symbol_kind_to_string(info.kind),
+            detail: None,
+            line: info.location.range.start.line,
+            character: info.location.range.start.character,
+            end_line: info.location.range.end.line,
+            end_character: info.location.range.end.character,
+            container_name: info.container_name,
+         })
+         .collect(),
+      Some(DocumentSymbolResponse::Nested(doc_symbols)) => {
+         flatten_document_symbols(&doc_symbols, None)
+      }
+      None => vec![],
+   };
+
+   Ok(symbols)
 }
 
 #[tauri::command]
