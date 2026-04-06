@@ -562,6 +562,8 @@ fn main() {
          lsp_get_completions,
          lsp_get_hover,
          lsp_get_definition,
+         lsp_get_references,
+         lsp_rename,
          lsp_get_code_actions,
          lsp_apply_code_action,
          lsp_document_open,

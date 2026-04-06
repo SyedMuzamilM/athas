@@ -727,6 +727,15 @@ const navigationCommands: Command[] = [
     },
   },
   {
+    id: "editor.renameSymbol",
+    title: "Rename Symbol",
+    category: "Navigation",
+    keybinding: "F2",
+    execute: () => {
+      window.dispatchEvent(new CustomEvent("editor-rename-symbol"));
+    },
+  },
+  {
     id: "navigation.goBack",
     title: "Go Back",
     category: "Navigation",

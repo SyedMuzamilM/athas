@@ -16,6 +16,8 @@ import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useZoomStore } from "@/features/window/stores/zoom-store";
 import { CompletionDropdown } from "../completion/completion-dropdown";
 import { HoverTooltip } from "../lsp/hover-tooltip";
+import RenameInput from "../lsp/rename-input";
+import { useRename } from "../lsp/use-rename";
 import { MarkdownPreview } from "../markdown/markdown-preview";
 import { ScrollDebugOverlay } from "./debug/scroll-debug-overlay";
 import { Editor } from "./editor";
@@ -152,6 +154,9 @@ const CodeEditor = ({
     editorRef,
     fontSize: zoomedFontSize,
   });
+
+  // Rename symbol support
+  const rename = useRename(enableInteractiveServices ? filePath : undefined);
 
   // Combine mouse move handlers for hover and definition link
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -351,6 +356,22 @@ const CodeEditor = ({
 
           {/* Completion Dropdown */}
           {enableInteractiveServices && <CompletionDropdown />}
+
+          {/* Rename Input */}
+          {enableInteractiveServices && rename.renameState && (
+            <RenameInput
+              symbol={rename.renameState.symbol}
+              line={rename.renameState.line}
+              column={rename.renameState.column}
+              fontSize={zoomedFontSize}
+              charWidth={zoomedFontSize * 0.6}
+              scrollTop={editorRef.current?.querySelector("textarea")?.scrollTop ?? 0}
+              scrollLeft={editorRef.current?.querySelector("textarea")?.scrollLeft ?? 0}
+              inputRef={rename.inputRef}
+              onSubmit={(newName) => void rename.executeRename(newName)}
+              onCancel={rename.cancelRename}
+            />
+          )}
 
           {/* Main editor - absolute positioned to fill container */}
           <div className="absolute inset-0 bg-primary-bg">

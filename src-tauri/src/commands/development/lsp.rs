@@ -1,7 +1,7 @@
 use athas_lsp::{LspError, LspManager, LspResult};
 use lsp_types::{
    CodeActionOrCommand, CompletionItem, Diagnostic as LspDiagnostic, DiagnosticSeverity,
-   GotoDefinitionResponse, Hover, Location, NumberOrString, Position, Range,
+   GotoDefinitionResponse, Hover, Location, NumberOrString, Position, Range, WorkspaceEdit,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -283,6 +283,39 @@ pub async fn lsp_apply_code_action(
       })?;
 
    Ok(LspApplyCodeActionResult { applied, reason })
+}
+
+#[tauri::command]
+pub async fn lsp_get_references(
+   lsp_manager: State<'_, LspManager>,
+   file_path: String,
+   line: u32,
+   character: u32,
+) -> LspResult<Option<Vec<Location>>> {
+   lsp_manager
+      .get_references(&file_path, line, character)
+      .await
+      .map_err(|e| {
+         log::error!("Failed to get references: {}", e);
+         e.into()
+      })
+}
+
+#[tauri::command]
+pub async fn lsp_rename(
+   lsp_manager: State<'_, LspManager>,
+   file_path: String,
+   line: u32,
+   character: u32,
+   new_name: String,
+) -> LspResult<Option<WorkspaceEdit>> {
+   lsp_manager
+      .rename(&file_path, line, character, new_name)
+      .await
+      .map_err(|e| {
+         log::error!("Failed to rename: {}", e);
+         e.into()
+      })
 }
 
 #[tauri::command]

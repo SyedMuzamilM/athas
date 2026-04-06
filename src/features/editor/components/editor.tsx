@@ -1272,6 +1272,9 @@ export function Editor({
             onFindReferences={() => {
               keymapRegistry.executeCommand("editor.goToReferences");
             }}
+            onRenameSymbol={() => {
+              keymapRegistry.executeCommand("editor.renameSymbol");
+            }}
           />,
           document.body,
         )}

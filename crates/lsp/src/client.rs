@@ -238,6 +238,12 @@ impl LspClient {
          references: Some(DynamicRegistrationClientCapabilities {
             dynamic_registration: Some(true),
          }),
+         rename: Some(RenameClientCapabilities {
+            dynamic_registration: Some(true),
+            prepare_support: Some(true),
+            prepare_support_default_behavior: None,
+            honors_change_annotations: Some(false),
+         }),
          code_action: Some(CodeActionClientCapabilities {
             dynamic_registration: Some(true),
             is_preferred_support: Some(true),
@@ -471,6 +477,24 @@ impl LspClient {
       params: CodeActionParams,
    ) -> Result<Option<CodeActionResponse>> {
       self.request::<request::CodeActionRequest>(params).await
+   }
+
+   pub async fn text_document_references(
+      &self,
+      params: ReferenceParams,
+   ) -> Result<Option<Vec<Location>>> {
+      self.request::<request::References>(params).await
+   }
+
+   pub async fn text_document_rename(&self, params: RenameParams) -> Result<Option<WorkspaceEdit>> {
+      self.request::<request::Rename>(params).await
+   }
+
+   pub async fn text_document_prepare_rename(
+      &self,
+      params: TextDocumentPositionParams,
+   ) -> Result<Option<PrepareRenameResponse>> {
+      self.request::<request::PrepareRenameRequest>(params).await
    }
 
    pub async fn workspace_execute_command(

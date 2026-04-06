@@ -488,6 +488,123 @@ impl LspManager {
       }
    }
 
+   pub async fn get_references(
+      &self,
+      file_path: &str,
+      line: u32,
+      character: u32,
+   ) -> Result<Option<Vec<Location>>> {
+      let Some(client) = self.get_client_for_file(file_path) else {
+         return Ok(None);
+      };
+
+      let text_document = TextDocumentIdentifier {
+         uri: Url::from_file_path(file_path).map_err(|_| anyhow::anyhow!("Invalid file path"))?,
+      };
+
+      let params = ReferenceParams {
+         text_document_position: TextDocumentPositionParams {
+            text_document,
+            position: Position { line, character },
+         },
+         context: ReferenceContext {
+            include_declaration: true,
+         },
+         work_done_progress_params: Default::default(),
+         partial_result_params: Default::default(),
+      };
+
+      match client.text_document_references(params).await {
+         Ok(value) => Ok(value),
+         Err(error) => {
+            let message = error.to_string();
+            if message.contains("-32601")
+               || message.contains("Method not found")
+               || message.contains("Unhandled method textDocument/references")
+            {
+               log::debug!("References method is not supported by this language server");
+               return Ok(None);
+            }
+            Err(error)
+         }
+      }
+   }
+
+   pub async fn rename(
+      &self,
+      file_path: &str,
+      line: u32,
+      character: u32,
+      new_name: String,
+   ) -> Result<Option<WorkspaceEdit>> {
+      let Some(client) = self.get_client_for_file(file_path) else {
+         return Ok(None);
+      };
+
+      let text_document = TextDocumentIdentifier {
+         uri: Url::from_file_path(file_path).map_err(|_| anyhow::anyhow!("Invalid file path"))?,
+      };
+
+      let params = RenameParams {
+         text_document_position: TextDocumentPositionParams {
+            text_document,
+            position: Position { line, character },
+         },
+         new_name,
+         work_done_progress_params: Default::default(),
+      };
+
+      match client.text_document_rename(params).await {
+         Ok(value) => Ok(value),
+         Err(error) => {
+            let message = error.to_string();
+            if message.contains("-32601")
+               || message.contains("Method not found")
+               || message.contains("Unhandled method textDocument/rename")
+            {
+               log::debug!("Rename method is not supported by this language server");
+               return Ok(None);
+            }
+            Err(error)
+         }
+      }
+   }
+
+   pub async fn prepare_rename(
+      &self,
+      file_path: &str,
+      line: u32,
+      character: u32,
+   ) -> Result<Option<PrepareRenameResponse>> {
+      let Some(client) = self.get_client_for_file(file_path) else {
+         return Ok(None);
+      };
+
+      let text_document = TextDocumentIdentifier {
+         uri: Url::from_file_path(file_path).map_err(|_| anyhow::anyhow!("Invalid file path"))?,
+      };
+
+      let params = TextDocumentPositionParams {
+         text_document,
+         position: Position { line, character },
+      };
+
+      match client.text_document_prepare_rename(params).await {
+         Ok(value) => Ok(value),
+         Err(error) => {
+            let message = error.to_string();
+            if message.contains("-32601")
+               || message.contains("Method not found")
+               || message.contains("Unhandled method textDocument/prepareRename")
+            {
+               log::debug!("PrepareRename method is not supported by this language server");
+               return Ok(None);
+            }
+            Err(error)
+         }
+      }
+   }
+
    pub async fn get_code_actions(
       &self,
       file_path: &str,

@@ -591,6 +591,52 @@ export class LspClient {
     }
   }
 
+  async rename(
+    filePath: string,
+    line: number,
+    character: number,
+    newName: string,
+  ): Promise<{
+    changes?: Record<
+      string,
+      {
+        range: {
+          start: { line: number; character: number };
+          end: { line: number; character: number };
+        };
+        newText: string;
+      }[]
+    >;
+  } | null> {
+    try {
+      logger.debug("LSPClient", `Renaming at ${filePath}:${line}:${character} to "${newName}"`);
+      const result = await invoke<{
+        changes?: Record<
+          string,
+          {
+            range: {
+              start: { line: number; character: number };
+              end: { line: number; character: number };
+            };
+            newText: string;
+          }[]
+        >;
+      } | null>("lsp_rename", {
+        filePath,
+        line,
+        character,
+        newName,
+      });
+      if (result) {
+        logger.debug("LSPClient", `Rename result: ${JSON.stringify(result)}`);
+      }
+      return result;
+    } catch (error) {
+      logger.error("LSPClient", "LSP rename error:", error);
+      return null;
+    }
+  }
+
   async getCodeActions(filePath: string, diagnostic: Diagnostic): Promise<DiagnosticCodeAction[]> {
     try {
       return await invoke<DiagnosticCodeAction[]>("lsp_get_code_actions", {
