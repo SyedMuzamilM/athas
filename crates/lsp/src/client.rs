@@ -204,7 +204,11 @@ impl LspClient {
       Ok((client, child))
    }
 
-   pub async fn initialize(&self, root_uri: Url) -> Result<()> {
+   pub async fn initialize(
+      &self,
+      root_uri: Url,
+      initialization_options: Option<Value>,
+   ) -> Result<()> {
       log::info!("Initializing LSP server with root_uri: {}", root_uri);
 
       // Build client capabilities with text document sync and diagnostics support
@@ -284,6 +288,7 @@ impl LspClient {
          process_id: Some(std::process::id()),
          #[allow(deprecated)]
          root_uri: Some(root_uri),
+         initialization_options,
          capabilities: ClientCapabilities {
             text_document: Some(text_document_capabilities),
             workspace: Some(WorkspaceClientCapabilities {

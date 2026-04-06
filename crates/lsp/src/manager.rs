@@ -94,6 +94,7 @@ impl LspManager {
       workspace_path: PathBuf,
       server_path_override: Option<String>,
       server_args_override: Option<Vec<String>>,
+      initialization_options: Option<serde_json::Value>,
    ) -> Result<()> {
       log::info!("Starting LSP for workspace: {:?}", workspace_path);
 
@@ -139,7 +140,9 @@ impl LspManager {
       .await?;
 
       // Initialize the client
-      client.initialize(root_uri).await?;
+      client
+         .initialize(root_uri, initialization_options.clone())
+         .await?;
 
       // Check if LSP already running for this workspace+language
       let workspace_key = (workspace_path.clone(), server_name.clone());
@@ -181,6 +184,7 @@ impl LspManager {
       workspace_path: PathBuf,
       server_path_override: Option<String>,
       server_args_override: Option<Vec<String>>,
+      initialization_options: Option<serde_json::Value>,
    ) -> Result<()> {
       log::info!("Starting LSP for file: {:?}", file_path);
 
@@ -238,7 +242,9 @@ impl LspManager {
       .await?;
 
       // Initialize the client
-      client.initialize(root_uri).await?;
+      client
+         .initialize(root_uri, initialization_options.clone())
+         .await?;
 
       // Store the new instance
       self.workspace_clients.lock().unwrap().insert(

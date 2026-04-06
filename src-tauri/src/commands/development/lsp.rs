@@ -155,10 +155,16 @@ pub async fn lsp_start(
    workspace_path: String,
    server_path: Option<String>,
    server_args: Option<Vec<String>>,
+   initialization_options: Option<Value>,
 ) -> LspResult<()> {
    log::info!("lsp_start command called with path: {}", workspace_path);
    lsp_manager
-      .start_lsp_for_workspace(PathBuf::from(workspace_path), server_path, server_args)
+      .start_lsp_for_workspace(
+         PathBuf::from(workspace_path),
+         server_path,
+         server_args,
+         initialization_options,
+      )
       .await
       .map_err(|e| {
          log::error!("Failed to start LSP: {}", e);
@@ -184,6 +190,7 @@ pub async fn lsp_start_for_file(
    workspace_path: String,
    server_path: Option<String>,
    server_args: Option<Vec<String>>,
+   initialization_options: Option<Value>,
 ) -> LspResult<()> {
    log::info!("lsp_start_for_file command called for file: {}", file_path);
    lsp_manager
@@ -192,6 +199,7 @@ pub async fn lsp_start_for_file(
          PathBuf::from(workspace_path),
          server_path,
          server_args,
+         initialization_options,
       )
       .await
       .map_err(|e| {

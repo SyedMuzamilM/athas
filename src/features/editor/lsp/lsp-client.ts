@@ -186,6 +186,7 @@ export class LspClient {
       let serverPath: string | undefined;
       let serverArgs: string[] | undefined;
       let languageId: string | undefined;
+      let initOptions: Record<string, unknown> | undefined;
 
       if (filePath) {
         const { extensionRegistry } = await import("@/extensions/registry/extension-registry");
@@ -193,6 +194,7 @@ export class LspClient {
         serverPath = extensionRegistry.getLspServerPath(filePath) || undefined;
         serverArgs = extensionRegistry.getLspServerArgs(filePath);
         languageId = extensionRegistry.getLanguageId(filePath) || undefined;
+        initOptions = extensionRegistry.getLspInitializationOptions(filePath);
 
         logger.debug("LSPClient", `Using LSP server: ${serverPath} for language: ${languageId}`);
 
@@ -229,6 +231,7 @@ export class LspClient {
         workspacePath,
         serverPath,
         serverArgs,
+        initializationOptions: initOptions || null,
       });
 
       // Track this language server
@@ -287,6 +290,7 @@ export class LspClient {
       const serverPath = extensionRegistry.getLspServerPath(filePath) || undefined;
       const serverArgs = extensionRegistry.getLspServerArgs(filePath);
       const languageId = extensionRegistry.getLanguageId(filePath) || undefined;
+      const initializationOptions = extensionRegistry.getLspInitializationOptions(filePath);
 
       // If no LSP server is configured for this file type, return early
       if (!serverPath) {
@@ -328,6 +332,7 @@ export class LspClient {
           workspacePath,
           serverPath,
           serverArgs,
+          initializationOptions: initializationOptions || null,
         });
       } catch (error) {
         // If backend call fails, remove from tracking
