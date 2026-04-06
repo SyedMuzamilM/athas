@@ -48,6 +48,8 @@ function convertToToken(highlightToken: HighlightToken): Token {
 const LARGE_FILE_LINE_THRESHOLD = 20000;
 const BACKGROUND_FULL_TOKENIZE_CHAR_THRESHOLD = 200_000;
 const BACKGROUND_FULL_TOKENIZE_LINE_THRESHOLD = 4_000;
+const BACKGROUND_FULL_TOKENIZE_DELAY_MS = 900;
+const BACKGROUND_FULL_TOKENIZE_IDLE_TIMEOUT_MS = 2000;
 
 export function useTokenizer({
   filePath,
@@ -66,6 +68,7 @@ export function useTokenizer({
   const textMetricsRef = useRef<TextMetricsCache | null>(null);
   const requestVersionRef = useRef(0);
   const backgroundSweepVersionRef = useRef(0);
+  const backgroundSweepTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { startMeasure, endMeasure } = usePerformanceMonitor("Tokenizer");
 
   const getTextMetrics = useCallback((text: string): TextMetricsCache => {
@@ -197,11 +200,25 @@ export function useTokenizer({
 
         if (shouldScheduleBackgroundFullSweep) {
           const sweepVersion = ++backgroundSweepVersionRef.current;
-          globalThis.setTimeout(() => {
-            if (requestVersionRef.current !== requestVersion) return;
-            if (backgroundSweepVersionRef.current !== sweepVersion) return;
-            void tokenizeFull(result.normalizedText);
-          }, 0);
+          if (backgroundSweepTimerRef.current !== null) {
+            globalThis.clearTimeout(backgroundSweepTimerRef.current);
+          }
+          backgroundSweepTimerRef.current = globalThis.setTimeout(() => {
+            const runFullSweep = () => {
+              if (requestVersionRef.current !== requestVersion) return;
+              if (backgroundSweepVersionRef.current !== sweepVersion) return;
+              void tokenizeFull(result.normalizedText);
+            };
+
+            if ("requestIdleCallback" in globalThis) {
+              globalThis.requestIdleCallback(runFullSweep, {
+                timeout: BACKGROUND_FULL_TOKENIZE_IDLE_TIMEOUT_MS,
+              });
+            } else {
+              runFullSweep();
+            }
+            backgroundSweepTimerRef.current = null;
+          }, BACKGROUND_FULL_TOKENIZE_DELAY_MS);
         }
       } catch (error) {
         if (requestVersion !== requestVersionRef.current) return;
@@ -241,6 +258,10 @@ export function useTokenizer({
   const resetForBufferSwitch = useCallback(() => {
     requestVersionRef.current += 1;
     backgroundSweepVersionRef.current += 1;
+    if (backgroundSweepTimerRef.current !== null) {
+      globalThis.clearTimeout(backgroundSweepTimerRef.current);
+      backgroundSweepTimerRef.current = null;
+    }
     cacheRef.current = {
       fullTokens: [],
       previousContent: "",

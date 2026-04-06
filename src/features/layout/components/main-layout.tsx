@@ -26,6 +26,7 @@ import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-s
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { parseDroppedPaths } from "@/features/file-system/utils/file-system-dropped-paths";
 import { ExtensionDialogs } from "@/extensions/ui/components/extension-dialog";
+import { frontendTrace } from "@/utils/frontend-trace";
 import { VimSearchBar } from "../../vim/components/vim-search-bar";
 import CustomTitleBarWithSettings from "../../window/components/custom-title-bar";
 import BottomPane from "./bottom-pane/bottom-pane";
@@ -171,17 +172,30 @@ export function MainLayout() {
     const restoreWorkspace = async () => {
       // Get the active project tab from persisted state
       const activeTab = useWorkspaceTabsStore.getState().getActiveProjectTab();
+      frontendTrace("info", "workspace-open", "startupRestore:checked", {
+        hasActiveTab: !!activeTab,
+        tabPath: activeTab?.path ?? null,
+      });
 
       if (activeTab && switchToProject && setIsSwitchingProject) {
         hasRestoredWorkspace.current = true;
+        frontendTrace("info", "workspace-open", "startupRestore:start", {
+          tabPath: activeTab.path,
+        });
 
         // Set flag BEFORE calling switchToProject to prevent tab bar from hiding
         setIsSwitchingProject(true);
 
         try {
           await switchToProject(activeTab.id);
+          frontendTrace("info", "workspace-open", "startupRestore:end", {
+            tabPath: activeTab.path,
+          });
         } catch (error) {
           console.error("Failed to restore workspace:", error);
+          frontendTrace("error", "workspace-open", "startupRestore:error", {
+            tabPath: activeTab.path,
+          });
           // Make sure to clear the flag even if restoration fails
           setIsSwitchingProject(false);
         }

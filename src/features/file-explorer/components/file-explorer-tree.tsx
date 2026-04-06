@@ -16,6 +16,7 @@ import { useSettingsStore } from "@/features/settings/store";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
 import { cn } from "@/utils/cn";
+import { frontendTrace } from "@/utils/frontend-trace";
 import { getRelativePath } from "@/utils/path-helpers";
 import { useFileExplorerContextMenu } from "../hooks/use-file-explorer-context-menu";
 import { useFileExplorerDragDrop } from "../hooks/use-file-explorer-drag-drop";
@@ -167,6 +168,7 @@ function FileExplorerTreeComponent({
   );
 
   const gitStatusClassLookup = useMemo(() => {
+    const startedAt = performance.now();
     if (!gitStatus || !settings.showGitStatusInFileTree)
       return null as null | {
         files: Map<string, string>;
@@ -209,6 +211,12 @@ function FileExplorerTreeComponent({
       }
     }
 
+    frontendTrace("info", "file-tree", "gitStatusClassLookup:computed", {
+      gitFiles: gitStatus.files.length,
+      filesMapSize: files.size,
+      directoriesMapSize: directories.size,
+      durationMs: Math.round((performance.now() - startedAt) * 100) / 100,
+    });
     return { files, directories };
   }, [gitStatus, settings.showGitStatusInFileTree]);
 
@@ -228,6 +236,7 @@ function FileExplorerTreeComponent({
   );
 
   const filteredFiles = useMemo(() => {
+    const startedAt = performance.now();
     const process = (items: FileEntry[]): FileEntry[] =>
       items
         .filter(
@@ -239,7 +248,13 @@ function FileExplorerTreeComponent({
           children: item.children ? process(item.children) : undefined,
         }));
 
-    return process(files);
+    const result = process(files);
+    frontendTrace("info", "file-tree", "filteredFiles:computed", {
+      rootItems: files.length,
+      filteredRootItems: result.length,
+      durationMs: Math.round((performance.now() - startedAt) * 100) / 100,
+    });
+    return result;
   }, [files, isGitIgnored, isUserHidden]);
 
   useFileExplorerSync({

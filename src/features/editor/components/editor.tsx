@@ -279,7 +279,7 @@ export function Editor({
   const lineHeight = useMemo(() => calculateLineHeight(fontSize), [fontSize]);
   const shouldVirtualizeRendering =
     lines.length >= EDITOR_CONSTANTS.RENDER_VIRTUALIZATION_THRESHOLD;
-  const useIncrementalTokenization = shouldVirtualizeRendering;
+  const useIncrementalTokenization = hasSyntaxHighlighting;
 
   const {
     viewportRange,
