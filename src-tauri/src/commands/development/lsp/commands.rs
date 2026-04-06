@@ -1,187 +1,21 @@
+use super::{
+   convert::{
+      convert_diagnostic_context_to_lsp, flatten_document_symbols, flatten_inlay_hint,
+      symbol_kind_label,
+   },
+   types::{
+      FlatCodeLens, FlatInlayHint, FlatSemanticToken, FlatSymbol, LspApplyCodeActionResult,
+      LspCodeActionItem, LspDiagnosticContext,
+   },
+};
 use athas_lsp::{LspError, LspManager, LspResult};
 use lsp_types::{
-   CodeActionOrCommand, CompletionItem, Diagnostic as LspDiagnostic, DiagnosticSeverity,
-   DocumentSymbol, DocumentSymbolResponse, GotoDefinitionResponse, Hover, InlayHint,
-   InlayHintLabel, Location, NumberOrString, Position, Range, SemanticTokensResult, SignatureHelp,
-   SymbolKind, WorkspaceEdit,
+   CodeActionOrCommand, CompletionItem, DocumentSymbolResponse, GotoDefinitionResponse, Hover,
+   Location, SemanticTokensResult, SignatureHelp, WorkspaceEdit,
 };
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::path::PathBuf;
 use tauri::State;
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct LspDiagnosticContext {
-   pub line: u32,
-   pub column: u32,
-   pub end_line: u32,
-   pub end_column: u32,
-   pub message: String,
-   pub source: Option<String>,
-   pub code: Option<String>,
-   pub severity: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct LspCodeActionItem {
-   pub id: String,
-   pub title: String,
-   pub kind: Option<String>,
-   pub is_preferred: bool,
-   pub disabled_reason: Option<String>,
-   pub has_command: bool,
-   pub has_edit: bool,
-   pub payload: Value,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct LspApplyCodeActionResult {
-   pub applied: bool,
-   pub reason: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FlatSymbol {
-   pub name: String,
-   pub kind: String,
-   pub detail: Option<String>,
-   pub line: u32,
-   pub character: u32,
-   pub end_line: u32,
-   pub end_character: u32,
-   pub container_name: Option<String>,
-}
-
-fn symbol_kind_to_string(kind: SymbolKind) -> String {
-   match kind {
-      SymbolKind::FILE => "file",
-      SymbolKind::MODULE => "module",
-      SymbolKind::NAMESPACE => "namespace",
-      SymbolKind::PACKAGE => "package",
-      SymbolKind::CLASS => "class",
-      SymbolKind::METHOD => "method",
-      SymbolKind::PROPERTY => "property",
-      SymbolKind::FIELD => "field",
-      SymbolKind::CONSTRUCTOR => "constructor",
-      SymbolKind::ENUM => "enum",
-      SymbolKind::INTERFACE => "interface",
-      SymbolKind::FUNCTION => "function",
-      SymbolKind::VARIABLE => "variable",
-      SymbolKind::CONSTANT => "constant",
-      SymbolKind::STRING => "string",
-      SymbolKind::NUMBER => "number",
-      SymbolKind::BOOLEAN => "boolean",
-      SymbolKind::ARRAY => "array",
-      SymbolKind::OBJECT => "object",
-      SymbolKind::KEY => "key",
-      SymbolKind::NULL => "null",
-      SymbolKind::ENUM_MEMBER => "enum-member",
-      SymbolKind::STRUCT => "struct",
-      SymbolKind::EVENT => "event",
-      SymbolKind::OPERATOR => "operator",
-      SymbolKind::TYPE_PARAMETER => "type-parameter",
-      _ => "unknown",
-   }
-   .to_string()
-}
-
-fn flatten_document_symbols(
-   symbols: &[DocumentSymbol],
-   container: Option<&str>,
-) -> Vec<FlatSymbol> {
-   let mut result = Vec::new();
-   for symbol in symbols {
-      result.push(FlatSymbol {
-         name: symbol.name.clone(),
-         kind: symbol_kind_to_string(symbol.kind),
-         detail: symbol.detail.clone(),
-         line: symbol.selection_range.start.line,
-         character: symbol.selection_range.start.character,
-         end_line: symbol.selection_range.end.line,
-         end_character: symbol.selection_range.end.character,
-         container_name: container.map(|s| s.to_string()),
-      });
-      if let Some(children) = &symbol.children {
-         result.extend(flatten_document_symbols(children, Some(&symbol.name)));
-      }
-   }
-   result
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FlatInlayHint {
-   pub line: u32,
-   pub character: u32,
-   pub label: String,
-   pub kind: Option<String>,
-   pub padding_left: bool,
-   pub padding_right: bool,
-}
-
-fn flatten_inlay_hint(hint: &InlayHint) -> FlatInlayHint {
-   let label = match &hint.label {
-      InlayHintLabel::String(s) => s.clone(),
-      InlayHintLabel::LabelParts(parts) => parts.iter().map(|p| p.value.as_str()).collect(),
-   };
-
-   let kind = hint.kind.map(|k| match k {
-      lsp_types::InlayHintKind::TYPE => "type".to_string(),
-      lsp_types::InlayHintKind::PARAMETER => "parameter".to_string(),
-      _ => "other".to_string(),
-   });
-
-   FlatInlayHint {
-      line: hint.position.line,
-      character: hint.position.character,
-      label,
-      kind,
-      padding_left: hint.padding_left.unwrap_or(false),
-      padding_right: hint.padding_right.unwrap_or(false),
-   }
-}
-
-fn convert_diagnostic_context_to_lsp(context: LspDiagnosticContext) -> LspDiagnostic {
-   let severity = match context.severity.as_deref() {
-      Some("error") => Some(DiagnosticSeverity::ERROR),
-      Some("warning") => Some(DiagnosticSeverity::WARNING),
-      Some("info") => Some(DiagnosticSeverity::INFORMATION),
-      _ => None,
-   };
-
-   let code = context.code.as_ref().map(|value| {
-      if let Ok(num) = value.parse::<i32>() {
-         NumberOrString::Number(num)
-      } else {
-         NumberOrString::String(value.clone())
-      }
-   });
-
-   LspDiagnostic {
-      range: Range {
-         start: Position {
-            line: context.line,
-            character: context.column,
-         },
-         end: Position {
-            line: context.end_line,
-            character: context.end_column,
-         },
-      },
-      severity,
-      code,
-      code_description: None,
-      source: context.source,
-      message: context.message,
-      related_information: None,
-      tags: None,
-      data: None,
-   }
-}
 
 #[tauri::command]
 pub async fn lsp_start(
@@ -334,7 +168,7 @@ pub async fn lsp_get_code_actions(
          LspError::from(e)
       })?;
 
-   let result = actions
+   Ok(actions
       .into_iter()
       .enumerate()
       .map(|(index, action)| {
@@ -368,9 +202,7 @@ pub async fn lsp_get_code_actions(
             },
          }
       })
-      .collect();
-
-   Ok(result)
+      .collect())
 }
 
 #[tauri::command]
@@ -397,16 +229,6 @@ pub async fn lsp_apply_code_action(
    Ok(LspApplyCodeActionResult { applied, reason })
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FlatSemanticToken {
-   pub line: u32,
-   pub start_char: u32,
-   pub length: u32,
-   pub token_type: u32,
-   pub token_modifiers: u32,
-}
-
 #[tauri::command]
 pub async fn lsp_get_semantic_tokens(
    lsp_manager: State<'_, LspManager>,
@@ -426,7 +248,6 @@ pub async fn lsp_get_semantic_tokens(
       None => return Ok(vec![]),
    };
 
-   // Decode delta-encoded tokens into absolute positions
    let mut result = Vec::with_capacity(data.len());
    let mut current_line: u32 = 0;
    let mut current_char: u32 = 0;
@@ -449,14 +270,6 @@ pub async fn lsp_get_semantic_tokens(
    }
 
    Ok(result)
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FlatCodeLens {
-   pub line: u32,
-   pub title: String,
-   pub command: Option<String>,
 }
 
 #[tauri::command]
@@ -523,7 +336,7 @@ pub async fn lsp_get_document_symbols(
          .into_iter()
          .map(|info| FlatSymbol {
             name: info.name,
-            kind: symbol_kind_to_string(info.kind),
+            kind: symbol_kind_label(info.kind),
             detail: None,
             line: info.location.range.start.line,
             character: info.location.range.start.character,
@@ -623,8 +436,5 @@ pub fn lsp_document_close(lsp_manager: State<'_, LspManager>, file_path: String)
 
 #[tauri::command]
 pub fn lsp_is_language_supported(_file_path: String) -> bool {
-   // Note: LSP support is now determined dynamically by the frontend extension registry.
-   // This command is deprecated but kept for backwards compatibility.
-   // Always return true and let the frontend do the actual checking.
    true
 }
