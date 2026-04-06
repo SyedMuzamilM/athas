@@ -577,6 +577,38 @@ export class LspClient {
     }
   }
 
+  async getSemanticTokens(filePath: string): Promise<
+    {
+      line: number;
+      startChar: number;
+      length: number;
+      tokenType: number;
+      tokenModifiers: number;
+    }[]
+  > {
+    try {
+      return await invoke("lsp_get_semantic_tokens", { filePath });
+    } catch (error) {
+      logger.error("LSPClient", "LSP semantic tokens error:", error);
+      return [];
+    }
+  }
+
+  async getCodeLens(filePath: string): Promise<
+    {
+      line: number;
+      title: string;
+      command?: string;
+    }[]
+  > {
+    try {
+      return await invoke("lsp_get_code_lens", { filePath });
+    } catch (error) {
+      logger.error("LSPClient", "LSP code lens error:", error);
+      return [];
+    }
+  }
+
   async getInlayHints(
     filePath: string,
     startLine: number,

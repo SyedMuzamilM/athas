@@ -1,6 +1,6 @@
 use athas_lsp::{LspError, LspManager, LspResult};
 use lsp_types::{
-   CodeActionOrCommand, CodeLens, CompletionItem, Diagnostic as LspDiagnostic, DiagnosticSeverity,
+   CodeActionOrCommand, CompletionItem, Diagnostic as LspDiagnostic, DiagnosticSeverity,
    DocumentSymbol, DocumentSymbolResponse, GotoDefinitionResponse, Hover, InlayHint,
    InlayHintLabel, Location, NumberOrString, Position, Range, SemanticTokensResult, SignatureHelp,
    SymbolKind, WorkspaceEdit,
@@ -397,29 +397,90 @@ pub async fn lsp_apply_code_action(
    Ok(LspApplyCodeActionResult { applied, reason })
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FlatSemanticToken {
+   pub line: u32,
+   pub start_char: u32,
+   pub length: u32,
+   pub token_type: u32,
+   pub token_modifiers: u32,
+}
+
 #[tauri::command]
 pub async fn lsp_get_semantic_tokens(
    lsp_manager: State<'_, LspManager>,
    file_path: String,
-) -> LspResult<Option<SemanticTokensResult>> {
-   lsp_manager
+) -> LspResult<Vec<FlatSemanticToken>> {
+   let response = lsp_manager
       .get_semantic_tokens(&file_path)
       .await
       .map_err(|e| {
          log::error!("Failed to get semantic tokens: {}", e);
-         e.into()
-      })
+         LspError::from(e)
+      })?;
+
+   let data = match response {
+      Some(SemanticTokensResult::Tokens(tokens)) => tokens.data,
+      Some(SemanticTokensResult::Partial(partial)) => partial.data,
+      None => return Ok(vec![]),
+   };
+
+   // Decode delta-encoded tokens into absolute positions
+   let mut result = Vec::with_capacity(data.len());
+   let mut current_line: u32 = 0;
+   let mut current_char: u32 = 0;
+
+   for token in &data {
+      if token.delta_line > 0 {
+         current_line += token.delta_line;
+         current_char = token.delta_start;
+      } else {
+         current_char += token.delta_start;
+      }
+
+      result.push(FlatSemanticToken {
+         line: current_line,
+         start_char: current_char,
+         length: token.length,
+         token_type: token.token_type,
+         token_modifiers: token.token_modifiers_bitset,
+      });
+   }
+
+   Ok(result)
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FlatCodeLens {
+   pub line: u32,
+   pub title: String,
+   pub command: Option<String>,
 }
 
 #[tauri::command]
 pub async fn lsp_get_code_lens(
    lsp_manager: State<'_, LspManager>,
    file_path: String,
-) -> LspResult<Option<Vec<CodeLens>>> {
-   lsp_manager.get_code_lens(&file_path).await.map_err(|e| {
+) -> LspResult<Vec<FlatCodeLens>> {
+   let response = lsp_manager.get_code_lens(&file_path).await.map_err(|e| {
       log::error!("Failed to get code lens: {}", e);
-      e.into()
-   })
+      LspError::from(e)
+   })?;
+
+   Ok(response
+      .unwrap_or_default()
+      .into_iter()
+      .filter_map(|lens| {
+         let cmd = lens.command?;
+         Some(FlatCodeLens {
+            line: lens.range.start.line,
+            title: cmd.title,
+            command: Some(cmd.command),
+         })
+      })
+      .collect())
 }
 
 #[tauri::command]

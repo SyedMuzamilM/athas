@@ -15,12 +15,16 @@ import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useZoomStore } from "@/features/window/stores/zoom-store";
 import { CompletionDropdown } from "../completion/completion-dropdown";
+import CodeLensOverlay from "../lsp/code-lens-overlay";
 import { HoverTooltip } from "../lsp/hover-tooltip";
 import InlayHintsOverlay from "../lsp/inlay-hints-overlay";
 import RenameInput from "../lsp/rename-input";
+import SemanticTokensOverlay from "../lsp/semantic-tokens-overlay";
 import { SignatureHelpTooltip } from "../lsp/signature-help-tooltip";
+import { useCodeLens } from "../lsp/use-code-lens";
 import { useInlayHints } from "../lsp/use-inlay-hints";
 import { useRename } from "../lsp/use-rename";
+import { useSemanticTokens } from "../lsp/use-semantic-tokens";
 import { MarkdownPreview } from "../markdown/markdown-preview";
 import { ScrollDebugOverlay } from "./debug/scroll-debug-overlay";
 import { Editor } from "./editor";
@@ -163,6 +167,18 @@ const CodeEditor = ({
 
   // Inlay hints
   const inlayHints = useInlayHints(
+    enableInteractiveServices ? filePath : undefined,
+    enableInteractiveServices,
+  );
+
+  // Code lens
+  const codeLenses = useCodeLens(
+    enableInteractiveServices ? filePath : undefined,
+    enableInteractiveServices,
+  );
+
+  // Semantic tokens
+  const semanticTokens = useSemanticTokens(
     enableInteractiveServices ? filePath : undefined,
     enableInteractiveServices,
   );
@@ -365,6 +381,30 @@ const CodeEditor = ({
 
           {/* Completion Dropdown */}
           {enableInteractiveServices && <CompletionDropdown />}
+
+          {/* Semantic Tokens */}
+          {enableInteractiveServices && semanticTokens.length > 0 && (
+            <SemanticTokensOverlay
+              tokens={semanticTokens}
+              content={value}
+              fontSize={zoomedFontSize}
+              charWidth={zoomedFontSize * 0.6}
+              scrollTop={editorRef.current?.querySelector("textarea")?.scrollTop ?? 0}
+              scrollLeft={editorRef.current?.querySelector("textarea")?.scrollLeft ?? 0}
+              viewportHeight={editorRef.current?.clientHeight ?? 600}
+            />
+          )}
+
+          {/* Code Lens */}
+          {enableInteractiveServices && codeLenses.length > 0 && (
+            <CodeLensOverlay
+              lenses={codeLenses}
+              fontSize={zoomedFontSize}
+              scrollTop={editorRef.current?.querySelector("textarea")?.scrollTop ?? 0}
+              scrollLeft={editorRef.current?.querySelector("textarea")?.scrollLeft ?? 0}
+              viewportHeight={editorRef.current?.clientHeight ?? 600}
+            />
+          )}
 
           {/* Inlay Hints */}
           {enableInteractiveServices && inlayHints.length > 0 && (
