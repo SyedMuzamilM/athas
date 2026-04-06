@@ -1,8 +1,9 @@
 use athas_lsp::{LspError, LspManager, LspResult};
 use lsp_types::{
    CodeActionOrCommand, CompletionItem, Diagnostic as LspDiagnostic, DiagnosticSeverity,
-   DocumentSymbol, DocumentSymbolResponse, GotoDefinitionResponse, Hover, Location, NumberOrString,
-   Position, Range, SignatureHelp, SymbolKind, WorkspaceEdit,
+   DocumentSymbol, DocumentSymbolResponse, GotoDefinitionResponse, Hover, InlayHint,
+   InlayHintLabel, Location, NumberOrString, Position, Range, SignatureHelp, SymbolKind,
+   WorkspaceEdit,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -109,6 +110,39 @@ fn flatten_document_symbols(
       }
    }
    result
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FlatInlayHint {
+   pub line: u32,
+   pub character: u32,
+   pub label: String,
+   pub kind: Option<String>,
+   pub padding_left: bool,
+   pub padding_right: bool,
+}
+
+fn flatten_inlay_hint(hint: &InlayHint) -> FlatInlayHint {
+   let label = match &hint.label {
+      InlayHintLabel::String(s) => s.clone(),
+      InlayHintLabel::LabelParts(parts) => parts.iter().map(|p| p.value.as_str()).collect(),
+   };
+
+   let kind = hint.kind.map(|k| match k {
+      lsp_types::InlayHintKind::TYPE => "type".to_string(),
+      lsp_types::InlayHintKind::PARAMETER => "parameter".to_string(),
+      _ => "other".to_string(),
+   });
+
+   FlatInlayHint {
+      line: hint.position.line,
+      character: hint.position.character,
+      label,
+      kind,
+      padding_left: hint.padding_left.unwrap_or(false),
+      padding_right: hint.padding_right.unwrap_or(false),
+   }
 }
 
 fn convert_diagnostic_context_to_lsp(context: LspDiagnosticContext) -> LspDiagnostic {
@@ -361,6 +395,28 @@ pub async fn lsp_apply_code_action(
       })?;
 
    Ok(LspApplyCodeActionResult { applied, reason })
+}
+
+#[tauri::command]
+pub async fn lsp_get_inlay_hints(
+   lsp_manager: State<'_, LspManager>,
+   file_path: String,
+   start_line: u32,
+   end_line: u32,
+) -> LspResult<Vec<FlatInlayHint>> {
+   let response = lsp_manager
+      .get_inlay_hints(&file_path, start_line, end_line)
+      .await
+      .map_err(|e| {
+         log::error!("Failed to get inlay hints: {}", e);
+         LspError::from(e)
+      })?;
+
+   Ok(response
+      .unwrap_or_default()
+      .iter()
+      .map(flatten_inlay_hint)
+      .collect())
 }
 
 #[tauri::command]

@@ -16,8 +16,10 @@ import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useZoomStore } from "@/features/window/stores/zoom-store";
 import { CompletionDropdown } from "../completion/completion-dropdown";
 import { HoverTooltip } from "../lsp/hover-tooltip";
+import InlayHintsOverlay from "../lsp/inlay-hints-overlay";
 import RenameInput from "../lsp/rename-input";
 import { SignatureHelpTooltip } from "../lsp/signature-help-tooltip";
+import { useInlayHints } from "../lsp/use-inlay-hints";
 import { useRename } from "../lsp/use-rename";
 import { MarkdownPreview } from "../markdown/markdown-preview";
 import { ScrollDebugOverlay } from "./debug/scroll-debug-overlay";
@@ -158,6 +160,12 @@ const CodeEditor = ({
 
   // Rename symbol support
   const rename = useRename(enableInteractiveServices ? filePath : undefined);
+
+  // Inlay hints
+  const inlayHints = useInlayHints(
+    enableInteractiveServices ? filePath : undefined,
+    enableInteractiveServices,
+  );
 
   // Combine mouse move handlers for hover and definition link
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -357,6 +365,18 @@ const CodeEditor = ({
 
           {/* Completion Dropdown */}
           {enableInteractiveServices && <CompletionDropdown />}
+
+          {/* Inlay Hints */}
+          {enableInteractiveServices && inlayHints.length > 0 && (
+            <InlayHintsOverlay
+              hints={inlayHints}
+              fontSize={zoomedFontSize}
+              charWidth={zoomedFontSize * 0.6}
+              scrollTop={editorRef.current?.querySelector("textarea")?.scrollTop ?? 0}
+              scrollLeft={editorRef.current?.querySelector("textarea")?.scrollLeft ?? 0}
+              viewportHeight={editorRef.current?.clientHeight ?? 600}
+            />
+          )}
 
           {/* Signature Help */}
           {enableInteractiveServices && <SignatureHelpTooltip />}

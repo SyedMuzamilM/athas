@@ -556,6 +556,32 @@ export class LspClient {
     }
   }
 
+  async getInlayHints(
+    filePath: string,
+    startLine: number,
+    endLine: number,
+  ): Promise<
+    {
+      line: number;
+      character: number;
+      label: string;
+      kind?: string;
+      paddingLeft: boolean;
+      paddingRight: boolean;
+    }[]
+  > {
+    try {
+      return await invoke("lsp_get_inlay_hints", {
+        filePath,
+        startLine,
+        endLine,
+      });
+    } catch (error) {
+      logger.error("LSPClient", "LSP inlay hints error:", error);
+      return [];
+    }
+  }
+
   async getDocumentSymbols(filePath: string): Promise<
     {
       name: string;

@@ -494,6 +494,51 @@ impl LspManager {
       }
    }
 
+   pub async fn get_inlay_hints(
+      &self,
+      file_path: &str,
+      start_line: u32,
+      end_line: u32,
+   ) -> Result<Option<Vec<InlayHint>>> {
+      let Some(client) = self.get_client_for_file(file_path) else {
+         return Ok(None);
+      };
+
+      let text_document = TextDocumentIdentifier {
+         uri: Url::from_file_path(file_path).map_err(|_| anyhow::anyhow!("Invalid file path"))?,
+      };
+
+      let params = InlayHintParams {
+         text_document,
+         range: Range {
+            start: Position {
+               line: start_line,
+               character: 0,
+            },
+            end: Position {
+               line: end_line,
+               character: 0,
+            },
+         },
+         work_done_progress_params: Default::default(),
+      };
+
+      match client.text_document_inlay_hint(params).await {
+         Ok(value) => Ok(value),
+         Err(error) => {
+            let message = error.to_string();
+            if message.contains("-32601")
+               || message.contains("Method not found")
+               || message.contains("Unhandled method textDocument/inlayHint")
+            {
+               log::debug!("InlayHint method is not supported by this language server");
+               return Ok(None);
+            }
+            Err(error)
+         }
+      }
+   }
+
    pub async fn get_document_symbols(
       &self,
       file_path: &str,

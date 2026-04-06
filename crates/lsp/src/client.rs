@@ -250,6 +250,10 @@ impl LspClient {
             dynamic_registration: Some(true),
             link_support: Some(true),
          }),
+         inlay_hint: Some(InlayHintClientCapabilities {
+            dynamic_registration: Some(true),
+            resolve_support: None,
+         }),
          document_symbol: Some(DocumentSymbolClientCapabilities {
             dynamic_registration: Some(true),
             symbol_kind: None,
@@ -499,6 +503,13 @@ impl LspClient {
       params: CodeActionParams,
    ) -> Result<Option<CodeActionResponse>> {
       self.request::<request::CodeActionRequest>(params).await
+   }
+
+   pub async fn text_document_inlay_hint(
+      &self,
+      params: InlayHintParams,
+   ) -> Result<Option<Vec<InlayHint>>> {
+      self.request::<request::InlayHintRequest>(params).await
    }
 
    pub async fn text_document_document_symbol(
