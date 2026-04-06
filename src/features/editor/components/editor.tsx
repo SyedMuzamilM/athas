@@ -19,6 +19,7 @@ import { useVimStore } from "@/features/vim/stores/vim-store";
 import { useZoomStore } from "@/features/window/stores/zoom-store";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
+import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { EDITOR_CONSTANTS } from "../config/constants";
 import EditorContextMenu from "../context-menu/context-menu";
 import { editorAPI } from "../extensions/api";
@@ -107,6 +108,7 @@ export function Editor({
   const autocompleteCompletionRef = useRef<HTMLDivElement>(null);
   const inlineEditOverlayRef = useRef<HTMLDivElement>(null);
   const gitBlameRef = useRef<HTMLDivElement>(null);
+  const inlineDiffRef = useRef<HTMLDivElement>(null);
 
   const [editorScrollTop, setEditorScrollTop] = useState(0);
   const [editorViewportHeight, setEditorViewportHeight] = useState(0);
@@ -681,6 +683,7 @@ export function Editor({
     autocompleteCompletionRef,
     inlineEditOverlayRef,
     gitBlameRef,
+    inlineDiffRef,
     setEditorScrollTop,
     handleViewportScroll,
   });
@@ -1210,16 +1213,27 @@ export function Editor({
         )}
 
         {inlineDiff.state.isOpen && (
-          <InlineDiff
-            lineNumber={inlineDiff.state.lineNumber}
-            type={inlineDiff.state.type}
-            diffLines={inlineDiff.state.diffLines}
-            fontSize={fontSize}
-            fontFamily={fontFamily}
-            lineHeight={lineHeight}
-            onClose={inlineDiff.close}
-            onRevert={handleRevertChange}
-          />
+          <div
+            ref={inlineDiffRef}
+            style={{
+              position: "absolute",
+              inset: 0,
+              pointerEvents: "none",
+              zIndex: 20,
+              padding: `var(--editor-padding-top) var(--editor-padding-right) var(--editor-padding-bottom) var(--editor-padding-left)`,
+            }}
+          >
+            <InlineDiff
+              lineNumber={inlineDiff.state.lineNumber}
+              type={inlineDiff.state.type}
+              diffLines={inlineDiff.state.diffLines}
+              fontSize={fontSize}
+              fontFamily={fontFamily}
+              lineHeight={lineHeight}
+              onClose={inlineDiff.close}
+              onRevert={handleRevertChange}
+            />
+          </div>
         )}
       </div>
 
@@ -1252,6 +1266,12 @@ export function Editor({
             onPaste={editorOps.paste}
             onSelectAll={editorOps.selectAll}
             onDelete={editorOps.deleteSelection}
+            onGoToDefinition={() => {
+              keymapRegistry.executeCommand("editor.goToDefinition");
+            }}
+            onFindReferences={() => {
+              keymapRegistry.executeCommand("editor.goToReferences");
+            }}
           />,
           document.body,
         )}
