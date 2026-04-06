@@ -15,7 +15,7 @@ use std::{
    },
    thread,
 };
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::oneshot;
 
 type PendingRequests = Arc<Mutex<HashMap<u64, oneshot::Sender<Result<Value>>>>>;
@@ -45,7 +45,12 @@ impl LspClient {
          // JS-based server requires Node.js runtime
          let node_path = if let Some(ref handle) = app_handle {
             // Get Node.js runtime asynchronously
-            let runtime = NodeRuntime::get_or_install(handle)
+            let managed_root = handle
+               .path()
+               .app_data_dir()
+               .map(|dir| dir.join("runtimes"))
+               .context("Failed to resolve runtime directory for JS-based language server")?;
+            let runtime = NodeRuntime::get_or_install(Some(&managed_root))
                .await
                .context("Failed to get Node.js runtime for JS-based language server")?;
             runtime.binary_path().clone()
@@ -275,7 +280,6 @@ impl LspClient {
             requests: SemanticTokensClientCapabilitiesRequests {
                full: Some(SemanticTokensFullOptions::Bool(true)),
                range: Some(true),
-               ..Default::default()
             },
             token_types: vec![
                SemanticTokenType::NAMESPACE,
