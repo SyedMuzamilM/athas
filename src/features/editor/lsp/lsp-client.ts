@@ -551,6 +551,35 @@ export class LspClient {
     }
   }
 
+  async getSignatureHelp(
+    filePath: string,
+    line: number,
+    character: number,
+  ): Promise<{
+    signatures: {
+      label: string;
+      documentation?: { kind: string; value: string } | string;
+      parameters?: {
+        label: string | [number, number];
+        documentation?: { kind: string; value: string } | string;
+      }[];
+      activeParameter?: number;
+    }[];
+    activeSignature?: number;
+    activeParameter?: number;
+  } | null> {
+    try {
+      return await invoke("lsp_get_signature_help", {
+        filePath,
+        line,
+        character,
+      });
+    } catch (error) {
+      logger.error("LSPClient", "LSP signature help error:", error);
+      return null;
+    }
+  }
+
   async getReferences(
     filePath: string,
     line: number,

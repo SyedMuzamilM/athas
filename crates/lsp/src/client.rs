@@ -231,6 +231,17 @@ impl LspClient {
             dynamic_registration: Some(true),
             content_format: Some(vec![MarkupKind::Markdown, MarkupKind::PlainText]),
          }),
+         signature_help: Some(SignatureHelpClientCapabilities {
+            dynamic_registration: Some(true),
+            signature_information: Some(SignatureInformationSettings {
+               documentation_format: Some(vec![MarkupKind::Markdown, MarkupKind::PlainText]),
+               parameter_information: Some(ParameterInformationSettings {
+                  label_offset_support: Some(true),
+               }),
+               active_parameter_support: Some(true),
+            }),
+            context_support: Some(true),
+         }),
          definition: Some(GotoCapability {
             dynamic_registration: Some(true),
             link_support: Some(true),
@@ -477,6 +488,13 @@ impl LspClient {
       params: CodeActionParams,
    ) -> Result<Option<CodeActionResponse>> {
       self.request::<request::CodeActionRequest>(params).await
+   }
+
+   pub async fn text_document_signature_help(
+      &self,
+      params: SignatureHelpParams,
+   ) -> Result<Option<SignatureHelp>> {
+      self.request::<request::SignatureHelpRequest>(params).await
    }
 
    pub async fn text_document_references(

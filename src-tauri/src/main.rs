@@ -562,6 +562,7 @@ fn main() {
          lsp_get_completions,
          lsp_get_hover,
          lsp_get_definition,
+         lsp_get_signature_help,
          lsp_get_references,
          lsp_rename,
          lsp_get_code_actions,
@@ -608,6 +609,7 @@ fn main() {
          get_language_tool_status,
          get_tool_path,
          get_available_tools,
+         frontend_trace,
          // Menu commands
          menu::toggle_menu_bar,
          menu::rebuild_menu_themes,

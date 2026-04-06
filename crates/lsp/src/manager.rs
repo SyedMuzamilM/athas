@@ -488,6 +488,45 @@ impl LspManager {
       }
    }
 
+   pub async fn get_signature_help(
+      &self,
+      file_path: &str,
+      line: u32,
+      character: u32,
+   ) -> Result<Option<SignatureHelp>> {
+      let Some(client) = self.get_client_for_file(file_path) else {
+         return Ok(None);
+      };
+
+      let text_document = TextDocumentIdentifier {
+         uri: Url::from_file_path(file_path).map_err(|_| anyhow::anyhow!("Invalid file path"))?,
+      };
+
+      let params = SignatureHelpParams {
+         text_document_position_params: TextDocumentPositionParams {
+            text_document,
+            position: Position { line, character },
+         },
+         context: None,
+         work_done_progress_params: Default::default(),
+      };
+
+      match client.text_document_signature_help(params).await {
+         Ok(value) => Ok(value),
+         Err(error) => {
+            let message = error.to_string();
+            if message.contains("-32601")
+               || message.contains("Method not found")
+               || message.contains("Unhandled method textDocument/signatureHelp")
+            {
+               log::debug!("SignatureHelp method is not supported by this language server");
+               return Ok(None);
+            }
+            Err(error)
+         }
+      }
+   }
+
    pub async fn get_references(
       &self,
       file_path: &str,

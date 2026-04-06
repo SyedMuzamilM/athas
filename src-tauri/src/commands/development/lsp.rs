@@ -1,7 +1,8 @@
 use athas_lsp::{LspError, LspManager, LspResult};
 use lsp_types::{
    CodeActionOrCommand, CompletionItem, Diagnostic as LspDiagnostic, DiagnosticSeverity,
-   GotoDefinitionResponse, Hover, Location, NumberOrString, Position, Range, WorkspaceEdit,
+   GotoDefinitionResponse, Hover, Location, NumberOrString, Position, Range, SignatureHelp,
+   WorkspaceEdit,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -283,6 +284,22 @@ pub async fn lsp_apply_code_action(
       })?;
 
    Ok(LspApplyCodeActionResult { applied, reason })
+}
+
+#[tauri::command]
+pub async fn lsp_get_signature_help(
+   lsp_manager: State<'_, LspManager>,
+   file_path: String,
+   line: u32,
+   character: u32,
+) -> LspResult<Option<SignatureHelp>> {
+   lsp_manager
+      .get_signature_help(&file_path, line, character)
+      .await
+      .map_err(|e| {
+         log::error!("Failed to get signature help: {}", e);
+         e.into()
+      })
 }
 
 #[tauri::command]

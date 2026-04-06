@@ -17,6 +17,7 @@ import { useZoomStore } from "@/features/window/stores/zoom-store";
 import { CompletionDropdown } from "../completion/completion-dropdown";
 import { HoverTooltip } from "../lsp/hover-tooltip";
 import RenameInput from "../lsp/rename-input";
+import { SignatureHelpTooltip } from "../lsp/signature-help-tooltip";
 import { useRename } from "../lsp/use-rename";
 import { MarkdownPreview } from "../markdown/markdown-preview";
 import { ScrollDebugOverlay } from "./debug/scroll-debug-overlay";
@@ -356,6 +357,9 @@ const CodeEditor = ({
 
           {/* Completion Dropdown */}
           {enableInteractiveServices && <CompletionDropdown />}
+
+          {/* Signature Help */}
+          {enableInteractiveServices && <SignatureHelpTooltip />}
 
           {/* Rename Input */}
           {enableInteractiveServices && rename.renameState && (
