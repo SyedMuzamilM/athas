@@ -134,6 +134,7 @@ impl LspClient {
       });
 
       // Stdout reader thread
+      let app_handle_crash = app_handle.clone();
       thread::spawn(move || {
          let mut reader = BufReader::new(stdout);
          loop {
@@ -143,8 +144,23 @@ impl LspClient {
             // Read headers
             loop {
                line.clear();
-               if reader.read_line(&mut line).is_err() {
-                  return;
+               match reader.read_line(&mut line) {
+                  Ok(0) => {
+                     // EOF — server process has exited
+                     log::warn!("LSP server stdout closed (server crashed or exited)");
+                     if let Some(ref app) = app_handle_crash {
+                        let _ = app.emit("lsp://server-crashed", json!({}));
+                     }
+                     return;
+                  }
+                  Err(e) => {
+                     log::error!("Error reading LSP stdout: {}", e);
+                     if let Some(ref app) = app_handle_crash {
+                        let _ = app.emit("lsp://server-crashed", json!({ "error": e.to_string() }));
+                     }
+                     return;
+                  }
+                  Ok(_) => {}
                }
 
                if line == "\r\n" || line == "\n" {
@@ -169,6 +185,10 @@ impl LspClient {
             // Read content
             let mut content = vec![0u8; content_length];
             if reader.read_exact(&mut content).is_err() {
+               log::warn!("LSP server stdout read error (server may have crashed)");
+               if let Some(ref app) = app_handle_crash {
+                  let _ = app.emit("lsp://server-crashed", json!({}));
+               }
                return;
             }
 

@@ -57,6 +57,7 @@ export class LspClient {
 
   private constructor() {
     this.setupDiagnosticsListener();
+    this.setupCrashListener();
   }
 
   /**
@@ -175,6 +176,26 @@ export class LspClient {
       logger.debug("LSPClient", "Diagnostics listener setup complete", unlisten);
     } catch (error) {
       logger.error("LSPClient", "Failed to setup diagnostics listener:", error);
+    }
+  }
+
+  private async setupCrashListener() {
+    try {
+      await listen("lsp://server-crashed", () => {
+        logger.warn("LSPClient", "LSP server crashed, attempting auto-restart");
+        const { actions } = useLspStore.getState();
+        actions.setLspError("Language server crashed");
+
+        // Auto-restart all tracked servers after a short delay
+        setTimeout(() => {
+          this.restartAllTrackedServers().catch((error) => {
+            logger.error("LSPClient", "Failed to auto-restart LSP servers:", error);
+          });
+        }, 2000);
+      });
+      logger.debug("LSPClient", "Crash listener setup complete");
+    } catch (error) {
+      logger.error("LSPClient", "Failed to setup crash listener:", error);
     }
   }
 
