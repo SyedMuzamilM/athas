@@ -494,6 +494,40 @@ impl LspManager {
       }
    }
 
+   pub async fn get_semantic_tokens(
+      &self,
+      file_path: &str,
+   ) -> Result<Option<SemanticTokensResult>> {
+      let Some(client) = self.get_client_for_file(file_path) else {
+         return Ok(None);
+      };
+
+      let text_document = TextDocumentIdentifier {
+         uri: Url::from_file_path(file_path).map_err(|_| anyhow::anyhow!("Invalid file path"))?,
+      };
+
+      let params = SemanticTokensParams {
+         text_document,
+         work_done_progress_params: Default::default(),
+         partial_result_params: Default::default(),
+      };
+
+      match client.text_document_semantic_tokens_full(params).await {
+         Ok(value) => Ok(value),
+         Err(error) => {
+            let message = error.to_string();
+            if message.contains("-32601")
+               || message.contains("Method not found")
+               || message.contains("Unhandled method textDocument/semanticTokens")
+            {
+               log::debug!("SemanticTokens method is not supported by this language server");
+               return Ok(None);
+            }
+            Err(error)
+         }
+      }
+   }
+
    pub async fn get_inlay_hints(
       &self,
       file_path: &str,
@@ -722,6 +756,37 @@ impl LspManager {
                || message.contains("Unhandled method textDocument/prepareRename")
             {
                log::debug!("PrepareRename method is not supported by this language server");
+               return Ok(None);
+            }
+            Err(error)
+         }
+      }
+   }
+
+   pub async fn get_code_lens(&self, file_path: &str) -> Result<Option<Vec<CodeLens>>> {
+      let Some(client) = self.get_client_for_file(file_path) else {
+         return Ok(None);
+      };
+
+      let text_document = TextDocumentIdentifier {
+         uri: Url::from_file_path(file_path).map_err(|_| anyhow::anyhow!("Invalid file path"))?,
+      };
+
+      let params = CodeLensParams {
+         text_document,
+         work_done_progress_params: Default::default(),
+         partial_result_params: Default::default(),
+      };
+
+      match client.text_document_code_lens(params).await {
+         Ok(value) => Ok(value),
+         Err(error) => {
+            let message = error.to_string();
+            if message.contains("-32601")
+               || message.contains("Method not found")
+               || message.contains("Unhandled method textDocument/codeLens")
+            {
+               log::debug!("CodeLens method is not supported by this language server");
                return Ok(None);
             }
             Err(error)

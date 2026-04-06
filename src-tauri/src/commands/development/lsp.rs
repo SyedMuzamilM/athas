@@ -1,9 +1,9 @@
 use athas_lsp::{LspError, LspManager, LspResult};
 use lsp_types::{
-   CodeActionOrCommand, CompletionItem, Diagnostic as LspDiagnostic, DiagnosticSeverity,
+   CodeActionOrCommand, CodeLens, CompletionItem, Diagnostic as LspDiagnostic, DiagnosticSeverity,
    DocumentSymbol, DocumentSymbolResponse, GotoDefinitionResponse, Hover, InlayHint,
-   InlayHintLabel, Location, NumberOrString, Position, Range, SignatureHelp, SymbolKind,
-   WorkspaceEdit,
+   InlayHintLabel, Location, NumberOrString, Position, Range, SemanticTokensResult, SignatureHelp,
+   SymbolKind, WorkspaceEdit,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -395,6 +395,31 @@ pub async fn lsp_apply_code_action(
       })?;
 
    Ok(LspApplyCodeActionResult { applied, reason })
+}
+
+#[tauri::command]
+pub async fn lsp_get_semantic_tokens(
+   lsp_manager: State<'_, LspManager>,
+   file_path: String,
+) -> LspResult<Option<SemanticTokensResult>> {
+   lsp_manager
+      .get_semantic_tokens(&file_path)
+      .await
+      .map_err(|e| {
+         log::error!("Failed to get semantic tokens: {}", e);
+         e.into()
+      })
+}
+
+#[tauri::command]
+pub async fn lsp_get_code_lens(
+   lsp_manager: State<'_, LspManager>,
+   file_path: String,
+) -> LspResult<Option<Vec<CodeLens>>> {
+   lsp_manager.get_code_lens(&file_path).await.map_err(|e| {
+      log::error!("Failed to get code lens: {}", e);
+      e.into()
+   })
 }
 
 #[tauri::command]

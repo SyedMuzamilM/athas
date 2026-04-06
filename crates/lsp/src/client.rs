@@ -270,6 +270,56 @@ impl LspClient {
             dynamic_registration: Some(true),
             link_support: Some(true),
          }),
+         semantic_tokens: Some(SemanticTokensClientCapabilities {
+            dynamic_registration: Some(true),
+            requests: SemanticTokensClientCapabilitiesRequests {
+               full: Some(SemanticTokensFullOptions::Bool(true)),
+               range: Some(true),
+               ..Default::default()
+            },
+            token_types: vec![
+               SemanticTokenType::NAMESPACE,
+               SemanticTokenType::TYPE,
+               SemanticTokenType::CLASS,
+               SemanticTokenType::ENUM,
+               SemanticTokenType::INTERFACE,
+               SemanticTokenType::STRUCT,
+               SemanticTokenType::TYPE_PARAMETER,
+               SemanticTokenType::PARAMETER,
+               SemanticTokenType::VARIABLE,
+               SemanticTokenType::PROPERTY,
+               SemanticTokenType::ENUM_MEMBER,
+               SemanticTokenType::EVENT,
+               SemanticTokenType::FUNCTION,
+               SemanticTokenType::METHOD,
+               SemanticTokenType::MACRO,
+               SemanticTokenType::KEYWORD,
+               SemanticTokenType::MODIFIER,
+               SemanticTokenType::COMMENT,
+               SemanticTokenType::STRING,
+               SemanticTokenType::NUMBER,
+               SemanticTokenType::REGEXP,
+               SemanticTokenType::OPERATOR,
+               SemanticTokenType::DECORATOR,
+            ],
+            token_modifiers: vec![
+               SemanticTokenModifier::DECLARATION,
+               SemanticTokenModifier::DEFINITION,
+               SemanticTokenModifier::READONLY,
+               SemanticTokenModifier::STATIC,
+               SemanticTokenModifier::DEPRECATED,
+               SemanticTokenModifier::ABSTRACT,
+               SemanticTokenModifier::ASYNC,
+               SemanticTokenModifier::MODIFICATION,
+               SemanticTokenModifier::DOCUMENTATION,
+               SemanticTokenModifier::DEFAULT_LIBRARY,
+            ],
+            formats: vec![TokenFormat::RELATIVE],
+            overlapping_token_support: Some(false),
+            multiline_token_support: Some(true),
+            server_cancel_support: Some(false),
+            augments_syntax_tokens: Some(true),
+         }),
          inlay_hint: Some(InlayHintClientCapabilities {
             dynamic_registration: Some(true),
             resolve_support: None,
@@ -288,6 +338,9 @@ impl LspClient {
             prepare_support: Some(true),
             prepare_support_default_behavior: None,
             honors_change_annotations: Some(false),
+         }),
+         code_lens: Some(CodeLensClientCapabilities {
+            dynamic_registration: Some(true),
          }),
          code_action: Some(CodeActionClientCapabilities {
             dynamic_registration: Some(true),
@@ -518,11 +571,27 @@ impl LspClient {
       self.request::<request::GotoDefinition>(params).await
    }
 
+   pub async fn text_document_code_lens(
+      &self,
+      params: CodeLensParams,
+   ) -> Result<Option<Vec<CodeLens>>> {
+      self.request::<request::CodeLensRequest>(params).await
+   }
+
    pub async fn text_document_code_action(
       &self,
       params: CodeActionParams,
    ) -> Result<Option<CodeActionResponse>> {
       self.request::<request::CodeActionRequest>(params).await
+   }
+
+   pub async fn text_document_semantic_tokens_full(
+      &self,
+      params: SemanticTokensParams,
+   ) -> Result<Option<SemanticTokensResult>> {
+      self
+         .request::<request::SemanticTokensFullRequest>(params)
+         .await
    }
 
    pub async fn text_document_inlay_hint(

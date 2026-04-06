@@ -522,6 +522,8 @@ fn main() {
          lsp_get_completions,
          lsp_get_hover,
          lsp_get_definition,
+         lsp_get_semantic_tokens,
+         lsp_get_code_lens,
          lsp_get_inlay_hints,
          lsp_get_document_symbols,
          lsp_get_signature_help,
