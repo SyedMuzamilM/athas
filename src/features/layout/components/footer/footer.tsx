@@ -1,6 +1,7 @@
 import {
   AlertCircle,
   Download,
+  Puzzle,
   Settings2,
   Sparkles,
   Terminal as TerminalIcon,
@@ -10,6 +11,7 @@ import { useEffect, useRef, useState } from "react";
 import { Dropdown } from "@/ui/dropdown";
 import { useAIChatStore } from "@/features/ai/store/store";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics-store";
+import { useExtensionStore } from "@/extensions/registry/extension-store";
 import { getGitStatus } from "@/features/git/api/git-status-api";
 import GitBranchManager from "@/features/git/components/git-branch-manager";
 import { useGitStore } from "@/features/git/stores/git-store";
@@ -309,6 +311,7 @@ const Footer = () => {
   const { actions } = useGitStore();
   const { available, downloading, installing, updateInfo, downloadAndInstall } = useUpdater(false);
 
+  const extensionUpdatesCount = useExtensionStore.use.extensionsWithUpdates().size;
   const diagnosticsByFile = useDiagnosticsStore.use.diagnosticsByFile();
   const diagnosticsCount = Array.from(diagnosticsByFile.values()).reduce(
     (total, diagnostics) => total + diagnostics.length,
@@ -388,6 +391,20 @@ const Footer = () => {
           >
             <AlertCircle />
             {diagnosticsCount > 0 && <span className="ui-text-sm ml-0.5">{diagnosticsCount}</span>}
+          </Button>
+        )}
+        {/* Extension updates indicator */}
+        {extensionUpdatesCount > 0 && (
+          <Button
+            onClick={() => uiState.openSettingsDialog("extensions")}
+            variant="secondary"
+            size="xs"
+            className="rounded-md bg-primary-bg/40 px-2 text-blue-400"
+            style={{ minHeight: 0, minWidth: 0 }}
+            title={`${extensionUpdatesCount} extension update${extensionUpdatesCount === 1 ? "" : "s"} available`}
+          >
+            <Puzzle />
+            <span className="ui-text-sm ml-0.5">{extensionUpdatesCount}</span>
           </Button>
         )}
         {/* Update indicator */}
