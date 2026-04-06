@@ -27,6 +27,10 @@ export function frontendTrace(
   message: string,
   payload?: Record<string, unknown>,
 ) {
+  if (scope.startsWith("bench:")) {
+    return;
+  }
+
   void invoke("frontend_trace", {
     level,
     scope,

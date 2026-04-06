@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { basename, dirname, extname, join } from "@tauri-apps/api/path";
-import { copyFile } from "@tauri-apps/plugin-fs";
+import { copyFile, readFile } from "@tauri-apps/plugin-fs";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
@@ -53,6 +53,7 @@ import {
 import {
   getDatabaseTypeFromPath,
   getFilenameFromPath,
+  isBinaryContent,
   isBinaryFile,
   isImageFile,
   isPdfFile,
@@ -743,6 +744,38 @@ export const useFileSystemStore = createSelectors(
           );
           fileOpenBenchmark.finish(path, "binary-buffer-opened");
         } else {
+          if (!path.startsWith("remote://")) {
+            try {
+              const fileData = await readFile(resolvedPath);
+
+              if (isStaleRequest()) return;
+
+              if (isBinaryContent(fileData)) {
+                openBuffer(
+                  path,
+                  fileName,
+                  "",
+                  false,
+                  undefined,
+                  false,
+                  false,
+                  undefined,
+                  false,
+                  false,
+                  false,
+                  undefined,
+                  false,
+                  false,
+                  true,
+                );
+                fileOpenBenchmark.finish(path, "binary-sniff-buffer-opened");
+                return;
+              }
+            } catch (error) {
+              console.error("Failed to inspect file bytes before opening:", error);
+            }
+          }
+
           // Check if external editor is enabled for text files
           const { settings } = useSettingsStore.getState();
           const { openExternalEditorBuffer } = useBufferStore.getState().actions;

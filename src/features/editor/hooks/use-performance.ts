@@ -35,9 +35,6 @@ export function usePerformanceMonitor(componentName: string) {
           const entries = performance.getEntriesByName(measureName);
           const lastEntry = entries[entries.length - 1];
           if (lastEntry) {
-            console.info(
-              `[Performance] [${componentName}] ${metricName}: ${lastEntry.duration.toFixed(2)}ms`,
-            );
             frontendTrace(
               lastEntry.duration >= 250 ? "warn" : "info",
               "bench:perf",

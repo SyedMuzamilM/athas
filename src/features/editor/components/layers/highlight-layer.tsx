@@ -304,12 +304,7 @@ export const HighlightLayer = memo(HighlightLayerComponent, (prev, next) => {
     );
   }
 
-  const tokensUnchanged =
-    prev.tokens === next.tokens ||
-    (prev.tokens.length === next.tokens.length &&
-      (prev.tokens.length === 0 ||
-        (prev.tokens[0]?.start === next.tokens[0]?.start &&
-          prev.tokens[prev.tokens.length - 1]?.end === next.tokens[prev.tokens.length - 1]?.end)));
+  const tokensUnchanged = prev.tokens === next.tokens;
 
   // If only content changed but tokens haven't updated yet, skip the intermediate render.
   // The tokenizer will produce new tokens shortly, triggering a proper re-render then.
