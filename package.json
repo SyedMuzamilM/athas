@@ -20,7 +20,6 @@
     "pre-commit": "bun scripts/pre-commit.ts",
     "pre-push": "bun scripts/pre-push.ts",
     "release:check": "bun scripts/pre-release-check.ts",
-    "release:check:full": "bun scripts/pre-release-check.ts --full",
     "benchmark": "bun scripts/benchmark-suite.ts",
     "release": "bun scripts/release.ts",
     "release:patch": "bun scripts/release.ts patch",

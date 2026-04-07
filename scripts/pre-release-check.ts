@@ -1,10 +1,6 @@
 #!/usr/bin/env bun
 import { $ } from "bun";
 
-// Parse CLI flags
-const args = process.argv.slice(2);
-const fullMode = args.includes("--full") || args.includes("-f");
-
 const colors = {
   reset: "\x1b[0m",
   red: "\x1b[31m",
@@ -35,10 +31,6 @@ function fail(message: string) {
 
 function warn(message: string) {
   log(`  [WARN] ${message}`, "yellow");
-}
-
-function skip(message: string) {
-  log(`  [SKIP] ${message}`, "dim");
 }
 
 function info(message: string) {
@@ -131,12 +123,8 @@ function formatBytes(bytes: number): string {
 }
 
 async function main() {
-  log("\n Pre-Release Check\n", "cyan");
-  if (fullMode) {
-    log("Running FULL checks (includes builds)...", "dim");
-  } else {
-    log("Running quick checks (use --full for build verification)...", "dim");
-  }
+  log("\n Release Check\n", "cyan");
+  log("Running full release validation...", "dim");
 
   // Get current version from package.json
   const pkgPath = `${process.cwd()}/package.json`;
@@ -344,32 +332,25 @@ async function main() {
     return { passed: true };
   });
 
-  // Check: Vite+ build (full mode only)
-  if (fullMode) {
-    await runCheck("Vite+ build", async () => {
-      const result = await $`bunx vp build`.quiet().nothrow();
-      if (result.exitCode !== 0) {
-        return { passed: false, message: "Frontend build failed" };
-      }
-      return { passed: true };
-    });
+  await runCheck("Vite+ build", async () => {
+    const result = await $`bunx vp build`.quiet().nothrow();
+    if (result.exitCode !== 0) {
+      return { passed: false, message: "Frontend build failed" };
+    }
+    return { passed: true };
+  });
 
-    // Check: Bundle size
-    await runCheck("Bundle size < 5MB", async () => {
-      const distPath = `${process.cwd()}/dist`;
-      const size = getDirSize(distPath);
-      const sizeStr = formatBytes(size);
-      const maxSize = 5 * 1024 * 1024; // 5MB
+  await runCheck("Bundle size < 5MB", async () => {
+    const distPath = `${process.cwd()}/dist`;
+    const size = getDirSize(distPath);
+    const sizeStr = formatBytes(size);
+    const maxSize = 5 * 1024 * 1024; // 5MB
 
-      if (size > maxSize) {
-        return { passed: true, warning: true, message: `${sizeStr} exceeds 5MB threshold` };
-      }
-      return { passed: true, message: sizeStr };
-    });
-  } else {
-    skip("Vite build (use --full)");
-    skip("Bundle size check (use --full)");
-  }
+    if (size > maxSize) {
+      return { passed: true, warning: true, message: `${sizeStr} exceeds 5MB threshold` };
+    }
+    return { passed: true, message: sizeStr };
+  });
 
   header("Rust Checks");
 
@@ -408,18 +389,13 @@ async function main() {
     return { passed: true };
   });
 
-  // Check: Cargo build release (full mode only)
-  if (fullMode) {
-    await runCheck("Cargo build (release)", async () => {
-      const result = await $`cargo build --release`.quiet().nothrow();
-      if (result.exitCode !== 0) {
-        return { passed: false, message: "Release build failed" };
-      }
-      return { passed: true };
-    });
-  } else {
-    skip("Cargo build release (use --full)");
-  }
+  await runCheck("Cargo build (release)", async () => {
+    const result = await $`cargo build --release`.quiet().nothrow();
+    if (result.exitCode !== 0) {
+      return { passed: false, message: "Release build failed" };
+    }
+    return { passed: true };
+  });
 
   header("Security Audits");
 
