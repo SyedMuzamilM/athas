@@ -819,7 +819,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         <div className="pointer-events-none absolute inset-0 z-40 bg-accent/10" />
       )}
       <SplitDropOverlay visible={isTabDragOver} onDrop={handleSplitDrop} />
-      {paneBuffers.length > 0 && <TabBar paneId={pane.id} onTabClick={handleTabClick} />}
+      <TabBar paneId={pane.id} onTabClick={handleTabClick} />
       <div className="relative min-h-0 flex-1 overflow-hidden">
         {(!activeBuffer || activeBuffer.type === "newTab") && !shouldRenderCarousel && (
           <EmptyEditorState />
@@ -968,7 +968,51 @@ export function PaneContainer({ pane }: PaneContainerProps) {
               )}
             </div>
           ) : (
-            activeBuffer && renderActiveBuffer(activeBuffer)
+            <>
+              {/* Keep terminal and webviewer buffers always mounted to preserve
+                  PTY sessions and embedded webview state. */}
+              {paneBuffers
+                .filter(
+                  (
+                    b,
+                  ): b is
+                    | import("../types/pane-content").TerminalContent
+                    | import("../types/pane-content").WebViewerContent =>
+                    b.type === "terminal" || b.type === "webViewer",
+                )
+                .map((b) => {
+                  const isActive = b.id === activeBuffer?.id;
+                  return (
+                    <div
+                      key={b.id}
+                      className="absolute inset-0"
+                      style={isActive ? undefined : { visibility: "hidden" }}
+                    >
+                      {b.type === "terminal" ? (
+                        <TerminalTab
+                          sessionId={b.sessionId}
+                          bufferId={b.id}
+                          initialCommand={b.initialCommand}
+                          workingDirectory={b.workingDirectory}
+                          isActive={isActive && isActivePane}
+                          isVisible={isActive}
+                        />
+                      ) : (
+                        <WebViewer
+                          url={b.url}
+                          bufferId={b.id}
+                          isActive={isActive && isActivePane}
+                          isVisible={isActive}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+              {activeBuffer &&
+                activeBuffer.type !== "terminal" &&
+                activeBuffer.type !== "webViewer" &&
+                renderActiveBuffer(activeBuffer)}
+            </>
           )}
         </Suspense>
       </div>

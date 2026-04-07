@@ -158,7 +158,10 @@ export function WebViewerToolbar({
           {showZoomPopover && (
             <>
               <div className="fixed inset-0 z-[9998]" onClick={() => setShowZoomPopover(false)} />
-              <div className="absolute top-full right-0 z-[9999] mt-1 flex items-center gap-1 rounded-lg border border-border bg-secondary-bg p-1.5 shadow-lg">
+              <div
+                role="menu"
+                className="absolute top-full right-0 z-[9999] mt-1 flex items-center gap-1 rounded-lg border border-border bg-secondary-bg p-1.5 shadow-lg"
+              >
                 <WebViewerToolbarButton
                   onClick={onZoomOut}
                   disabled={zoomLevel <= 0.25}

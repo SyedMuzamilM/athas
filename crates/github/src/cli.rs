@@ -3,11 +3,64 @@ use std::{
    ffi::OsStr,
    path::{Path, PathBuf},
    process::Command,
+   sync::OnceLock,
 };
 use tauri::{AppHandle, Manager};
 
+/// Get the user's login shell PATH by running `$SHELL -ilc 'echo $PATH'`.
+/// Cached for the lifetime of the process since the user's PATH doesn't change.
+fn user_shell_path() -> Option<&'static str> {
+   static CACHED: OnceLock<Option<String>> = OnceLock::new();
+   CACHED
+      .get_or_init(|| {
+         let shell = env::var("SHELL").unwrap_or_else(|_| {
+            if cfg!(target_os = "windows") {
+               return String::new();
+            }
+            "/bin/zsh".to_string()
+         });
+         if shell.is_empty() {
+            return None;
+         }
+         let output = Command::new(&shell)
+            .args(["-ilc", "echo $PATH"])
+            .output()
+            .ok()?;
+         let path = String::from_utf8(output.stdout).ok()?.trim().to_string();
+         if path.is_empty() { None } else { Some(path) }
+      })
+      .as_deref()
+}
+
+/// Find the `gh` binary. On bundled apps the inherited PATH is minimal,
+/// so we resolve the full PATH from the user's login shell first.
+pub(crate) fn resolve_gh_binary() -> String {
+   let exe = if cfg!(target_os = "windows") {
+      "gh.exe"
+   } else {
+      "gh"
+   };
+
+   // Combine current PATH with the user's shell PATH
+   let combined = match (env::var("PATH").ok(), user_shell_path()) {
+      (Some(current), Some(shell)) => format!("{current}:{shell}"),
+      (Some(current), None) => current,
+      (None, Some(shell)) => shell.to_string(),
+      (None, None) => String::new(),
+   };
+
+   for dir in env::split_paths(&combined) {
+      if dir.join(exe).exists() {
+         return dir.join(exe).to_string_lossy().into_owned();
+      }
+   }
+
+   // Fall back to bare name and let the OS try
+   exe.to_string()
+}
+
 pub(crate) fn gh_command(app: &AppHandle, repo_dir: Option<&Path>) -> Command {
-   let mut command = Command::new("gh");
+   let mut command = Command::new(resolve_gh_binary());
 
    if let Some(dir) = repo_dir {
       command.current_dir(dir);
