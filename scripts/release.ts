@@ -69,6 +69,14 @@ function formatVersion(version: ParsedVersion): string {
   return `${base}-${version.prerelease.channel}.${version.prerelease.number}`;
 }
 
+function getReleaseCommitMessage(version: ParsedVersion): string {
+  if (version.prerelease) {
+    return `Prepare ${version.prerelease.channel} release`;
+  }
+
+  return "Prepare release";
+}
+
 function isReleaseChannel(value: string): value is ReleaseChannel {
   return value === "alpha" || value === "beta" || value === "rc";
 }
@@ -290,7 +298,7 @@ async function release() {
   await $`git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml`;
   success("Staged version changes");
 
-  const commitMessage = `Bump version to ${newVersion}`;
+  const commitMessage = getReleaseCommitMessage(parsedNewVersion);
   await $`git commit -m ${commitMessage}`;
   success(`Created commit: ${commitMessage}`);
 
