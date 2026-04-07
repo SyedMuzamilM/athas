@@ -223,11 +223,11 @@ async function release() {
   const releaseArgs = process.argv.slice(2);
 
   if (!process.env.RELEASE_SKIP_CHECKS) {
-    log("Running pre-release checks...\n", "magenta");
-    await $`bun pre-release`;
-    success("Pre-release checks passed");
+    log("Running release checks...\n", "magenta");
+    await $`bun release:check`;
+    success("Release checks passed");
   } else {
-    info("Skipping pre-release checks because RELEASE_SKIP_CHECKS is set");
+    info("Skipping release checks because RELEASE_SKIP_CHECKS is set");
   }
 
   await checkWorkingDirectory();
