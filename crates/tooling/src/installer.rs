@@ -71,12 +71,16 @@ impl ToolInstaller {
          .map(|first_bin| package_root.join(first_bin))
    }
 
+   #[cfg(unix)]
    fn ensure_executable(path: &Path) -> Result<(), ToolError> {
-      #[cfg(unix)]
-      {
-         use std::os::unix::fs::PermissionsExt;
-         fs::set_permissions(path, fs::Permissions::from_mode(0o755))?;
-      }
+      use std::os::unix::fs::PermissionsExt;
+      fs::set_permissions(path, fs::Permissions::from_mode(0o755))?;
+      Ok(())
+   }
+
+   #[cfg(not(unix))]
+   fn ensure_executable(path: &Path) -> Result<(), ToolError> {
+      let _ = path;
       Ok(())
    }
 
