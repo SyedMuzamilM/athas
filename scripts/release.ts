@@ -12,6 +12,12 @@ const colors = {
 };
 
 type ReleaseChannel = "alpha" | "beta" | "rc";
+const VERSIONED_FILES = [
+  "package.json",
+  "src-tauri/tauri.conf.json",
+  "src-tauri/Cargo.toml",
+  "Cargo.lock",
+] as const;
 
 interface ParsedVersion {
   major: number;
@@ -219,10 +225,7 @@ async function updateCargoToml(newVersion: string) {
 }
 
 async function updateCargoLock() {
-  const result = await $`cargo metadata --format-version 1 --no-deps`
-    .quiet()
-    .nothrow()
-    .cwd(process.cwd());
+  const result = await $`cargo check -p athas`.quiet().nothrow().cwd(process.cwd());
 
   if (result.exitCode !== 0) {
     error("Could not refresh Cargo.lock");
@@ -241,7 +244,9 @@ async function checkWorkingDirectory() {
 async function release() {
   log("\nStarting release process...\n", "magenta");
 
-  const releaseArgs = process.argv.slice(2);
+  const rawArgs = process.argv.slice(2);
+  const isDryRun = rawArgs.includes("--dry-run");
+  const releaseArgs = rawArgs.filter((arg) => arg !== "--dry-run");
 
   if (!process.env.RELEASE_SKIP_CHECKS) {
     log("Running release checks...\n", "magenta");
@@ -283,9 +288,14 @@ async function release() {
     `  1. Update package.json, tauri.conf.json, Cargo.toml, and Cargo.lock to v${newVersion}`,
     "yellow",
   );
-  log("  2. Create a commit with these changes", "yellow");
-  log(`  3. Create and push tag v${newVersion}`, "yellow");
-  log("  4. Trigger GitHub Actions to build and release\n", "yellow");
+  if (isDryRun) {
+    log("  2. Verify the working tree diff locally", "yellow");
+    log("  3. Restore all touched files without commit, tag, or push\n", "yellow");
+  } else {
+    log("  2. Create a commit with these changes", "yellow");
+    log(`  3. Create and push tag v${newVersion}`, "yellow");
+    log("  4. Trigger GitHub Actions to build and release\n", "yellow");
+  }
 
   if (parsedNewVersion.prerelease) {
     info(
@@ -305,33 +315,57 @@ async function release() {
     }
   }
 
+  const originalFiles = new Map<string, string>();
+
+  for (const filePath of VERSIONED_FILES) {
+    originalFiles.set(filePath, await Bun.file(`${process.cwd()}/${filePath}`).text());
+  }
+
   log("\n📦 Updating version files...\n", "magenta");
 
-  await updatePackageJson(newVersion);
-  await updateTauriConfig(newVersion);
-  await updateCargoToml(newVersion);
-  await updateCargoLock();
+  try {
+    await updatePackageJson(newVersion);
+    await updateTauriConfig(newVersion);
+    await updateCargoToml(newVersion);
+    await updateCargoLock();
 
-  await $`git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml Cargo.lock`;
-  success("Staged version changes");
+    if (isDryRun) {
+      const diffStat = (await $`git diff --stat -- ${VERSIONED_FILES}`.text()).trim();
+      if (diffStat.length > 0) {
+        log(diffStat, "blue");
+      }
+      success("Dry run updated version files locally");
+      return;
+    }
 
-  const commitMessage = getReleaseCommitMessage(parsedNewVersion);
-  await $`git commit -m ${commitMessage}`;
-  success(`Created commit: ${commitMessage}`);
+    await $`git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml Cargo.lock`;
+    success("Staged version changes");
 
-  await $`git tag v${newVersion}`;
-  success(`Created tag: v${newVersion}`);
+    const commitMessage = getReleaseCommitMessage(parsedNewVersion);
+    await $`git commit -m ${commitMessage}`;
+    success(`Created commit: ${commitMessage}`);
 
-  log("\nPushing to remote...\n", "magenta");
-  await $`git push origin master`;
-  success("Pushed commits");
+    await $`git tag v${newVersion}`;
+    success(`Created tag: v${newVersion}`);
 
-  await $`git push origin v${newVersion}`;
-  success("Pushed tag");
+    log("\nPushing to remote...\n", "magenta");
+    await $`git push origin master`;
+    success("Pushed commits");
 
-  log("\n✨ Release process complete!\n", "green");
-  log(`GitHub Actions will now build and release v${newVersion}`, "cyan");
-  log("View the progress at: https://github.com/athasdev/athas/actions\n", "cyan");
+    await $`git push origin v${newVersion}`;
+    success("Pushed tag");
+
+    log("\n✨ Release process complete!\n", "green");
+    log(`GitHub Actions will now build and release v${newVersion}`, "cyan");
+    log("View the progress at: https://github.com/athasdev/athas/actions\n", "cyan");
+  } finally {
+    if (isDryRun) {
+      for (const [filePath, contents] of originalFiles) {
+        await Bun.write(`${process.cwd()}/${filePath}`, contents);
+      }
+      success("Dry run restored version files");
+    }
+  }
 }
 
 release().catch((err) => {
