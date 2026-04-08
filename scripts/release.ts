@@ -295,7 +295,7 @@ async function release() {
   await updateTauriConfig(newVersion);
   await updateCargoToml(newVersion);
 
-  await $`git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml`;
+  await $`git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml Cargo.lock`;
   success("Staged version changes");
 
   const commitMessage = getReleaseCommitMessage(parsedNewVersion);
