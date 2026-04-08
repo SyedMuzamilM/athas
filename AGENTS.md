@@ -8,6 +8,9 @@
 - Avoid unnecessary `cn(...)` calls: use it only for conditional or merged class names; do not wrap static strings
 - Always use bun.
 - PR descriptions should be simple, natural language, no headers or sections, just a few bullet points describing what changed and why.
+- Validate release changes locally before publishing anything. Prefer `bun scripts/release.ts <channel> --dry-run` first.
+- Do not use real release tags to debug release automation. Fix and prove the flow locally before pushing a new tag.
+- Keep Windows MSI versioning numeric-only through `tauri.bundle.windows.wix.version`; prerelease app versions must not be used directly for MSI builds.
 
 ## Zustand
 

@@ -29,6 +29,14 @@ interface ParsedVersion {
   };
 }
 
+const WINDOWS_MSI_PATCH_MULTIPLIER = 1000;
+const WINDOWS_MSI_STABLE_OFFSET = 900;
+const WINDOWS_MSI_CHANNEL_OFFSETS = {
+  alpha: 0,
+  beta: 200,
+  rc: 400,
+} satisfies Record<ReleaseChannel, number>;
+
 function log(message: string, color: keyof typeof colors = "reset") {
   console.log(`${colors[color]}${message}${colors.reset}`);
 }
@@ -73,6 +81,25 @@ function formatVersion(version: ParsedVersion): string {
   }
 
   return `${base}-${version.prerelease.channel}.${version.prerelease.number}`;
+}
+
+function getWindowsMsiVersion(version: ParsedVersion): string {
+  if (version.patch > 64) {
+    error("Windows MSI version mapping supports patch versions up to 64");
+  }
+
+  const baseBuild = version.patch * WINDOWS_MSI_PATCH_MULTIPLIER;
+
+  if (!version.prerelease) {
+    return `${version.major}.${version.minor}.${baseBuild + WINDOWS_MSI_STABLE_OFFSET}`;
+  }
+
+  if (version.prerelease.number > 199) {
+    error("Windows MSI version mapping supports prerelease numbers up to 199");
+  }
+
+  const channelOffset = WINDOWS_MSI_CHANNEL_OFFSETS[version.prerelease.channel];
+  return `${version.major}.${version.minor}.${baseBuild + channelOffset + version.prerelease.number}`;
 }
 
 function getReleaseCommitMessage(version: ParsedVersion): string {
@@ -197,14 +224,13 @@ async function updatePackageJson(newVersion: string) {
 
 async function updateTauriConfig(newVersion: string) {
   const configPath = `${process.cwd()}/src-tauri/tauri.conf.json`;
-  const configText = await Bun.file(configPath).text();
-  const updatedConfig = configText.replace(/"version"\s*:\s*"[^"]+"/, `"version": "${newVersion}"`);
-
-  if (updatedConfig === configText) {
-    error("Could not update version in src-tauri/tauri.conf.json");
-  }
-
-  await Bun.write(configPath, updatedConfig);
+  const config = JSON.parse(await Bun.file(configPath).text());
+  config.version = newVersion;
+  config.bundle ??= {};
+  config.bundle.windows ??= {};
+  config.bundle.windows.wix ??= {};
+  config.bundle.windows.wix.version = getWindowsMsiVersion(parseVersion(newVersion));
+  await Bun.write(configPath, `${JSON.stringify(config, null, 2)}\n`);
   success(`Updated tauri.conf.json to v${newVersion}`);
 }
 

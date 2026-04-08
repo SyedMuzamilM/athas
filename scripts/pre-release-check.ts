@@ -64,6 +64,43 @@ function parsePrerelease(version: string): { channel: string; number: number } |
   };
 }
 
+const WINDOWS_MSI_PATCH_MULTIPLIER = 1000;
+const WINDOWS_MSI_STABLE_OFFSET = 900;
+const WINDOWS_MSI_CHANNEL_OFFSETS = {
+  alpha: 0,
+  beta: 200,
+  rc: 400,
+} as const;
+
+function getExpectedWindowsMsiVersion(version: string): string | null {
+  const stableVersion = parseStableVersion(version);
+  if (!stableVersion) {
+    return null;
+  }
+
+  if (stableVersion.patch > 64) {
+    return null;
+  }
+
+  const prerelease = parsePrerelease(version);
+  const baseBuild = stableVersion.patch * WINDOWS_MSI_PATCH_MULTIPLIER;
+
+  if (!prerelease) {
+    return `${stableVersion.major}.${stableVersion.minor}.${baseBuild + WINDOWS_MSI_STABLE_OFFSET}`;
+  }
+
+  if (
+    !Object.prototype.hasOwnProperty.call(WINDOWS_MSI_CHANNEL_OFFSETS, prerelease.channel) ||
+    prerelease.number > 199
+  ) {
+    return null;
+  }
+
+  const channelOffset =
+    WINDOWS_MSI_CHANNEL_OFFSETS[prerelease.channel as keyof typeof WINDOWS_MSI_CHANNEL_OFFSETS];
+  return `${stableVersion.major}.${stableVersion.minor}.${baseBuild + channelOffset + prerelease.number}`;
+}
+
 interface CheckResult {
   name: string;
   passed: boolean;
@@ -240,6 +277,26 @@ async function main() {
         message: `package.json (${currentVersion}), tauri.conf.json (${tauriVersion}), Cargo.toml (${cargoVersion})`,
       };
     }
+    return { passed: true };
+  });
+
+  await runCheck("Windows MSI version stays in sync", async () => {
+    const expectedWindowsMsiVersion = getExpectedWindowsMsiVersion(currentVersion);
+    if (!expectedWindowsMsiVersion) {
+      return {
+        passed: false,
+        message: `Could not derive a Windows MSI version from ${currentVersion}`,
+      };
+    }
+
+    const windowsMsiVersion = tauriConfig.bundle?.windows?.wix?.version;
+    if (windowsMsiVersion !== expectedWindowsMsiVersion) {
+      return {
+        passed: false,
+        message: `tauri.conf.json wix.version (${windowsMsiVersion ?? "missing"}) should be ${expectedWindowsMsiVersion}`,
+      };
+    }
+
     return { passed: true };
   });
 
