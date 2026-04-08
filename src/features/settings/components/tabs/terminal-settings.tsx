@@ -12,7 +12,7 @@ import {
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import NumberInput from "@/ui/number-input";
-import Section, { SettingRow } from "../settings-section";
+import Section, { SETTINGS_CONTROL_WIDTHS, SettingRow } from "../settings-section";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import Textarea from "@/ui/textarea";
@@ -134,7 +134,7 @@ export const TerminalSettings = () => {
                 value === DEFAULT_SHELL_OPTION_VALUE ? "" : value,
               )
             }
-            className="w-56"
+            className={SETTINGS_CONTROL_WIDTHS.xwide}
             size="xs"
             variant="secondary"
           />
@@ -159,7 +159,7 @@ export const TerminalSettings = () => {
                 value === SYSTEM_DEFAULT_PROFILE_ID ? "" : value,
               )
             }
-            className="w-56"
+            className={SETTINGS_CONTROL_WIDTHS.xwide}
             size="xs"
             variant="secondary"
             searchable
@@ -302,7 +302,7 @@ export const TerminalSettings = () => {
               value={settings.terminalFontFamily}
               options={fontOptions}
               onChange={(val) => updateSetting("terminalFontFamily", val)}
-              className="w-64"
+              className={SETTINGS_CONTROL_WIDTHS.xwide}
               size="xs"
               variant="secondary"
               searchable
@@ -325,7 +325,7 @@ export const TerminalSettings = () => {
             max="32"
             value={settings.terminalFontSize}
             onChange={(val) => updateSetting("terminalFontSize", val)}
-            className="w-20"
+            className={SETTINGS_CONTROL_WIDTHS.number}
             size="xs"
           />
         </SettingRow>
@@ -344,7 +344,7 @@ export const TerminalSettings = () => {
             step={0.1}
             value={settings.terminalLineHeight}
             onChange={(val) => updateSetting("terminalLineHeight", val)}
-            className="w-20"
+            className={SETTINGS_CONTROL_WIDTHS.number}
             size="xs"
           />
         </SettingRow>
@@ -363,7 +363,7 @@ export const TerminalSettings = () => {
             step={0.1}
             value={settings.terminalLetterSpacing}
             onChange={(val) => updateSetting("terminalLetterSpacing", val)}
-            className="w-20"
+            className={SETTINGS_CONTROL_WIDTHS.number}
             size="xs"
           />
         </SettingRow>
@@ -382,7 +382,7 @@ export const TerminalSettings = () => {
             step={1000}
             value={settings.terminalScrollback}
             onChange={(val) => updateSetting("terminalScrollback", val)}
-            className="w-24"
+            className={SETTINGS_CONTROL_WIDTHS.default}
             size="xs"
           />
         </SettingRow>
@@ -407,7 +407,7 @@ export const TerminalSettings = () => {
             onChange={(val) =>
               updateSetting("terminalCursorStyle", val as "block" | "underline" | "bar")
             }
-            className="w-32"
+            className={SETTINGS_CONTROL_WIDTHS.default}
             size="xs"
             variant="secondary"
           />
@@ -441,7 +441,7 @@ export const TerminalSettings = () => {
             max="6"
             value={settings.terminalCursorWidth}
             onChange={(val) => updateSetting("terminalCursorWidth", val)}
-            className="w-20"
+            className={SETTINGS_CONTROL_WIDTHS.number}
             size="xs"
           />
         </SettingRow>

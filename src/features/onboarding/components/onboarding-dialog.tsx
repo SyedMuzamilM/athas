@@ -60,6 +60,7 @@ export default function OnboardingDialog({ context, onClose, onComplete }: Onboa
   const [openFoldersInNewWindow, setOpenFoldersInNewWindow] = useState(
     settings.openFoldersInNewWindow,
   );
+  const [horizontalTabScroll, setHorizontalTabScroll] = useState(settings.horizontalTabScroll);
   const modeCopy = getModeCopy(context.mode, context.currentVersion, context.previousVersion);
 
   useEffect(() => {
@@ -67,8 +68,10 @@ export default function OnboardingDialog({ context, onClose, onComplete }: Onboa
     setSyncSystemTheme(settings.syncSystemTheme);
     setVimMode(settings.vimMode);
     setOpenFoldersInNewWindow(settings.openFoldersInNewWindow);
+    setHorizontalTabScroll(settings.horizontalTabScroll);
   }, [
     context.mode,
+    settings.horizontalTabScroll,
     settings.openFoldersInNewWindow,
     settings.syncSystemTheme,
     settings.telemetry,
@@ -97,6 +100,7 @@ export default function OnboardingDialog({ context, onClose, onComplete }: Onboa
       updateSetting("syncSystemTheme", syncSystemTheme),
       updateSetting("vimMode", vimMode),
       updateSetting("openFoldersInNewWindow", openFoldersInNewWindow),
+      updateSetting("horizontalTabScroll", horizontalTabScroll),
     ]);
   };
 
@@ -145,6 +149,11 @@ export default function OnboardingDialog({ context, onClose, onComplete }: Onboa
             title: "Open folders in a new window",
             checked: openFoldersInNewWindow,
             onChange: setOpenFoldersInNewWindow,
+          },
+          {
+            title: "Enable buffer carousel",
+            checked: horizontalTabScroll,
+            onChange: setHorizontalTabScroll,
           },
         ].map((item, index) => (
           <motion.div

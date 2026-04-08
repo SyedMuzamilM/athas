@@ -2,6 +2,11 @@ import { cva } from "class-variance-authority";
 import { Minus, Plus } from "lucide-react";
 import type React from "react";
 import { useEffect, useState } from "react";
+import {
+  controlFieldIconSizes,
+  controlFieldSizeVariants,
+  controlFieldSurfaceVariants,
+} from "@/ui/control-field";
 import { cn } from "@/utils/cn";
 
 interface InputProps extends Omit<
@@ -13,7 +18,7 @@ interface InputProps extends Omit<
 }
 
 const numberInputFieldVariants = cva(
-  "rounded text-text focus:outline-none disabled:cursor-not-allowed disabled:opacity-50",
+  "min-w-0 bg-transparent text-text focus:outline-none disabled:cursor-not-allowed disabled:opacity-50",
   {
     variants: {
       size: {
@@ -29,15 +34,21 @@ const numberInputFieldVariants = cva(
 );
 
 const numberInputStepperButtonVariants = cva(
-  "bg-secondary-bg text-text transition-colors hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-secondary-bg",
+  "flex items-center justify-center bg-secondary-bg text-text transition-colors hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-secondary-bg",
   {
     variants: {
+      size: {
+        xs: "h-[11px] w-5",
+        sm: "h-[13px] w-5",
+        md: "h-[15px] w-6",
+      },
       segment: {
         top: "border-border border-b",
         bottom: "",
       },
     },
     defaultVariants: {
+      size: "sm",
       segment: "bottom",
     },
   },
@@ -130,7 +141,13 @@ export default function NumberInput({
   };
 
   return (
-    <div className="flex items-center overflow-hidden rounded border border-border bg-secondary-bg">
+    <div
+      className={cn(
+        controlFieldSurfaceVariants({ variant: "secondary" }),
+        controlFieldSizeVariants({ size }),
+        "flex items-center overflow-hidden rounded-lg",
+      )}
+    >
       <input
         value={inputValue}
         onChange={handleInputChange}
@@ -143,17 +160,17 @@ export default function NumberInput({
           type="button"
           onClick={handleIncrement}
           disabled={numericValue >= max}
-          className={numberInputStepperButtonVariants({ segment: "top" })}
+          className={numberInputStepperButtonVariants({ size, segment: "top" })}
         >
-          <Plus className="text-text-lighter" />
+          <Plus size={controlFieldIconSizes[size]} className="text-text-lighter" />
         </button>
         <button
           type="button"
           onClick={handleDecrement}
           disabled={numericValue <= min}
-          className={numberInputStepperButtonVariants({ segment: "bottom" })}
+          className={numberInputStepperButtonVariants({ size, segment: "bottom" })}
         >
-          <Minus className="text-text-lighter" />
+          <Minus size={controlFieldIconSizes[size]} className="text-text-lighter" />
         </button>
       </div>
     </div>

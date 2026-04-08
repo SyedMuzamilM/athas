@@ -10,6 +10,17 @@ interface SectionProps {
   className?: string;
 }
 
+export const SETTINGS_CONTROL_WIDTHS = {
+  compact: "w-fit min-w-0 max-w-20",
+  default: "w-fit min-w-0 max-w-32",
+  wide: "w-fit min-w-0 max-w-40",
+  xwide: "w-fit min-w-0 max-w-56",
+  number: "w-20",
+  numberCompact: "w-16",
+  text: "w-48",
+  textWide: "w-56",
+} as const;
+
 export default function Section({ title, description, children, className }: SectionProps) {
   return (
     <section className={cn("px-1 py-1", className)} data-settings-section={title}>
@@ -46,14 +57,12 @@ export function SettingRow({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
           <div className="ui-font ui-text-sm text-text">{label}</div>
-          {onReset && (
+          {onReset && canReset && (
             <Button
               type="button"
               variant="secondary"
               size="icon-xs"
               onClick={onReset}
-              disabled={!canReset}
-              className={cn(canReset ? undefined : "cursor-default opacity-40")}
               aria-label={resetLabel || `Reset ${label}`}
               title={resetLabel || `Reset ${label}`}
             >
@@ -63,7 +72,9 @@ export function SettingRow({
         </div>
         {description && <div className="ui-font ui-text-sm text-text-lighter">{description}</div>}
       </div>
-      <div className="shrink-0">{children}</div>
+      <div className="ui-font ui-text-sm shrink-0 [--app-ui-control-font-size:var(--ui-text-sm)]">
+        {children}
+      </div>
     </div>
   );
 }

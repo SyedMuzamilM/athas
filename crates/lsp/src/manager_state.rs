@@ -33,11 +33,9 @@ impl WorkspaceClients {
       workspace_path: &Path,
       server_name: &str,
    ) -> bool {
-      self
-         .inner
-         .lock()
-         .unwrap()
-         .contains_key(&(workspace_path.to_path_buf(), server_name.to_string()))
+      let mut clients = self.inner.lock().unwrap();
+      Self::prune_dead_instances(&mut clients);
+      clients.contains_key(&(workspace_path.to_path_buf(), server_name.to_string()))
    }
 
    pub(super) fn insert(
@@ -60,6 +58,7 @@ impl WorkspaceClients {
       file_path: &Path,
    ) -> Option<usize> {
       let mut clients = self.inner.lock().unwrap();
+      Self::prune_dead_instances(&mut clients);
       let key = (workspace_path.to_path_buf(), server_name.to_string());
       let instance = clients.get_mut(&key)?;
       instance.ref_count += 1;
@@ -71,6 +70,7 @@ impl WorkspaceClients {
 
    pub(super) fn stop_file(&self, file_path: &Path) {
       let mut clients = self.inner.lock().unwrap();
+      Self::prune_dead_instances(&mut clients);
       let mut to_remove: Option<WorkspaceKey> = None;
 
       for (key, instance) in clients.iter_mut() {
@@ -106,7 +106,8 @@ impl WorkspaceClients {
 
    pub(super) fn get_client_for_file(&self, file_path: &Path) -> Option<LspClient> {
       let file_ext = file_path.extension().and_then(|ext| ext.to_str());
-      let clients = self.inner.lock().unwrap();
+      let mut clients = self.inner.lock().unwrap();
+      Self::prune_dead_instances(&mut clients);
 
       log::debug!(
          "get_client_for_file: looking for client for {:?} (ext: {:?})",
@@ -169,6 +170,7 @@ impl WorkspaceClients {
 
    pub(super) fn shutdown_workspace(&self, workspace_path: &Path) -> std::io::Result<()> {
       let mut clients = self.inner.lock().unwrap();
+      Self::prune_dead_instances(&mut clients);
       let keys_to_remove: Vec<_> = clients
          .keys()
          .filter(|(ws, _)| ws == workspace_path)
@@ -187,5 +189,41 @@ impl WorkspaceClients {
       }
 
       Ok(())
+   }
+
+   fn prune_dead_instances(clients: &mut HashMap<WorkspaceKey, LspInstance>) {
+      let mut dead_keys = Vec::new();
+
+      for (key, instance) in clients.iter_mut() {
+         let child_exited = match instance.child.try_wait() {
+            Ok(Some(status)) => {
+               log::warn!(
+                  "Removing exited LSP '{}' for workspace {:?} with status {}",
+                  instance.server_name,
+                  key.0,
+                  status
+               );
+               true
+            }
+            Ok(None) => false,
+            Err(error) => {
+               log::warn!(
+                  "Failed to inspect LSP '{}' for workspace {:?}: {}",
+                  instance.server_name,
+                  key.0,
+                  error
+               );
+               true
+            }
+         };
+
+         if child_exited || !instance.client.is_running() {
+            dead_keys.push(key.clone());
+         }
+      }
+
+      for key in dead_keys {
+         clients.remove(&key);
+      }
    }
 }

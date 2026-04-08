@@ -200,13 +200,13 @@ export default function Select({
           className={resolvedTriggerClassName}
           aria-label={ariaLabel ?? placeholder}
         >
-          <span className="flex min-w-0 flex-1 items-center gap-2">
+          <span className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
             {triggerIcon}
             {selectedOption?.icon && (
               <span className="size-3 shrink-0 text-text-lighter">{selectedOption.icon}</span>
             )}
-            <SelectPrimitive.Value placeholder={placeholder}>
-              <span className="truncate text-left">
+            <SelectPrimitive.Value className="min-w-0 flex-1" placeholder={placeholder}>
+              <span className="block truncate text-left">
                 {selectedOption?.label || value || placeholder}
               </span>
             </SelectPrimitive.Value>

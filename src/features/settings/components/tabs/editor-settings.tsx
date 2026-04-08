@@ -1,7 +1,7 @@
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
 import Input from "@/ui/input";
 import NumberInput from "@/ui/number-input";
-import Section, { SettingRow } from "../settings-section";
+import Section, { SETTINGS_CONTROL_WIDTHS, SettingRow } from "../settings-section";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import { FontSelector } from "../font-selector";
@@ -21,7 +21,7 @@ export const EditorSettings = () => {
           <FontSelector
             value={settings.fontFamily}
             onChange={(fontFamily) => updateSetting("fontFamily", fontFamily)}
-            className="w-48"
+            className={SETTINGS_CONTROL_WIDTHS.text}
             monospaceOnly={true}
           />
         </SettingRow>
@@ -37,7 +37,7 @@ export const EditorSettings = () => {
             max="32"
             value={settings.fontSize}
             onChange={(val) => updateSetting("fontSize", val)}
-            className="w-16"
+            className={SETTINGS_CONTROL_WIDTHS.numberCompact}
             size="xs"
           />
         </SettingRow>
@@ -53,7 +53,7 @@ export const EditorSettings = () => {
             max="8"
             value={settings.tabSize}
             onChange={(val) => updateSetting("tabSize", val)}
-            className="w-16"
+            className={SETTINGS_CONTROL_WIDTHS.numberCompact}
             size="xs"
           />
         </SettingRow>
@@ -140,10 +140,10 @@ export const EditorSettings = () => {
         >
           <NumberInput
             min="1"
-            max="50"
+            max="100"
             value={settings.maxOpenTabs}
             onChange={(val) => updateSetting("maxOpenTabs", val)}
-            className="w-16"
+            className={SETTINGS_CONTROL_WIDTHS.numberCompact}
             size="xs"
           />
         </SettingRow>
@@ -203,7 +203,7 @@ export const EditorSettings = () => {
                 value as "none" | "nvim" | "helix" | "vim" | "nano" | "emacs" | "custom",
               )
             }
-            className="w-48"
+            className={SETTINGS_CONTROL_WIDTHS.text}
             size="xs"
             variant="secondary"
           />
@@ -223,7 +223,7 @@ export const EditorSettings = () => {
               value={settings.customEditorCommand}
               onChange={(e) => updateSetting("customEditorCommand", e.target.value)}
               placeholder="micro $FILE"
-              className="w-48"
+              className={SETTINGS_CONTROL_WIDTHS.text}
               size="xs"
             />
           </SettingRow>

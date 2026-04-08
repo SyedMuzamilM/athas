@@ -11,7 +11,7 @@ import { useAuthStore } from "@/features/window/stores/auth-store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
-import Section, { SettingRow } from "../settings-section";
+import Section, { SETTINGS_CONTROL_WIDTHS, SettingRow } from "../settings-section";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import { fetchAutocompleteModels } from "@/features/editor/services/editor-autocomplete-service";
@@ -346,7 +346,7 @@ export const AISettings = () => {
               size="xs"
               variant="secondary"
               searchable
-              className="w-56"
+              className={SETTINGS_CONTROL_WIDTHS.xwide}
               disabled={!aiCompletionAllowedByPolicy}
             />
             <Button

@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { Minus, Plus, Upload } from "lucide-react";
+import { Upload } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
 import type { IconThemeDefinition } from "@/extensions/icon-themes/types";
@@ -7,15 +7,17 @@ import { themeRegistry } from "@/extensions/themes/theme-registry";
 import type { ThemeDefinition } from "@/extensions/themes/types";
 import {
   formatUiFontSize,
-  shiftUiFontSize,
   UI_FONT_SIZE_MAX,
   UI_FONT_SIZE_MIN,
+  UI_FONT_SIZE_STEP,
 } from "@/features/settings/lib/ui-font-size";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
 import { Button } from "@/ui/button";
-import Section, { SettingRow } from "../settings-section";
+import NumberInput from "@/ui/number-input";
+import Section, { SETTINGS_CONTROL_WIDTHS, SettingRow } from "../settings-section";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
+import { cn } from "@/utils/cn";
 import { IS_MAC } from "@/utils/platform";
 import { FontSelector } from "../font-selector";
 
@@ -134,17 +136,6 @@ export const AppearanceSettings = () => {
     updateSetting("iconTheme", themeId);
   };
 
-  const canDecreaseUiFontSize = settings.uiFontSize > UI_FONT_SIZE_MIN;
-  const canIncreaseUiFontSize = settings.uiFontSize < UI_FONT_SIZE_MAX;
-
-  const handleDecreaseUiFontSize = () => {
-    updateSetting("uiFontSize", shiftUiFontSize(settings.uiFontSize, -1));
-  };
-
-  const handleIncreaseUiFontSize = () => {
-    updateSetting("uiFontSize", shiftUiFontSize(settings.uiFontSize, 1));
-  };
-
   const getThemeDescription = () => {
     const currentTheme = themeRegistry.getTheme(settings.theme);
     return currentTheme?.description || "Choose your preferred color theme";
@@ -164,7 +155,7 @@ export const AppearanceSettings = () => {
               value={settings.theme}
               options={normalizedThemeOptions}
               onChange={(value) => updateSetting("theme", value)}
-              className="w-40"
+              className={SETTINGS_CONTROL_WIDTHS.wide}
               size="xs"
               variant="secondary"
               searchable
@@ -200,7 +191,7 @@ export const AppearanceSettings = () => {
             value={settings.autoThemeLight}
             options={lightThemeOptions}
             onChange={(value) => updateSetting("autoThemeLight", value)}
-            className="w-40"
+            className={SETTINGS_CONTROL_WIDTHS.wide}
             size="xs"
             variant="secondary"
             searchable
@@ -217,7 +208,7 @@ export const AppearanceSettings = () => {
             value={settings.autoThemeDark}
             options={darkThemeOptions}
             onChange={(value) => updateSetting("autoThemeDark", value)}
-            className="w-40"
+            className={SETTINGS_CONTROL_WIDTHS.wide}
             size="xs"
             variant="secondary"
             searchable
@@ -234,7 +225,7 @@ export const AppearanceSettings = () => {
             value={settings.iconTheme}
             options={normalizedIconThemeOptions}
             onChange={handleIconThemeChange}
-            className="w-40"
+            className={SETTINGS_CONTROL_WIDTHS.wide}
             size="xs"
             variant="secondary"
             searchable
@@ -252,7 +243,7 @@ export const AppearanceSettings = () => {
           <FontSelector
             value={settings.uiFontFamily}
             onChange={(fontFamily) => updateSetting("uiFontFamily", fontFamily)}
-            className="w-48"
+            className={SETTINGS_CONTROL_WIDTHS.text}
             monospaceOnly={false}
           />
         </SettingRow>
@@ -263,33 +254,16 @@ export const AppearanceSettings = () => {
           onReset={() => updateSetting("uiFontSize", getDefaultSetting("uiFontSize"))}
           canReset={settings.uiFontSize !== getDefaultSetting("uiFontSize")}
         >
-          <div className="flex items-center gap-1.5">
-            <Button
-              type="button"
-              variant="secondary"
-              size="xs"
-              onClick={handleDecreaseUiFontSize}
-              disabled={!canDecreaseUiFontSize}
-              aria-label="Decrease UI font size"
-            >
-              <Minus />
-            </Button>
-
-            <div className="ui-font ui-text-sm min-w-[52px] text-center text-text tabular-nums">
-              {formatUiFontSize(settings.uiFontSize)}
-            </div>
-
-            <Button
-              type="button"
-              variant="secondary"
-              size="xs"
-              onClick={handleIncreaseUiFontSize}
-              disabled={!canIncreaseUiFontSize}
-              aria-label="Increase UI font size"
-            >
-              <Plus />
-            </Button>
-          </div>
+          <NumberInput
+            min={String(UI_FONT_SIZE_MIN)}
+            max={String(UI_FONT_SIZE_MAX)}
+            step={String(UI_FONT_SIZE_STEP)}
+            value={settings.uiFontSize}
+            onChange={(value) => updateSetting("uiFontSize", value)}
+            className={cn(SETTINGS_CONTROL_WIDTHS.number, "tabular-nums")}
+            size="xs"
+            aria-label={`UI font size: ${formatUiFontSize(settings.uiFontSize)} pixels`}
+          />
         </SettingRow>
       </Section>
 
@@ -304,7 +278,7 @@ export const AppearanceSettings = () => {
             value={settings.sidebarPosition}
             options={sidebarOptions}
             onChange={(value) => updateSetting("sidebarPosition", value as "left" | "right")}
-            className="w-20"
+            className={SETTINGS_CONTROL_WIDTHS.compact}
             size="xs"
             variant="secondary"
           />
@@ -395,7 +369,7 @@ export const AppearanceSettings = () => {
             value={settings.titleBarProjectMode}
             options={titleBarProjectModeOptions}
             onChange={(value) => updateSetting("titleBarProjectMode", value as "tabs" | "window")}
-            className="w-24"
+            className={SETTINGS_CONTROL_WIDTHS.default}
             size="xs"
             variant="secondary"
           />

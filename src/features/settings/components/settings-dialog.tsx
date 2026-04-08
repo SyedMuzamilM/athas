@@ -142,7 +142,7 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
   }, []);
 
   const dialogTitle = useMemo(() => {
-    const crumbs: Array<{ label: string; onClick: () => void }> = [
+    const baseCrumbs: Array<{ label: string; onClick: () => void }> = [
       {
         label: "Settings",
         onClick: () => {
@@ -155,17 +155,24 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
         onClick: scrollContentToTop,
       },
     ];
-    if (activeSection) {
-      crumbs.push({
+    if (activeSection && activeSection !== SETTINGS_TAB_LABELS[activeTab] && !searchQuery) {
+      baseCrumbs.push({
         label: activeSection,
         onClick: () => scrollToSection(activeSection),
       });
     }
 
+    const crumbs = baseCrumbs.filter(
+      (crumb, index, entries) => index === 0 || crumb.label !== entries[index - 1]?.label,
+    );
+
     return (
       <div className="ui-font flex min-w-0 items-center gap-0.5 overflow-x-auto scrollbar-none text-text-lighter">
         {crumbs.map((crumb, index) => (
-          <div key={crumb.label} className="flex min-w-0 shrink-0 items-center gap-0.5">
+          <div
+            key={`${index}-${crumb.label}`}
+            className="flex min-w-0 shrink-0 items-center gap-0.5"
+          >
             {index > 0 ? (
               <ChevronRight className="mx-0.5 size-3.5 shrink-0 text-text-lighter" />
             ) : null}
@@ -187,7 +194,7 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
         ))}
       </div>
     );
-  }, [activeSection, activeTab, scrollContentToTop, scrollToSection]);
+  }, [activeSection, activeTab, handleTabChange, scrollContentToTop, scrollToSection, searchQuery]);
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -256,7 +263,11 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
         </div>
 
         {/* Main content area */}
-        <div ref={contentRef} className="flex-1 overflow-y-auto p-4 [overscroll-behavior:contain]">
+        <div
+          ref={contentRef}
+          data-settings-content=""
+          className="flex-1 overflow-y-auto p-4 [--app-ui-control-font-size:var(--ui-text-sm)] [overscroll-behavior:contain]"
+        >
           {renderTabContent()}
         </div>
       </div>

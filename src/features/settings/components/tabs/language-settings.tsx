@@ -1,5 +1,5 @@
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
-import Section, { SettingRow } from "../settings-section";
+import Section, { SETTINGS_CONTROL_WIDTHS, SettingRow } from "../settings-section";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 
@@ -53,7 +53,7 @@ export const LanguageSettings = () => {
             value={defaultLanguage}
             options={languageOptions}
             onChange={(value) => updateSetting("defaultLanguage", value)}
-            className="w-28"
+            className={SETTINGS_CONTROL_WIDTHS.default}
             size="xs"
             variant="secondary"
           />
@@ -112,7 +112,7 @@ export const LanguageSettings = () => {
             value={formatter}
             options={formatOptions}
             onChange={(value) => updateSetting("formatter", value)}
-            className="w-24"
+            className={SETTINGS_CONTROL_WIDTHS.default}
             size="xs"
             variant="secondary"
           />

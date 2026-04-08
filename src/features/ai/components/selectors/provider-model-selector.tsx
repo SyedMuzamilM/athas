@@ -108,6 +108,7 @@ export function ProviderModelSelector({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const apiKeyInputRef = useRef<HTMLInputElement>(null);
+  const portalContainer = triggerRef.current?.closest("[data-dialog-content]") ?? document.body;
 
   const providers = getAvailableProviders();
   const currentProvider = getProviderById(providerId);
@@ -473,6 +474,7 @@ export function ProviderModelSelector({
       <MenuPopover
         isOpen={isOpen && !!position}
         menuRef={dropdownRef}
+        portalContainer={portalContainer}
         initial={{ opacity: 0, y: -4, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: -4, scale: 0.98 }}

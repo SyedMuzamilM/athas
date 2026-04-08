@@ -87,7 +87,7 @@ export const defaultSettings: Settings = {
   enterpriseAllowedExtensionIds: [],
   // Other
   extensionsActiveTab: "all",
-  maxOpenTabs: 10,
+  maxOpenTabs: 100,
   horizontalTabScroll: false,
   //// File tree
   hiddenFilePatterns: [],

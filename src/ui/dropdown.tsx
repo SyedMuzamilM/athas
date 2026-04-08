@@ -106,6 +106,7 @@ interface MenuPopoverProps {
   menuRef: RefObject<HTMLDivElement | null>;
   children: ReactNode;
   className?: string;
+  portalContainer?: Element | DocumentFragment | null;
   style?: CSSProperties;
   initial?: { opacity: number; scale: number; y?: number };
   animate?: { opacity: number; scale: number; y?: number };
@@ -118,6 +119,7 @@ export function MenuPopover({
   menuRef,
   children,
   className,
+  portalContainer,
   style,
   initial = { opacity: 0, scale: 0.95 },
   animate = { opacity: 1, scale: 1 },
@@ -129,6 +131,8 @@ export function MenuPopover({
   const node = isOpen ? (
     <motion.div
       ref={menuRef}
+      onMouseDown={(event) => event.stopPropagation()}
+      onPointerDown={(event) => event.stopPropagation()}
       onWheelCapture={containScrollChain}
       initial={initial}
       animate={animate}
@@ -141,7 +145,7 @@ export function MenuPopover({
     </motion.div>
   ) : null;
 
-  return createPortal(<AnimatePresence>{node}</AnimatePresence>, document.body);
+  return createPortal(<AnimatePresence>{node}</AnimatePresence>, portalContainer ?? document.body);
 }
 
 interface MenuItemsListProps {

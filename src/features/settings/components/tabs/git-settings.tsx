@@ -1,5 +1,5 @@
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
-import Section, { SettingRow } from "../settings-section";
+import Section, { SETTINGS_CONTROL_WIDTHS, SettingRow } from "../settings-section";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 
@@ -177,7 +177,7 @@ export const GitSettings = () => {
               { value: "split", label: "Split" },
             ]}
             onChange={(value) => updateSetting("gitDefaultDiffView", value as "unified" | "split")}
-            className="w-32"
+            className={SETTINGS_CONTROL_WIDTHS.default}
             size="xs"
             variant="secondary"
           />

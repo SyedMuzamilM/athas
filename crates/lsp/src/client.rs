@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use athas_runtime::NodeRuntime;
 use crossbeam_channel::{Sender, bounded};
 use lsp_types::*;
@@ -11,7 +11,7 @@ use std::{
    process::{Child, Command, Stdio},
    sync::{
       Arc, Mutex,
-      atomic::{AtomicU64, Ordering},
+      atomic::{AtomicBool, AtomicU64, Ordering},
    },
    thread,
 };
@@ -26,6 +26,7 @@ pub struct LspClient {
    stdin_tx: Sender<String>,
    pending_requests: PendingRequests,
    capabilities: Arc<Mutex<Option<ServerCapabilities>>>,
+   is_running: Arc<AtomicBool>,
 }
 
 impl LspClient {
@@ -103,6 +104,18 @@ impl LspClient {
       let pending_requests = Arc::new(Mutex::new(HashMap::new()));
       let pending_requests_clone = Arc::clone(&pending_requests);
       let app_handle_clone = app_handle.clone();
+      let is_running = Arc::new(AtomicBool::new(true));
+      let is_running_clone = Arc::clone(&is_running);
+
+      let mark_stopped =
+         |reason: String, pending_requests: &PendingRequests, is_running: &Arc<AtomicBool>| {
+            is_running.store(false, Ordering::SeqCst);
+
+            let mut pending = pending_requests.lock().unwrap();
+            for (_, tx) in pending.drain() {
+               let _ = tx.send(Err(anyhow::anyhow!(reason.clone())));
+            }
+         };
 
       // Stderr reader thread
       thread::spawn(move || {
@@ -139,7 +152,6 @@ impl LspClient {
       });
 
       // Stdout reader thread
-      let app_handle_crash = app_handle.clone();
       thread::spawn(move || {
          let mut reader = BufReader::new(stdout);
          loop {
@@ -153,16 +165,20 @@ impl LspClient {
                   Ok(0) => {
                      // EOF — server process has exited
                      log::warn!("LSP server stdout closed (server crashed or exited)");
-                     if let Some(ref app) = app_handle_crash {
-                        let _ = app.emit("lsp://server-crashed", json!({}));
-                     }
+                     mark_stopped(
+                        "LSP server stdout closed (server crashed or exited)".to_string(),
+                        &pending_requests_clone,
+                        &is_running_clone,
+                     );
                      return;
                   }
                   Err(e) => {
                      log::error!("Error reading LSP stdout: {}", e);
-                     if let Some(ref app) = app_handle_crash {
-                        let _ = app.emit("lsp://server-crashed", json!({ "error": e.to_string() }));
-                     }
+                     mark_stopped(
+                        format!("Error reading LSP stdout: {e}"),
+                        &pending_requests_clone,
+                        &is_running_clone,
+                     );
                      return;
                   }
                   Ok(_) => {}
@@ -191,9 +207,11 @@ impl LspClient {
             let mut content = vec![0u8; content_length];
             if reader.read_exact(&mut content).is_err() {
                log::warn!("LSP server stdout read error (server may have crashed)");
-               if let Some(ref app) = app_handle_crash {
-                  let _ = app.emit("lsp://server-crashed", json!({}));
-               }
+               mark_stopped(
+                  "LSP server stdout read error (server may have crashed)".to_string(),
+                  &pending_requests_clone,
+                  &is_running_clone,
+               );
                return;
             }
 
@@ -221,6 +239,7 @@ impl LspClient {
          stdin_tx,
          pending_requests,
          capabilities: Arc::new(Mutex::new(None)),
+         is_running,
       };
 
       // Don't initialize here - we'll do it separately to avoid runtime issues
@@ -491,6 +510,10 @@ impl LspClient {
       R::Params: serde::Serialize,
       R::Result: serde::de::DeserializeOwned,
    {
+      if !self.is_running.load(Ordering::SeqCst) {
+         bail!("LSP server is not running");
+      }
+
       let id = self.request_counter.fetch_add(1, Ordering::SeqCst);
       let (tx, rx) = oneshot::channel();
 
@@ -522,6 +545,10 @@ impl LspClient {
       N: lsp_types::notification::Notification,
       N::Params: serde::Serialize,
    {
+      if !self.is_running.load(Ordering::SeqCst) {
+         bail!("LSP server is not running");
+      }
+
       let notification = json!({
           "jsonrpc": "2.0",
           "method": N::METHOD,
@@ -539,6 +566,10 @@ impl LspClient {
          .send(msg)
          .context("Failed to send notification")?;
       Ok(())
+   }
+
+   pub fn is_running(&self) -> bool {
+      self.is_running.load(Ordering::SeqCst)
    }
 
    pub async fn text_document_completion(
