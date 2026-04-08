@@ -218,6 +218,19 @@ async function updateCargoToml(newVersion: string) {
   success(`Updated src-tauri/Cargo.toml to v${newVersion}`);
 }
 
+async function updateCargoLock() {
+  const result = await $`cargo metadata --format-version 1 --no-deps`
+    .quiet()
+    .nothrow()
+    .cwd(process.cwd());
+
+  if (result.exitCode !== 0) {
+    error("Could not refresh Cargo.lock");
+  }
+
+  success("Updated Cargo.lock");
+}
+
 async function checkWorkingDirectory() {
   const status = await $`git status --porcelain`.text();
   if (status.trim().length > 0) {
@@ -266,7 +279,10 @@ async function release() {
   }
 
   log("\n  This will:", "yellow");
-  log(`  1. Update package.json, tauri.conf.json, and Cargo.toml to v${newVersion}`, "yellow");
+  log(
+    `  1. Update package.json, tauri.conf.json, Cargo.toml, and Cargo.lock to v${newVersion}`,
+    "yellow",
+  );
   log("  2. Create a commit with these changes", "yellow");
   log(`  3. Create and push tag v${newVersion}`, "yellow");
   log("  4. Trigger GitHub Actions to build and release\n", "yellow");
@@ -294,6 +310,7 @@ async function release() {
   await updatePackageJson(newVersion);
   await updateTauriConfig(newVersion);
   await updateCargoToml(newVersion);
+  await updateCargoLock();
 
   await $`git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml Cargo.lock`;
   success("Staged version changes");
