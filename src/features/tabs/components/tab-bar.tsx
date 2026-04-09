@@ -797,11 +797,6 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
 
   const MemoizedTabContextMenu = useMemo(() => TabContextMenu, []);
 
-  // Hide tab bar when no buffers are open
-  if (buffers.length === 0) {
-    return null;
-  }
-
   const { isDragging, draggedIndex, dropTargetIndex, currentPosition } = dragState;
 
   return (
