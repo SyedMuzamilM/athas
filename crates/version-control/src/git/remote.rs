@@ -1,10 +1,42 @@
 use crate::git::{GitRemote, IntoStringError};
 use anyhow::{Context, Result, bail};
 use git2::Repository;
-use std::{path::Path, process::Command};
+use std::{
+   path::Path,
+   process::{Command, Stdio},
+};
 
 pub fn git_push(repo_path: String, branch: Option<String>, remote: String) -> Result<(), String> {
    _git_push(repo_path, branch, remote).into_string_error()
+}
+
+fn execute_remote_git_command(repo_dir: &Path, args: &[&str], operation: &str) -> Result<()> {
+   let output = Command::new("git")
+      .current_dir(repo_dir)
+      .env("GIT_TERMINAL_PROMPT", "0")
+      .env("GCM_INTERACTIVE", "never")
+      .env("SSH_ASKPASS_REQUIRE", "never")
+      .env("GIT_SSH_COMMAND", "ssh -oBatchMode=yes")
+      .stdin(Stdio::null())
+      .args(args)
+      .output()
+      .with_context(|| format!("Failed to execute git {operation}"))?;
+
+   if output.status.success() {
+      return Ok(());
+   }
+
+   let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+   let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+   let details = if !stderr.is_empty() {
+      stderr
+   } else if !stdout.is_empty() {
+      stdout
+   } else {
+      "Git returned a non-zero exit status without output.".to_string()
+   };
+
+   bail!("Git {operation} failed: {details}");
 }
 
 fn _git_push(repo_path: String, branch: Option<String>, remote: String) -> Result<()> {
@@ -16,20 +48,7 @@ fn _git_push(repo_path: String, branch: Option<String>, remote: String) -> Resul
       args.push(&branch_str);
    }
 
-   let output = Command::new("git")
-      .current_dir(repo_dir)
-      .args(&args)
-      .output()
-      .context("Failed to execute git push")?;
-
-   if !output.status.success() {
-      bail!(
-         "Git push failed: {}",
-         String::from_utf8_lossy(&output.stderr)
-      );
-   }
-
-   Ok(())
+   execute_remote_git_command(repo_dir, &args, "push")
 }
 
 pub fn git_pull(repo_path: String, branch: Option<String>, remote: String) -> Result<(), String> {
@@ -45,20 +64,7 @@ fn _git_pull(repo_path: String, branch: Option<String>, remote: String) -> Resul
       args.push(&branch_str);
    }
 
-   let output = Command::new("git")
-      .current_dir(repo_dir)
-      .args(&args)
-      .output()
-      .context("Failed to execute git pull")?;
-
-   if !output.status.success() {
-      bail!(
-         "Git pull failed: {}",
-         String::from_utf8_lossy(&output.stderr)
-      );
-   }
-
-   Ok(())
+   execute_remote_git_command(repo_dir, &args, "pull")
 }
 
 pub fn git_fetch(repo_path: String, remote: Option<String>) -> Result<(), String> {
@@ -74,20 +80,7 @@ fn _git_fetch(repo_path: String, remote: Option<String>) -> Result<()> {
       args.push(&remote_str);
    }
 
-   let output = Command::new("git")
-      .current_dir(repo_dir)
-      .args(&args)
-      .output()
-      .context("Failed to execute git fetch")?;
-
-   if !output.status.success() {
-      bail!(
-         "Git fetch failed: {}",
-         String::from_utf8_lossy(&output.stderr)
-      );
-   }
-
-   Ok(())
+   execute_remote_git_command(repo_dir, &args, "fetch")
 }
 
 pub fn git_get_remotes(repo_path: String) -> Result<Vec<GitRemote>, String> {

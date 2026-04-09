@@ -1,6 +1,16 @@
 use athas_version_control::git as git_backend;
 use std::{path::Path, time::Instant};
 
+async fn run_blocking<T, F>(operation: F) -> Result<T, String>
+where
+   T: Send + 'static,
+   F: FnOnce() -> Result<T, String> + Send + 'static,
+{
+   tauri::async_runtime::spawn_blocking(operation)
+      .await
+      .map_err(|error| format!("Git command task failed: {}", error))?
+}
+
 fn short_repo_path(path: &str) -> String {
    Path::new(path)
       .file_name()
@@ -123,18 +133,26 @@ pub fn git_delete_branch(repo_path: String, branch_name: String) -> Result<(), S
 }
 
 #[tauri::command]
-pub fn git_push(repo_path: String, branch: Option<String>, remote: String) -> Result<(), String> {
-   git_backend::git_push(repo_path, branch, remote)
+pub async fn git_push(
+   repo_path: String,
+   branch: Option<String>,
+   remote: String,
+) -> Result<(), String> {
+   run_blocking(move || git_backend::git_push(repo_path, branch, remote)).await
 }
 
 #[tauri::command]
-pub fn git_pull(repo_path: String, branch: Option<String>, remote: String) -> Result<(), String> {
-   git_backend::git_pull(repo_path, branch, remote)
+pub async fn git_pull(
+   repo_path: String,
+   branch: Option<String>,
+   remote: String,
+) -> Result<(), String> {
+   run_blocking(move || git_backend::git_pull(repo_path, branch, remote)).await
 }
 
 #[tauri::command]
-pub fn git_fetch(repo_path: String, remote: Option<String>) -> Result<(), String> {
-   git_backend::git_fetch(repo_path, remote)
+pub async fn git_fetch(repo_path: String, remote: Option<String>) -> Result<(), String> {
+   run_blocking(move || git_backend::git_fetch(repo_path, remote)).await
 }
 
 #[tauri::command]
