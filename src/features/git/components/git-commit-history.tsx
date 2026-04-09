@@ -1,6 +1,8 @@
-import { memo, useCallback, useEffect, useRef } from "react";
+import { ChevronDown, ChevronRight } from "lucide-react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/utils/cn";
 import { formatRelativeDate } from "@/utils/date";
+import type { GitCommit } from "../types/git-types";
 import { useGitStore } from "../stores/git-store";
 import GitSidebarSectionHeader from "./git-sidebar-section-header";
 
@@ -13,11 +15,12 @@ interface GitCommitHistoryProps {
 }
 
 interface CommitItemProps {
-  commit: any;
+  commit: GitCommit;
   onViewCommitDiff: (commitHash: string) => void;
+  isSelected: boolean;
 }
 
-const CommitItem = memo(({ commit, onViewCommitDiff }: CommitItemProps) => {
+const CommitItem = memo(({ commit, onViewCommitDiff, isSelected }: CommitItemProps) => {
   const handleCommitClick = useCallback(() => {
     onViewCommitDiff(commit.hash);
   }, [commit.hash, onViewCommitDiff]);
@@ -25,14 +28,19 @@ const CommitItem = memo(({ commit, onViewCommitDiff }: CommitItemProps) => {
   return (
     <div
       onClick={handleCommitClick}
-      className="ui-text-sm mx-1 mb-1 cursor-pointer rounded-lg px-2.5 py-2 hover:bg-hover"
-    >
-      <div className="truncate text-inherit text-text leading-tight">{commit.message}</div>
-      {commit.description && (
-        <div className="ui-text-sm mt-1 line-clamp-2 whitespace-pre-wrap text-text-lighter">
-          {commit.description}
-        </div>
+      className={cn(
+        "ui-text-sm mx-1 mb-1 cursor-pointer rounded-lg px-2.5 py-2 hover:bg-hover",
+        isSelected && "bg-hover",
       )}
+    >
+      <div className="flex items-center gap-2">
+        {isSelected ? (
+          <ChevronDown className="size-3 shrink-0 text-text-lighter" />
+        ) : (
+          <ChevronRight className="size-3 shrink-0 text-text-lighter" />
+        )}
+        <div className="truncate text-inherit text-text leading-tight">{commit.message}</div>
+      </div>
       <div className="ui-text-sm mt-1 flex items-center gap-2 text-text-lighter">
         <span className="truncate">{commit.author}</span>
         <span className="shrink-0">{formatRelativeDate(commit.date)}</span>
@@ -53,9 +61,13 @@ const GitCommitHistory = ({
   const lastScrollTop = useRef(0);
   const scrollSetupTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const scrollSetupRafRef = useRef<number | null>(null);
+  const [selectedCommitHash, setSelectedCommitHash] = useState<string | null>(null);
+
+  const selectedCommit = commits.find((commit) => commit.hash === selectedCommitHash) ?? null;
 
   const handleViewCommitDiff = useCallback(
     (commitHash: string, filePath?: string) => {
+      setSelectedCommitHash(commitHash);
       onViewCommitDiff?.(commitHash, filePath);
     },
     [onViewCommitDiff],
@@ -175,6 +187,29 @@ const GitCommitHistory = ({
             )}
             ref={scrollContainerRef}
           >
+            {selectedCommit && (
+              <div className="mx-1 mb-2 overflow-hidden rounded-lg border border-border/60 bg-primary-bg/55">
+                <div className="border-border/60 border-b px-2.5 py-1.5">
+                  <div className="ui-text-sm text-text">Commit Details</div>
+                  <div className="ui-text-sm mt-0.5 font-mono text-text-lighter">
+                    {selectedCommit.hash}
+                  </div>
+                </div>
+                <div className="px-2.5 py-2">
+                  <div className="ui-text-sm text-text">{selectedCommit.message}</div>
+                  {selectedCommit.description && (
+                    <div className="ui-text-sm mt-2 whitespace-pre-wrap text-text-lighter">
+                      {selectedCommit.description}
+                    </div>
+                  )}
+                  <div className="ui-text-sm mt-2 flex items-center gap-2 text-text-lighter">
+                    <span className="truncate">{selectedCommit.author}</span>
+                    <span className="shrink-0">{formatRelativeDate(selectedCommit.date)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {commits.length === 0 ? (
               <div className="ui-text-sm px-2.5 py-2 text-text-lighter italic">No commits</div>
             ) : (
@@ -184,6 +219,7 @@ const GitCommitHistory = ({
                     key={commit.hash}
                     commit={commit}
                     onViewCommitDiff={handleViewCommitDiff}
+                    isSelected={commit.hash === selectedCommitHash}
                   />
                 ))}
 
