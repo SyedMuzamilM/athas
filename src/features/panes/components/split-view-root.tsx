@@ -83,10 +83,11 @@ function writeFlatSizesToTree(
 }
 
 interface PaneNodeRendererProps {
+  hiddenPaneId?: string | null;
   node: PaneNode;
 }
 
-function PaneNodeRenderer({ node }: PaneNodeRendererProps) {
+function PaneNodeRenderer({ node, hiddenPaneId = null }: PaneNodeRendererProps) {
   const { updatePaneSizes } = usePaneStore.use.actions();
 
   const isHorizontal = node.type === "split" ? node.direction === "horizontal" : false;
@@ -118,6 +119,10 @@ function PaneNodeRenderer({ node }: PaneNodeRendererProps) {
   );
 
   if (node.type === "group") {
+    if (hiddenPaneId && node.id === hiddenPaneId) {
+      return <div className="h-full w-full bg-primary-bg" aria-hidden="true" />;
+    }
+
     return <PaneContainer pane={node} />;
   }
 
@@ -143,11 +148,15 @@ function PaneNodeRenderer({ node }: PaneNodeRendererProps) {
               }}
             >
               {entry.node.type === "split" && entry.node.direction !== node.direction ? (
-                <PaneNodeRenderer node={entry.node} />
+                <PaneNodeRenderer node={entry.node} hiddenPaneId={hiddenPaneId} />
               ) : entry.node.type === "group" ? (
-                <PaneContainer pane={entry.node} />
+                entry.node.id === hiddenPaneId ? (
+                  <div className="h-full w-full bg-primary-bg" aria-hidden="true" />
+                ) : (
+                  <PaneContainer pane={entry.node} />
+                )
               ) : (
-                <PaneNodeRenderer node={entry.node} />
+                <PaneNodeRenderer node={entry.node} hiddenPaneId={hiddenPaneId} />
               )}
             </div>
             {i < flatEntries.length - 1 && (
@@ -211,7 +220,7 @@ export function SplitViewRoot() {
   return (
     <>
       <div className="h-full w-full overflow-hidden">
-        <PaneNodeRenderer node={root} />
+        <PaneNodeRenderer node={root} hiddenPaneId={fullscreenPaneId} />
       </div>
 
       {fullscreenPane && (
