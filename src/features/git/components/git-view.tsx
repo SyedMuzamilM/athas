@@ -475,6 +475,8 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           const { additions, deletions } = countDiffStats(diffs);
 
           const multiDiff: MultiFileDiff = {
+            title: `Commit ${commitHash.substring(0, 7)}`,
+            repoPath: activeRepoPath,
             commitHash,
             commitMessage: commit?.message,
             commitDescription: commit?.description,
@@ -521,6 +523,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         const { additions, deletions } = countDiffStats(diffs);
 
         const multiDiff: MultiFileDiff = {
+          repoPath: activeRepoPath,
           commitHash: `stash@{${stashIndex}}`,
           files: diffs,
           totalFiles: diffs.length,

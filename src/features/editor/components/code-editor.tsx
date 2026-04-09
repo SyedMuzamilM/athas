@@ -360,7 +360,7 @@ const CodeEditor = ({
       <EditorStylesheet />
       <div className="absolute inset-0 flex flex-col overflow-hidden">
         {/* Breadcrumbs */}
-        {showToolbar && settings.coreFeatures.breadcrumbs && <Breadcrumb {...breadcrumbProps} />}
+        {showToolbar && <Breadcrumb {...breadcrumbProps} />}
 
         {/* Find Bar */}
         {showToolbar && enableInteractiveServices && <FindBar />}

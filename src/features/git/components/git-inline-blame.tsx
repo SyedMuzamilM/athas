@@ -131,6 +131,8 @@ export const InlineGitBlame = ({ blameLine, className }: InlineGitBlameProps) =>
         const { additions, deletions } = countDiffStats(diffs);
 
         const multiDiff: MultiFileDiff = {
+          title: `Commit ${blameLine.commit_hash.substring(0, 7)}`,
+          repoPath,
           commitHash: blameLine.commit_hash,
           files: diffs,
           totalFiles: diffs.length,

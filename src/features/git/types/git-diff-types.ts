@@ -85,6 +85,7 @@ export interface ImageDiffViewerProps {
 
 export interface MultiFileDiff {
   title?: string;
+  repoPath?: string;
   commitHash: string;
   commitMessage?: string;
   commitDescription?: string;

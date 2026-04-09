@@ -7,9 +7,9 @@ import { hasTextContent } from "@/features/panes/types/pane-content";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useExtensionActions } from "@/extensions/ui/hooks/use-extension-actions";
 import { ExtensionToolbarAction } from "@/extensions/ui/components/extension-toolbar-action";
+import { useSettingsStore } from "@/features/settings/store";
 import { Button } from "@/ui/button";
 import Tooltip from "@/ui/tooltip";
-import { isMac } from "@/utils/platform";
 import { FilePathBreadcrumb } from "./file-path-breadcrumb";
 
 export interface BreadcrumbProps {
@@ -30,11 +30,10 @@ export default function Breadcrumb({
   const buffers = useBufferStore.use.buffers();
   const activeBufferId = useBufferStore.use.activeBufferId();
   const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
+  const showBreadcrumbPath = useSettingsStore((state) => state.settings.coreFeatures.breadcrumbs);
   const { isFindVisible, setIsFindVisible } = useUIState();
   const inlineEditActions = useInlineEditToolbarStore.use.actions();
   const extensionActions = useExtensionActions();
-
-  const inlineEditShortcutLabel = isMac() ? "Cmd+I" : "Ctrl+I";
 
   const handleSearchClick = () => {
     setIsFindVisible(!isFindVisible);
@@ -43,8 +42,6 @@ export default function Breadcrumb({
   const handleInlineEditClick = () => {
     inlineEditActions.show();
   };
-
-  const inlineEditTooltip = `AI inline edit (${inlineEditShortcutLabel})`;
 
   const isMarkdownFile = () => {
     if (!activeBuffer) return false;
@@ -121,18 +118,18 @@ export default function Breadcrumb({
             </Button>
           </Tooltip>
         )}
-        <Tooltip content={inlineEditTooltip} side="bottom">
+        <Tooltip content="AI inline edit" shortcut="Mod+I" side="bottom">
           <Button
             onClick={handleInlineEditClick}
             variant="ghost"
             size="icon-xs"
             className="rounded text-text-lighter"
-            aria-label={`AI inline edit (${inlineEditShortcutLabel})`}
+            aria-label="AI inline edit"
           >
             <Sparkles />
           </Button>
         </Tooltip>
-        <Tooltip content="Find in file" side="bottom">
+        <Tooltip content="Find in file" shortcut="Mod+F" side="bottom">
           <Button
             onClick={onSearchClick}
             variant="ghost"
@@ -152,7 +149,9 @@ export default function Breadcrumb({
     <>
       <div className="flex min-h-7 select-none items-center justify-between bg-terniary-bg px-3 py-1">
         <div className="ui-font flex min-w-0 items-center gap-2 text-text-lighter text-xs">
-          <FilePathBreadcrumb filePath={filePath} interactive={interactive} />
+          {showBreadcrumbPath ? (
+            <FilePathBreadcrumb filePath={filePath} interactive={interactive} />
+          ) : null}
           {extensionActions.left.map((action) => (
             <ExtensionToolbarAction key={action.id} action={action} />
           ))}

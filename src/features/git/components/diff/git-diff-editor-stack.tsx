@@ -1,5 +1,14 @@
-import { Check, ChevronDown, ChevronRight, Columns2, Rows3, Trash2 } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  ChevronRight,
+  Columns2,
+  GithubIcon,
+  Rows3,
+  Trash2,
+} from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import CodeEditor from "@/features/editor/components/code-editor";
 import Breadcrumb from "@/features/editor/components/toolbar/breadcrumb";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
@@ -10,7 +19,10 @@ import { calculateLineHeight, splitLines } from "@/features/editor/utils/lines";
 import { useZoomStore } from "@/features/window/stores/zoom-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { Button } from "@/ui/button";
+import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
+import { formatRelativeDate } from "@/utils/date";
+import { getRemotes } from "../../api/git-remotes-api";
 import { getGitStatus } from "../../api/git-status-api";
 import { useDiffEditorBuffer } from "../../hooks/use-diff-editor-buffer";
 import type { MultiFileDiff } from "../../types/git-diff-types";
@@ -25,6 +37,7 @@ import {
 import DiffLineBackgroundLayer from "./diff-line-background-layer";
 import ImageDiffViewer from "./git-diff-image";
 import TextDiffViewer from "./git-diff-text";
+import Badge from "@/ui/badge";
 
 function countStats(diff: GitDiff) {
   let additions = 0;
@@ -51,6 +64,23 @@ const statusBadgeClass: Record<string, string> = {
   modified: "bg-git-modified/12 text-git-modified",
   renamed: "bg-git-renamed/12 text-git-renamed",
 };
+
+function buildGitHubCommitUrl(remoteUrl: string, commitHash: string): string | null {
+  const normalized = remoteUrl.trim();
+  const httpsMatch = normalized.match(/^https?:\/\/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?\/?$/i);
+  if (httpsMatch) {
+    const [, owner, repo] = httpsMatch;
+    return `https://github.com/${owner}/${repo}/commit/${commitHash}`;
+  }
+
+  const sshMatch = normalized.match(/^git@github\.com:([^/]+)\/(.+?)(?:\.git)?$/i);
+  if (sshMatch) {
+    const [, owner, repo] = sshMatch;
+    return `https://github.com/${owner}/${repo}/commit/${commitHash}`;
+  }
+
+  return null;
+}
 
 function DiffSectionEditor({
   diff,
@@ -291,7 +321,7 @@ const DiffFileSection = memo(function DiffFileSection({
 
   return (
     <section className="relative isolate rounded-md border border-border/70 bg-primary-bg">
-      <div className="sticky top-0 z-50 border-border/70 border-b bg-primary-bg shadow-[0_1px_0_rgba(0,0,0,0.04)]">
+      <div className="sticky top-0 rounded-t-md z-50 border-border/70 border-b bg-primary-bg shadow-[0_1px_0_rgba(0,0,0,0.04)]">
         <button
           type="button"
           onClick={handleToggle}
@@ -306,16 +336,22 @@ const DiffFileSection = memo(function DiffFileSection({
             size={16}
             className="shrink-0 text-text-lighter"
           />
-          <span className={`shrink-0 text-sm font-medium ${statusTextClass[status]}`}>
+          <span className={`shrink-0 ui-text-sm font-medium ${statusTextClass[status]}`}>
             {fileName}
           </span>
-          <span className="min-w-0 truncate text-sm text-text-lighter">{directoryPath}</span>
+          <span className="min-w-0 truncate ui-text-sm editor-font text-text-lighter">
+            {directoryPath}
+          </span>
           <span className="ml-auto flex shrink-0 items-center gap-2 text-[11px]">
             {additions > 0 ? <span className="text-git-added">+{additions}</span> : null}
             {deletions > 0 ? <span className="text-git-deleted">-{deletions}</span> : null}
-            <span className={`rounded px-1.5 py-0.5 capitalize ${statusBadgeClass[status]}`}>
+            <Badge
+              size="compact"
+              variant="muted"
+              className={`rounded px-1.5 py-0.5 capitalize ${statusBadgeClass[status]}`}
+            >
               {status}
-            </span>
+            </Badge>
           </span>
         </button>
       </div>
@@ -361,6 +397,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
   const activeBuffer = buffers.find((buffer) => buffer.id === activeBufferId) || null;
   const isWorkingTreeBuffer = activeBuffer?.path === "diff://working-tree/all-files";
   const isRefreshingRef = useRef(false);
+  const [githubCommitUrl, setGitHubCommitUrl] = useState<string | null>(null);
   const [expandedFiles, setExpandedFiles] = useState<Set<string>>(
     () =>
       new Set(
@@ -437,6 +474,37 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
     };
   }, [isWorkingTree, refreshWorkingTreeBuffer]);
 
+  useEffect(() => {
+    if (isWorkingTree || multiDiff.commitHash.startsWith("stash@{")) {
+      setGitHubCommitUrl(null);
+      return;
+    }
+
+    const repoPath = multiDiff.repoPath ?? rootFolderPath;
+    if (!repoPath) {
+      setGitHubCommitUrl(null);
+      return;
+    }
+
+    let isCancelled = false;
+
+    const loadGitHubCommitUrl = async () => {
+      const remotes = await getRemotes(repoPath);
+      const candidate =
+        remotes.find((remote) => remote.name === "origin")?.url ?? remotes[0]?.url ?? null;
+      const nextUrl = candidate ? buildGitHubCommitUrl(candidate, multiDiff.commitHash) : null;
+      if (!isCancelled) {
+        setGitHubCommitUrl(nextUrl);
+      }
+    };
+
+    void loadGitHubCommitUrl();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [isWorkingTree, multiDiff.commitHash, multiDiff.repoPath, rootFolderPath]);
+
   return (
     <div className="flex h-full flex-col overflow-hidden bg-primary-bg">
       <Breadcrumb
@@ -444,58 +512,109 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
         interactive={false}
         showDefaultActions={true}
         extraLeftContent={
-          <span className="text-text-lighter">
-            {multiDiff.totalFiles} file{multiDiff.totalFiles !== 1 ? "s" : ""}
-          </span>
+          <div className="ui-text-sm flex items-center gap-2 text-text-lighter">
+            <span>
+              {multiDiff.totalFiles} changed file
+              {multiDiff.totalFiles !== 1 ? "s" : ""}
+            </span>
+            <span className="text-git-added">+{multiDiff.totalAdditions}</span>
+            <span className="text-git-deleted">-{multiDiff.totalDeletions}</span>
+          </div>
         }
         rightContent={
           <div className="flex items-center gap-1">
-            <Button
-              type="button"
-              variant="ghost"
-              size="xs"
-              active={showWhitespace}
-              onClick={() => setShowWhitespace((prev) => !prev)}
-              className={cn("h-5 gap-1 px-1.5 text-text-lighter", showWhitespace && "text-text")}
-              title={showWhitespace ? "Hide whitespace" : "Show whitespace"}
-            >
-              <Trash2 />
-              {showWhitespace ? <Check /> : null}
-            </Button>
+            {githubCommitUrl ? (
+              <Tooltip content="View on GitHub" side="bottom">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="xs"
+                  onClick={() => void openUrl(githubCommitUrl)}
+                  className="h-5 gap-1 px-1.5 text-text-lighter ui-text-sm"
+                  aria-label="View on GitHub"
+                >
+                  <GithubIcon />
+                  View on GitHub
+                </Button>
+              </Tooltip>
+            ) : null}
+            <Tooltip content={showWhitespace ? "Hide whitespace" : "Show whitespace"} side="bottom">
+              <Button
+                type="button"
+                variant="ghost"
+                size="xs"
+                active={showWhitespace}
+                onClick={() => setShowWhitespace((prev) => !prev)}
+                className={cn("h-5 gap-1 px-1.5 text-text-lighter", showWhitespace && "text-text")}
+                aria-label={showWhitespace ? "Hide whitespace" : "Show whitespace"}
+              >
+                <Trash2 />
+                {showWhitespace ? <Check /> : null}
+              </Button>
+            </Tooltip>
             <div className="flex items-center gap-0.5">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-xs"
-                active={viewMode === "unified"}
-                onClick={() => setViewMode("unified")}
-                className="text-text-lighter"
-                title="Unified view"
-              >
-                <Rows3 />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-xs"
-                active={viewMode === "split"}
-                onClick={() => setViewMode("split")}
-                className="text-text-lighter"
-                title="Split view"
-              >
-                <Columns2 />
-              </Button>
+              <Tooltip content="Unified view" side="bottom">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  active={viewMode === "unified"}
+                  onClick={() => setViewMode("unified")}
+                  className="text-text-lighter"
+                  aria-label="Unified view"
+                >
+                  <Rows3 />
+                </Button>
+              </Tooltip>
+              <Tooltip content="Split view" side="bottom">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  active={viewMode === "split"}
+                  onClick={() => setViewMode("split")}
+                  className="text-text-lighter"
+                  aria-label="Split view"
+                >
+                  <Columns2 />
+                </Button>
+              </Tooltip>
             </div>
           </div>
         }
       />
+
+      {!isWorkingTree &&
+      (multiDiff.commitMessage || multiDiff.commitAuthor || multiDiff.commitDate) ? (
+        <div className="bg-primary-bg px-2 py-2">
+          <div className="px-1 py-1.5">
+            {multiDiff.commitMessage ? (
+              <div className="ui-text-sm font-medium text-text">{multiDiff.commitMessage}</div>
+            ) : null}
+            {multiDiff.commitDescription ? (
+              <div className="ui-text-sm mt-2 whitespace-pre-wrap text-text-lighter">
+                {multiDiff.commitDescription}
+              </div>
+            ) : null}
+            <div className="ui-text-sm mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-text-lighter">
+              {multiDiff.commitAuthor ? <span>{multiDiff.commitAuthor}</span> : null}
+              {multiDiff.commitDate ? (
+                <span>{formatRelativeDate(multiDiff.commitDate)}</span>
+              ) : null}
+              <Badge size="compact" variant="muted">
+                {multiDiff.commitHash}
+              </Badge>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <div
         className="min-h-0 flex-1 overflow-auto px-2 pb-2"
         style={{ overflowAnchor: "none" }}
         data-diff-stack-scroll-container
       >
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 rounded-md">
           {multiDiff.files.map((diff, index) => {
             const sectionKey = multiDiff.fileKeys?.[index] ?? `${diff.file_path}:${index}`;
 
