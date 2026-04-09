@@ -47,15 +47,16 @@
 - Wrap long lines if needed, but keep the body as one paragraph unless extra structure is necessary.
 - Commit bodies should explain what changed and why in plain language, without headings or boilerplate.
 - Avoid prefixes, filler, hype, and changelog-style noise in commit messages.
+- If commitlint or message-format checks warn, fix the message before moving on.
 - Before creating a commit, run the checks that match the change.
 - Before opening a PR, run the relevant validation again for the final diff.
 - PR titles should be short and plain.
 - PR descriptions should start with one short plain-language sentence.
-- After the opening sentence, use short list items written as full sentences that begin with words like `Add`, `Fix`, `Change`, or `Validate`.
-- Write PR bullets in the style `Add ... by @username` rather than label-style prefixes such as `Add:`.
+- After the opening sentence, use the smallest number of short list items needed to cover the user-visible outcome.
+- Write PR bullets in the style `Add ... by @username`, `Fix ... by @username`, `Change ... by @username`, or `Validate ... by @username`.
 - Keep PR descriptions compact. Do not turn them into essays, templates, or long multi-paragraph writeups.
-- Prefer the smallest number of bullets that still covers the user-visible outcome.
 - If a PR is already open and a new commit changes its scope, update the PR description to match the current diff before you finish.
+- When editing commit or PR text that includes code, multiline content, or shell-sensitive characters, prefer a file-based edit over inline shell text.
 - When release, packaging, or versioning is involved, include the validation you ran in the PR description.
 
 ## Code Style
