@@ -27,9 +27,9 @@
 
 ## Branches And Releases
 
-- Branch from `master`.
-- Use short-lived branches with clear prefixes such as `feat/`, `fix/`, `refactor/`, `docs/`, `chore/`, and `release/`.
-- Open normal pull requests into `master`.
+- Default to working directly on `master` unless the user explicitly wants a separate branch or pull request.
+- If a branch is needed, branch from `master`.
+- Keep branch names short and descriptive.
 - Keep release tags and stable releases on `master`.
 - Use prerelease versions to ship preview builds before a stable release instead of tagging ad hoc debug builds.
 - Use `alpha` for early or high-risk work that needs limited testing.
@@ -40,22 +40,18 @@
 ## Commits And PRs
 
 - Keep commits focused. One logical change per commit.
-- Commit messages should be short, direct, and imperative.
+- Commit titles should be short, direct, and describe the outcome of the change.
 - Start commit messages with an uppercase letter.
 - Add a short commit body when the change benefits from extra context.
-- Prefer a single 1-3 sentence commit body.
-- Wrap long lines if needed, but keep the body as one paragraph unless extra structure is necessary.
-- Commit bodies should explain what changed and why in plain language, without headings or boilerplate.
+- Prefer a short wrapped commit body in plain language.
+- Wrap commit body lines before the commitlint line-length limit instead of leaving warnings behind.
+- Commit bodies should explain what changed and why without headings, boilerplate, or filler.
+- When useful, end the commit message with a separate `Fixes ...` or `Closes ...` line.
 - Avoid prefixes, filler, hype, and changelog-style noise in commit messages.
-- If commitlint or message-format checks warn, fix the message before moving on.
+- Never leave commitlint or message-format warnings unresolved.
 - Before creating a commit, run the checks that match the change.
-- Before opening a PR, run the relevant validation again for the final diff.
-- PR titles should be short and plain.
-- PR descriptions should start with one short plain-language sentence.
-- After the opening sentence, use the smallest number of short list items needed to cover the user-visible outcome.
-- Write PR bullets in the style `Add ... by @username`, `Fix ... by @username`, `Change ... by @username`, or `Validate ... by @username`.
-- Keep PR descriptions compact. Do not turn them into essays, templates, or long multi-paragraph writeups.
-- If a PR is already open and a new commit changes its scope, update the PR description to match the current diff before you finish.
+- If a PR exists, keep the title plain and keep the description short.
+- If a PR exists, update its description when the current diff changes in a meaningful way.
 - When editing commit or PR text that includes code, multiline content, or shell-sensitive characters, prefer a file-based edit over inline shell text.
 - When release, packaging, or versioning is involved, include the validation you ran in the PR description.
 
