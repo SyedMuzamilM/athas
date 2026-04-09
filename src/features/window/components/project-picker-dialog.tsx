@@ -27,6 +27,7 @@ import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
 import { paneIconButtonClassName, paneTitleClassName } from "@/ui/pane";
 import { toast } from "@/ui/toast";
+import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import { connectionStore } from "@/features/remote/services/remote-connection-store";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
@@ -244,25 +245,28 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
                       {folder.path}
                     </span>
                   </Button>
-                  <Button
-                    onClick={() => void handleRecentFolderNewWindowClick(folder)}
-                    variant="ghost"
-                    size="icon-xs"
-                    className="shrink-0 opacity-0 group-hover:opacity-100"
-                    aria-label="Open in new window"
-                    title="Open in new window"
-                  >
-                    <SquareArrowOutUpRight />
-                  </Button>
-                  <Button
-                    onClick={() => removeFromRecents(folder.path)}
-                    variant="ghost"
-                    size="icon-xs"
-                    className="mr-2 shrink-0 opacity-0 group-hover:opacity-100"
-                    aria-label="Remove from recents"
-                  >
-                    <X />
-                  </Button>
+                  <div className="mr-2 flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 pointer-events-none">
+                    <Tooltip content="Open in new window" side="bottom">
+                      <Button
+                        onClick={() => void handleRecentFolderNewWindowClick(folder)}
+                        variant="ghost"
+                        size="icon-xs"
+                        aria-label="Open in new window"
+                      >
+                        <SquareArrowOutUpRight />
+                      </Button>
+                    </Tooltip>
+                    <Tooltip content="Remove from recents" side="bottom">
+                      <Button
+                        onClick={() => removeFromRecents(folder.path)}
+                        variant="ghost"
+                        size="icon-xs"
+                        aria-label="Remove from recents"
+                      >
+                        <X />
+                      </Button>
+                    </Tooltip>
+                  </div>
                 </div>
               ))
             ) : (
@@ -330,36 +334,41 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
                       {connection.isConnected ? "Connected" : "Disconnected"}
                     </span>
                   </Button>
-                  <div className="mr-2 flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-                    <Button
-                      onClick={() => void handleRemoteConnectionNewWindowClick(connection)}
-                      variant="ghost"
-                      size="icon-xs"
-                      aria-label="Open in new window"
-                      title="Open in new window"
-                    >
-                      <SquareArrowOutUpRight />
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        setEditingConnection(connection);
-                        setIsConnectionDialogOpen(true);
-                      }}
-                      variant="ghost"
-                      size="icon-xs"
-                      aria-label="Edit connection"
-                    >
-                      <Edit />
-                    </Button>
-                    <Button
-                      onClick={() => handleDeleteConnection(connection.id)}
-                      variant="ghost"
-                      size="icon-xs"
-                      className="hover:text-error"
-                      aria-label="Delete connection"
-                    >
-                      <Trash2 />
-                    </Button>
+                  <div className="mr-2 flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 pointer-events-none">
+                    <Tooltip content="Open in new window" side="bottom">
+                      <Button
+                        onClick={() => void handleRemoteConnectionNewWindowClick(connection)}
+                        variant="ghost"
+                        size="icon-xs"
+                        aria-label="Open in new window"
+                      >
+                        <SquareArrowOutUpRight />
+                      </Button>
+                    </Tooltip>
+                    <Tooltip content="Edit connection" side="bottom">
+                      <Button
+                        onClick={() => {
+                          setEditingConnection(connection);
+                          setIsConnectionDialogOpen(true);
+                        }}
+                        variant="ghost"
+                        size="icon-xs"
+                        aria-label="Edit connection"
+                      >
+                        <Edit />
+                      </Button>
+                    </Tooltip>
+                    <Tooltip content="Delete connection" side="bottom">
+                      <Button
+                        onClick={() => handleDeleteConnection(connection.id)}
+                        variant="ghost"
+                        size="icon-xs"
+                        className="hover:text-error"
+                        aria-label="Delete connection"
+                      >
+                        <Trash2 />
+                      </Button>
+                    </Tooltip>
                   </div>
                 </div>
               ))
