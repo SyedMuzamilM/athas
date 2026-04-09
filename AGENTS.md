@@ -25,6 +25,18 @@
 - Do not use emojis in commit messages, logs, or documentation.
 - Validate the relevant checks after making changes instead of stopping at code edits.
 
+## Branches And Releases
+
+- Branch from `master`.
+- Use short-lived branches with clear prefixes such as `feat/`, `fix/`, `refactor/`, `docs/`, `chore/`, and `release/`.
+- Open normal pull requests into `master`.
+- Keep release tags and stable releases on `master`.
+- Use prerelease versions to ship preview builds before a stable release instead of tagging ad hoc debug builds.
+- Use `alpha` for early or high-risk work that needs limited testing.
+- Use `beta` for feature-complete work that needs broader validation.
+- Use `rc` for builds that are expected to ship unless a blocker is found.
+- Cut a stable release only after the relevant `rc` build has been validated on the platforms affected by the change.
+
 ## Commits And PRs
 
 - Keep commits focused. One logical change per commit.
@@ -72,3 +84,5 @@
 - Validate release changes locally before publishing anything.
 - Do not use real release tags to debug release automation.
 - Keep Windows MSI versioning numeric-only via `tauri.bundle.windows.wix.version`; do not use prerelease app versions directly for MSI builds.
+- Release automation is triggered by pushing `v*` tags.
+- Use `bun scripts/release.ts <channel> --dry-run` before running a real release command.

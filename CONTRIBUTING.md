@@ -10,7 +10,7 @@ Prerequisites:
 
 - [Rust](https://rustup.rs)
 - [Bun](https://bun.sh)
-- [Node.js ≥ 18](https://nodejs.org)
+- [Node.js ≥ 22](https://nodejs.org)
 
 ```bash
 bun install
@@ -38,4 +38,4 @@ bun dev
 
 ## Documentation
 
-- [Releasing](docs/contributing/releasing.md)
+- [Workflow and releasing](docs/contributing/releasing.md)
