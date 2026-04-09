@@ -100,9 +100,6 @@ export function EditorStatusActions() {
   const activeBuffer = buffers.find((buffer) => buffer.id === activeBufferId) || null;
   const lspClient = LspClient.getInstance();
   const activeServerEntries = lspClient.getActiveServerEntries();
-  const currentServerEntry = activeBuffer?.path
-    ? activeServerEntries.find((entry) => entry.filePath === activeBuffer.path)
-    : undefined;
   const currentFileLanguageId =
     activeBuffer && isEditorContent(activeBuffer) && activeBuffer.languageOverride
       ? activeBuffer.languageOverride
@@ -110,6 +107,9 @@ export function EditorStatusActions() {
         ? getLanguageIdFromPath(activeBuffer.path) ||
           extensionRegistry.getLanguageId(activeBuffer.path)
         : null;
+  const currentServerEntry = activeBuffer?.path
+    ? lspClient.getActiveServerEntryForFile(activeBuffer.path, currentFileLanguageId || undefined)
+    : null;
   const currentFileDisplayName = getLanguageDisplayNameOrNull(currentFileLanguageId);
 
   useEffect(() => {

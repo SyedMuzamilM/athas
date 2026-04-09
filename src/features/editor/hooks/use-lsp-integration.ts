@@ -139,6 +139,32 @@ export const useLspIntegration = ({
       return;
     }
 
+    const cleanupDocument = () => {
+      const isStillOpen = useBufferStore
+        .getState()
+        .buffers.some((buffer) => hasTextContent(buffer) && buffer.path === filePath);
+
+      if (isStillOpen) {
+        return;
+      }
+
+      if (openedDocumentsRef.current.has(filePath)) {
+        lspClient.notifyDocumentClose(filePath).catch((error) => {
+          console.error("LSP document close error:", error);
+        });
+        lspClient.stopForFile(filePath).catch((error) => {
+          console.error("LSP stop for file error:", error);
+        });
+      }
+
+      documentVersionsRef.current.delete(filePath);
+      openedDocumentsRef.current.delete(filePath);
+    };
+
+    if (openedDocumentsRef.current.has(filePath)) {
+      return cleanupDocument;
+    }
+
     // Start LSP server for this file and then notify about document open
     const initLsp = async () => {
       try {
@@ -161,16 +187,7 @@ export const useLspIntegration = ({
 
     initLsp();
 
-    return () => {
-      // Notify LSP about document close only if open was sent successfully.
-      if (openedDocumentsRef.current.has(filePath)) {
-        lspClient.notifyDocumentClose(filePath).catch((error) => {
-          console.error("LSP document close error:", error);
-        });
-      }
-      documentVersionsRef.current.delete(filePath);
-      openedDocumentsRef.current.delete(filePath);
-    };
+    return cleanupDocument;
   }, [enabled, filePath, isLspSupported, lspClient, rootFolderPath, value]);
 
   // Handle document content changes

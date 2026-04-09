@@ -53,7 +53,7 @@ export class LspClient {
   private static instance: LspClient | null = null;
   private activeLanguageServers = new Set<string>(); // workspace:language format
   private activeLanguages = new Set<string>(); // Track active language IDs for status
-  private activeServerFiles = new Map<string, string>(); // workspace:language -> file path
+  private activeServerFiles = new Map<string, Set<string>>(); // workspace:language -> tracked files
 
   private constructor() {
     this.setupDiagnosticsListener();
@@ -78,15 +78,60 @@ export class LspClient {
   private findServerKeyForFile(filePath: string, languageId?: string): string | null {
     if (languageId) {
       const directMatch = Array.from(this.activeServerFiles.entries()).find(
-        ([key, trackedFilePath]) => trackedFilePath === filePath && key.endsWith(`:${languageId}`),
+        ([key, trackedFiles]) => trackedFiles.has(filePath) && key.endsWith(`:${languageId}`),
       );
       if (directMatch) return directMatch[0];
     }
 
-    const fallbackMatch = Array.from(this.activeServerFiles.entries()).find(
-      ([, trackedFilePath]) => trackedFilePath === filePath,
+    const fallbackMatch = Array.from(this.activeServerFiles.entries()).find(([, trackedFiles]) =>
+      trackedFiles.has(filePath),
     );
     return fallbackMatch?.[0] ?? null;
+  }
+
+  private addTrackedFile(serverKey: string, filePath: string) {
+    const trackedFiles = this.activeServerFiles.get(serverKey) ?? new Set<string>();
+    trackedFiles.add(filePath);
+    this.activeServerFiles.set(serverKey, trackedFiles);
+  }
+
+  private removeTrackedFile(serverKey: string, filePath: string) {
+    const trackedFiles = this.activeServerFiles.get(serverKey);
+    if (!trackedFiles) return;
+
+    trackedFiles.delete(filePath);
+    if (trackedFiles.size === 0) {
+      this.activeServerFiles.delete(serverKey);
+      return;
+    }
+
+    this.activeServerFiles.set(serverKey, trackedFiles);
+  }
+
+  private getRepresentativeFilePath(serverKey: string): string | null {
+    const trackedFiles = this.activeServerFiles.get(serverKey);
+    if (!trackedFiles || trackedFiles.size === 0) {
+      return null;
+    }
+
+    return trackedFiles.values().next().value ?? null;
+  }
+
+  private buildServerEntry(serverKey: string): {
+    key: string;
+    workspacePath: string;
+    languageId: string;
+    displayName: string;
+    filePath: string | null;
+  } {
+    const { workspacePath, languageId } = this.parseServerKey(serverKey);
+    return {
+      key: serverKey,
+      workspacePath,
+      languageId,
+      displayName: this.getLanguageDisplayName(languageId),
+      filePath: this.getRepresentativeFilePath(serverKey),
+    };
   }
 
   private parseServerKey(serverKey: string): { workspacePath: string; languageId: string } {
@@ -109,17 +154,13 @@ export class LspClient {
     filePath: string | null;
   }> {
     return Array.from(this.activeLanguageServers)
-      .map((key) => {
-        const { workspacePath, languageId } = this.parseServerKey(key);
-        return {
-          key,
-          workspacePath,
-          languageId,
-          displayName: this.getLanguageDisplayName(languageId),
-          filePath: this.activeServerFiles.get(key) ?? null,
-        };
-      })
+      .map((key) => this.buildServerEntry(key))
       .sort((a, b) => a.displayName.localeCompare(b.displayName));
+  }
+
+  getActiveServerEntryForFile(filePath: string, languageId?: string) {
+    const serverKey = this.findServerKeyForFile(filePath, languageId);
+    return serverKey ? this.buildServerEntry(serverKey) : null;
   }
 
   static getInstance(): LspClient {
@@ -260,7 +301,7 @@ export class LspClient {
         const serverKey = `${workspacePath}:${languageId}`;
         this.activeLanguageServers.add(serverKey);
         if (filePath) {
-          this.activeServerFiles.set(serverKey, filePath);
+          this.addTrackedFile(serverKey, filePath);
         }
       }
 
@@ -332,7 +373,7 @@ export class LspClient {
       if (languageId) {
         const serverKey = `${workspacePath}:${languageId}`;
         this.activeLanguageServers.add(serverKey);
-        this.activeServerFiles.set(serverKey, filePath);
+        this.addTrackedFile(serverKey, filePath);
         // Track language with proper display name
         const displayName = this.getLanguageDisplayName(languageId);
         this.activeLanguages.add(displayName);
@@ -360,7 +401,7 @@ export class LspClient {
         if (languageId) {
           const serverKey = `${workspacePath}:${languageId}`;
           this.activeLanguageServers.delete(serverKey);
-          this.activeServerFiles.delete(serverKey);
+          this.removeTrackedFile(serverKey, filePath);
           const displayName = this.getLanguageDisplayName(languageId);
           this.activeLanguages.delete(displayName);
           this.updateLspStatus();
@@ -415,8 +456,11 @@ export class LspClient {
       if (languageId) {
         const activeKey = this.findServerKeyForFile(filePath, languageId);
         if (activeKey) {
-          this.activeLanguageServers.delete(activeKey);
-          this.activeServerFiles.delete(activeKey);
+          this.removeTrackedFile(activeKey, filePath);
+          const stillActiveForServer = this.activeServerFiles.has(activeKey);
+          if (!stillActiveForServer) {
+            this.activeLanguageServers.delete(activeKey);
+          }
         }
 
         const displayName = this.getLanguageDisplayName(languageId);
@@ -438,7 +482,7 @@ export class LspClient {
   }
 
   async stopTrackedServer(serverKey: string): Promise<void> {
-    const filePath = this.activeServerFiles.get(serverKey);
+    const filePath = this.getRepresentativeFilePath(serverKey);
     if (!filePath) {
       const { workspacePath } = this.parseServerKey(serverKey);
       await this.stop(workspacePath);
@@ -467,7 +511,7 @@ export class LspClient {
   }
 
   async restartTrackedServer(serverKey: string): Promise<void> {
-    const filePath = this.activeServerFiles.get(serverKey);
+    const filePath = this.getRepresentativeFilePath(serverKey);
     if (!filePath) {
       throw new Error("No tracked file for this language server");
     }

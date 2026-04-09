@@ -22,10 +22,129 @@ const AUTO_PAIRS: Record<string, string> = {
   "`": "`",
 };
 const AUTO_PAIR_CLOSERS = new Set(Object.values(AUTO_PAIRS));
-const BLOCK_COMMENT_LANGUAGES = new Set(["css"]);
+const BLOCK_COMMENT_LANGUAGES = new Set([
+  "c",
+  "cpp",
+  "csharp",
+  "css",
+  "dart",
+  "go",
+  "java",
+  "javascript",
+  "javascriptreact",
+  "php",
+  "rust",
+  "scala",
+  "swift",
+  "typescript",
+  "typescriptreact",
+]);
+const LINE_COMMENT_TOKENS: Partial<Record<string, string>> = {
+  bash: "#",
+  c: "//",
+  cpp: "//",
+  csharp: "//",
+  dart: "//",
+  elixir: "#",
+  go: "//",
+  java: "//",
+  javascript: "//",
+  javascriptreact: "//",
+  kotlin: "//",
+  lua: "--",
+  php: "//",
+  python: "#",
+  ruby: "#",
+  rust: "//",
+  scala: "//",
+  shell: "#",
+  sql: "--",
+  swift: "//",
+  typescript: "//",
+  typescriptreact: "//",
+  yaml: "#",
+  toml: "#",
+  zig: "//",
+};
 
 function isAltGraphPressed(e: React.KeyboardEvent<HTMLTextAreaElement>): boolean {
   return e.getModifierState("AltGraph") || (e.ctrlKey && e.altKey && !e.metaKey);
+}
+
+function shouldTreatAltAsTextInput(e: React.KeyboardEvent<HTMLTextAreaElement>): boolean {
+  if (!e.altKey || e.metaKey) return false;
+  if (e.key.length !== 1) return false;
+  return !e.ctrlKey || isAltGraphPressed(e);
+}
+
+function escapeForRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function getLineCommentToken(languageId: string | null): string | null {
+  if (!languageId) return null;
+  return LINE_COMMENT_TOKENS[languageId] || null;
+}
+
+function getCommentContinuation(
+  languageId: string | null,
+  linePrefix: string,
+  lineSuffix: string,
+): { insertText: string; cursorOffset: number } | null {
+  const indentMatch = linePrefix.match(/^[\t ]*/);
+  const indent = indentMatch?.[0] ?? "";
+  const trimmedPrefix = linePrefix.trimStart();
+  const trimmedSuffix = lineSuffix.trim();
+
+  if (languageId && BLOCK_COMMENT_LANGUAGES.has(languageId)) {
+    const openingBlockMatch = trimmedPrefix.match(/^\/\*\*?(?:\s.*)?$/);
+    const starLineMatch = trimmedPrefix.match(/^\*(?:\s.*)?$/);
+    const isInlineBlockPair =
+      (trimmedPrefix === "/*" || trimmedPrefix === "/**") &&
+      (lineSuffix.startsWith(" */") || lineSuffix.startsWith("*/"));
+
+    if (isInlineBlockPair) {
+      const insertText = `\n${indent} * \n${indent}`;
+      return {
+        insertText,
+        cursorOffset: insertText.length - (indent.length + 1),
+      };
+    }
+
+    if (openingBlockMatch || starLineMatch) {
+      const insertText = `\n${indent} * `;
+      return {
+        insertText,
+        cursorOffset: insertText.length,
+      };
+    }
+  }
+
+  const lineCommentToken = getLineCommentToken(languageId);
+  if (!lineCommentToken) {
+    return null;
+  }
+
+  const lineCommentPattern = new RegExp(
+    `^([\\t ]*)${escapeForRegex(lineCommentToken)}(?:\\s?(.*))?$`,
+  );
+  const lineCommentMatch = linePrefix.match(lineCommentPattern);
+  if (!lineCommentMatch) {
+    return null;
+  }
+
+  const commentIndent = lineCommentMatch[1] ?? indent;
+  const commentBody = lineCommentMatch[2] ?? "";
+
+  if (commentBody.length === 0 && trimmedSuffix.length === 0) {
+    return null;
+  }
+
+  const insertText = `\n${commentIndent}${lineCommentToken} `;
+  return {
+    insertText,
+    cursorOffset: insertText.length,
+  };
 }
 
 interface UseEditorKeyDownOptions {
@@ -93,8 +212,9 @@ export function useEditorKeyDown({
   return useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       const isAltGraph = isAltGraphPressed(e);
+      const isAltTextInput = shouldTreatAltAsTextInput(e);
       const hasBlockedModifier =
-        e.metaKey || (e.ctrlKey && !isAltGraph) || (e.altKey && !isAltGraph);
+        e.metaKey || (e.ctrlKey && !isAltGraph) || (e.altKey && !isAltGraph && !isAltTextInput);
       const isInlineEditShortcut =
         (e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "i";
 
@@ -140,7 +260,7 @@ export function useEditorKeyDown({
         return;
       }
 
-      if (!isAltGraph && e.altKey && (e.key === "[" || e.key === "]")) {
+      if (!isAltGraph && !isAltTextInput && e.altKey && (e.key === "[" || e.key === "]")) {
         e.preventDefault();
         const decorations = useEditorDecorationsStore.getState().decorations;
         const changedLines: number[] = [];
@@ -371,6 +491,8 @@ export function useEditorKeyDown({
         }
       }
 
+      const currentLanguageId = filePath ? getLanguageId(filePath) : null;
+
       // Auto-pairing for single cursor editing
       if (inputRef.current && !hasBlockedModifier) {
         const textarea = e.currentTarget;
@@ -380,9 +502,8 @@ export function useEditorKeyDown({
         const selectedText = currentContent.substring(start, end);
         const nextChar = currentContent[start] || "";
         const prevChar = start > 0 ? currentContent[start - 1] : "";
-        const currentLanguageId = filePath ? getLanguageId(filePath) : null;
 
-        // CSS block comment expansion: typing * after / becomes /* */
+        // Block comment expansion: typing * after / becomes /* */
         if (
           e.key === "*" &&
           start === end &&
@@ -560,14 +681,22 @@ export function useEditorKeyDown({
         const currentContent = textarea.value;
 
         const lineStart = currentContent.lastIndexOf("\n", Math.max(0, start - 1)) + 1;
+        const lineEnd = currentContent.indexOf("\n", start);
         const currentLinePrefix = currentContent.slice(lineStart, start);
+        const currentLineSuffix =
+          lineEnd === -1 ? currentContent.slice(start) : currentContent.slice(start, lineEnd);
         const indentMatch = currentLinePrefix.match(/^[\t ]*/);
         const indent = indentMatch?.[0] ?? "";
 
-        const inserted = `\n${indent}`;
+        const commentContinuation = getCommentContinuation(
+          currentLanguageId,
+          currentLinePrefix,
+          currentLineSuffix,
+        );
+        const inserted = commentContinuation?.insertText ?? `\n${indent}`;
         const newContent =
           currentContent.substring(0, start) + inserted + currentContent.substring(end);
-        const newCursorPos = start + inserted.length;
+        const newCursorPos = start + (commentContinuation?.cursorOffset ?? inserted.length);
 
         textarea.value = newContent;
         textarea.selectionStart = textarea.selectionEnd = newCursorPos;
