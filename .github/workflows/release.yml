@@ -59,44 +59,8 @@ jobs:
     timeout-minutes: ${{ matrix.timeout_minutes }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Compute release metadata
-        id: release_meta
-        shell: bash
-        run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          if [[ "$VERSION" == *-* ]]; then
-            echo "is_prerelease=true" >> "$GITHUB_OUTPUT"
-            echo "release_name=Athas v__VERSION__ prerelease" >> "$GITHUB_OUTPUT"
-            {
-              echo "release_body<<EOF"
-              echo "## Preview build"
-              echo
-              echo "This is a prerelease build for testing before the next stable release."
-              echo
-              echo "See the assets below to download this version and install."
-              echo
-              echo "Full changelog: https://github.com/athasdev/athas/compare/v__PREVIOUS_VERSION__...v__VERSION__"
-              echo "EOF"
-            } >> "$GITHUB_OUTPUT"
-          else
-            echo "is_prerelease=false" >> "$GITHUB_OUTPUT"
-            echo "release_name=Athas v__VERSION__" >> "$GITHUB_OUTPUT"
-            {
-              echo "release_body<<EOF"
-              echo "## What's Changed"
-              echo
-              echo "See the assets below to download this version and install."
-              echo
-              echo "### Installation"
-              echo "- **macOS**: Download the \`.dmg\` file"
-              echo "- **Windows**: Download the \`.exe\` file"
-              echo "- **Linux**: Download the \`.deb\` or \`.rpm\` file"
-              echo
-              echo "Full changelog: https://github.com/athasdev/athas/compare/v__PREVIOUS_VERSION__...v__VERSION__"
-              echo "EOF"
-            } >> "$GITHUB_OUTPUT"
-          fi
+        with:
+          fetch-depth: 0
 
       - name: Free disk space (Linux only)
         if: matrix.os == 'linux'
@@ -113,6 +77,15 @@ jobs:
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+
+      - name: Generate release metadata
+        id: release_meta
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          bun scripts/generate-release-notes.mjs \
+            --tag "${GITHUB_REF_NAME}" \
+            --github-output "${GITHUB_OUTPUT}"
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -265,7 +238,7 @@ jobs:
           APPLE_TEAM_ID: ${{ matrix.os == 'macos' && secrets.APPLE_TEAM_ID || '' }}
           NO_STRIP: ${{ matrix.os == 'linux' && 'true' || '' }}
         with:
-          tagName: v__VERSION__
+          tagName: ${{ github.ref_name }}
           releaseName: ${{ steps.release_meta.outputs.release_name }}
           releaseBody: ${{ steps.release_meta.outputs.release_body }}
           releaseDraft: true

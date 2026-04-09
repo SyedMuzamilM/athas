@@ -157,6 +157,12 @@ The release script:
 
 GitHub Actions publishes releases from tags matching `v*`.
 
+Release notes are generated automatically from the pull requests associated with commits since the previous tag.
+
+- The notes are grouped into clean sections such as Editor, AI, Git, Terminal, Extensions, Platform, Docs, and Other
+- Each entry is rendered as a short bullet with attribution such as `by @username`
+- If pull request metadata cannot be resolved, the workflow falls back to commit subjects
+
 Examples:
 
 - `v0.5.0-alpha.1`
@@ -185,6 +191,7 @@ Use this after the release candidate is clean:
 2. Run `bun scripts/release.ts patch --dry-run` or the exact stable version dry run.
 3. Run the real release command.
 4. Verify the GitHub release assets and updater metadata.
+5. Review the generated release notes before sharing the release publicly.
 
 ## Platform validation
 

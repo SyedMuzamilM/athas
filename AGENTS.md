@@ -43,6 +43,8 @@
 - Commit messages should be short, direct, and imperative.
 - Start commit messages with an uppercase letter.
 - Add a short commit body when the change benefits from extra context.
+- Prefer a single 1-3 sentence commit body.
+- Wrap long lines if needed, but keep the body as one paragraph unless extra structure is necessary.
 - Commit bodies should explain what changed and why in plain language, without headings or boilerplate.
 - Avoid prefixes, filler, hype, and changelog-style noise in commit messages.
 - Before creating a commit, run the checks that match the change.
