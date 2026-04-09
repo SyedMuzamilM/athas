@@ -146,6 +146,27 @@ export function useTerminalConnection({
           return;
         }
 
+        // Modifier+Enter: send CSI u sequences so TUI apps can distinguish them
+        if (event.key === "Enter") {
+          if (event.shiftKey) {
+            event.preventDefault();
+            write("\x1b[13;2u"); // Shift+Enter
+            return;
+          }
+          if (event.altKey) {
+            event.preventDefault();
+            write("\x1b[13;3u"); // Alt+Enter
+            return;
+          }
+        }
+
+        // Shift+Tab: send reverse-tab escape sequence
+        if (event.key === "Tab" && event.shiftKey) {
+          event.preventDefault();
+          write("\x1b[Z");
+          return;
+        }
+
         if (event.metaKey && (event.key === "ArrowLeft" || event.key === "ArrowRight")) {
           event.preventDefault();
           write(event.key === "ArrowLeft" ? "\u0001" : "\u0005");
