@@ -1,100 +1,74 @@
-## Important
+## Project Overview
 
-- Commits should have the first character uppercased
-- Do not prefix unused variables with an underscore, delete them instead
-- Do not use emojis in commit messages, logs, or documentation
-- Never change the AGENTS.md file unless the user specifically asks for it
-- Avoid unnecessary comments in UI components (keep code self-explanatory)
-- Avoid unnecessary `cn(...)` calls: use it only for conditional or merged class names; do not wrap static strings
-- Always use bun.
-- PR descriptions should be simple, natural language, no headers or sections, just a few bullet points describing what changed and why.
-- Validate release changes locally before publishing anything. Prefer `bun scripts/release.ts <channel> --dry-run` first.
-- Do not use real release tags to debug release automation. Fix and prove the flow locally before pushing a new tag.
-- Keep Windows MSI versioning numeric-only through `tauri.bundle.windows.wix.version`; prerelease app versions must not be used directly for MSI builds.
+- Athas is a desktop code editor built with Tauri, React, TypeScript, and Rust.
+- Frontend feature code lives under `src/features/`.
+- Shared frontend code lives under `src/components`, `src/hooks`, and `src/utils`.
+- Extension-specific code lives under `src/extensions/`.
+- Rust feature logic should prefer `crates/[feature]`; keep `src-tauri` focused on app wiring and integration.
+
+## Setup And Validation
+
+- Always use Bun for repo scripts and package management.
+- Required environment: Bun `1.3.2`, Node.js `22+`, and Rust.
+- Install dependencies with `bun install`.
+- Start the app with `bun dev`.
+- Run full checks with `bun check`.
+- Run tests with `bun test`.
+- Run TypeScript checks with `bun typecheck`.
+- Run Rust checks with `bun check:rust` when touching Rust code.
+- When touching release flow, validate locally with `bun scripts/release.ts <channel> --dry-run` before anything else, then run `bun release:check`.
+
+## Workflow Rules
+
+- Never change `AGENTS.md` unless the user explicitly asks.
+- Do not prefix unused variables with an underscore; delete them instead.
+- Do not use emojis in commit messages, logs, or documentation.
+- Validate the relevant checks after making changes instead of stopping at code edits.
+
+## Commits And PRs
+
+- Keep commits focused. One logical change per commit.
+- Commit messages should be short, direct, and imperative.
+- Start commit messages with an uppercase letter.
+- Add a short commit body when the change benefits from extra context.
+- Commit bodies should explain what changed and why in plain language, without headings or boilerplate.
+- Avoid prefixes, filler, hype, and changelog-style noise in commit messages.
+- Before creating a commit, run the checks that match the change.
+- Before opening a PR, run the relevant validation again for the final diff.
+- PR titles should be short and plain.
+- PR descriptions should be plain natural language with a few short bullet points, no headers, and no section templates.
+- PR descriptions should explain what changed and why, without restating the file list.
+- When release, packaging, or versioning is involved, include the validation you ran in the PR description.
+
+## Code Style
+
+- Follow existing code style and keep changes aligned with nearby code.
+- Avoid unnecessary comments in UI components; prefer self-explanatory code.
+- Avoid unnecessary `cn(...)` calls; use it only for conditional or merged class names.
+- Use Tailwind utilities for normal component styling.
+- Use CSS variables for theme colors; do not hardcode hex values in UI code.
+- Interactive elements must remain accessible, including accessible names for icon-only controls and usable keyboard/focus behavior.
 
 ## Zustand
 
-This project uses Zustand for state management with specific patterns:
+- Always use the `createSelectors` wrapper for stores.
+- Prefer `store.use.property()` selectors over inline state selectors when available.
+- Group store actions inside an `actions` object.
+- Use `getState()` to access other stores inside actions instead of passing dependent state through parameters.
+- Use `immer` when store updates are deeply nested.
+- Use `persist` for state that must sync to local storage.
+- Use `createWithEqualityFn` or `useShallow` when selector stability matters and rerenders would otherwise be noisy.
 
-- `createSelectors` - Creates automatic selectors for each state property. Use like `store.use.property()` instead of `store((state) => state.property)`
-- `immer` - Use when stores have deep nesting to enable direct mutations in set functions
-- `persist` - Use to sync store state with localStorage
-- `createWithEqualityFn` - Use when you need custom comparison functions for selectors to avoid unnecessary rerenders when stable references change
-- `useShallow` - Use when creating selectors that return objects/arrays to compare them shallowly and avoid rerenders
+## Code Organization
 
-### Store Access Patterns
+- Group feature-specific code under `src/features/[feature]/`.
+- Prefer subfolders such as `components`, `hooks`, `services`, `stores`, `types`, `utils`, and `tests` instead of leaving feature logic in the feature root.
+- Do not put feature-specific code in global shared folders unless it is genuinely shared across features.
+- Keep feature tests under `src/features/[feature]/tests/` when practical.
+- New user-facing documentation belongs in the `www` repo under `www/docs/`, not in this repo.
 
-- Use `getState()` to access other stores' state within actions: `const { fontSize } = useEditorSettingsStore.getState()`
-- Prefer accessing dependent store state inside actions rather than passing parameters
-- Group all actions in an `actions` object within the store
-- Always use `createSelectors` wrapper for stores
+## Release Rules
 
-### CSS Variables for Theming
-
-All theme colors are defined as CSS variables following this structure:
-
-**Variable Naming Convention:**
-
-- Use semantic names without prefixes: `--primary-bg`, `--text`, `--accent`
-- No `--tw-` prefix (this was removed during standardization)
-- Variables are defined in `:root` with system theme fallbacks via `@media (prefers-color-scheme: dark)`
-
-**Tailwind Integration:**
-
-- CSS variables map to Tailwind colors via `@theme inline` directive
-- Use pattern: `--color-{name}: var(--{name})`
-- Enables utilities like `bg-primary-bg`, `text-text`, `border-border`
-
-**Theme System:**
-
-- All themes (including built-ins) are defined in JSON files in `src/extensions/themes/builtin/`
-- Themes override CSS variables via the Theme Registry
-- No CSS classes for themes - pure variable-based theming
-- Data attributes track current theme: `data-theme="theme-id"` and `data-theme-type="light|dark"`
-
-### File Organization
-
-```
-src/
-├── styles.css                    # Global styles, Tailwind imports, theme config
-├── features/
-│   └── [feature]/
-│       └── styles/              # Feature-specific CSS files
-└── extensions/
-    └── themes/
-        ├── builtin/*.json       # Theme definitions
-        ├── theme-registry.ts    # Theme management
-        └── types.ts             # Theme interfaces
-```
-
-### Best Practices
-
-1. **Consistency**: Use Tailwind utilities for all standard component styling
-2. **Performance**: Use CSS files for complex layouts with many styles
-3. **Theming**: Always use CSS variables for colors, never hardcode hex values
-4. **Maintainability**: Keep styles close to their components using feature-based organization
-5. **Customization**: Make components themeable by using semantic CSS variable names
-
-### Accessibility
-
-- Always add accessibility attributes like `aria-label`, `role`, etc. to interactive elements
-
-### Folder Structure
-
-- Group related components, hooks, and utils into feature-based folders (e.g. `src/features/editor/[components,types,utils,config,constants,etc.])
-- Use `src/` for shared, generic components used across multiple features (e.g. `src/components`, `src/hooks`, `src/utils`, etc.)
-- Use `src/extensions/` for extension-specific code (e.g. themes, plugins, etc.)
-- New feature code should follow the canonical structure documented in the contributing docs (hosted in the www repo)
-- Prefer `src/features/[feature]/{components,hooks,services,api,adapters,stores,state,selectors,contexts,types,constants,utils,tests}`
-- Do not add new feature-specific logic to global folders unless it is genuinely shared across multiple features
-- Do not leave feature logic scattered in `src/features/[feature]/` root when an appropriate subfolder exists
-- Keep feature tests under `src/features/[feature]/tests/` when practical
-- Backend feature logic should prefer `crates/[feature]`; keep `src-tauri` focused on app wiring and integration
-
-### Documentation
-
-- User-facing documentation lives in the **www** repo (`www/docs/`), not in this repo
-- Update relevant documentation in the www repo when adding new features or making significant changes
-- Documentation should be clear and concise, focusing on usage and examples
-- Documentation is for users, not developers - avoid internal implementation details unless necessary for understanding usage
-- Use markdown format for documentation files with proper headings, lists, and code blocks
+- Validate release changes locally before publishing anything.
+- Do not use real release tags to debug release automation.
+- Keep Windows MSI versioning numeric-only via `tauri.bundle.windows.wix.version`; do not use prerelease app versions directly for MSI builds.
