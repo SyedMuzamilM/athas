@@ -193,9 +193,7 @@ export function ResizablePane({
           onMouseDown={handleMouseDown}
           className={cn(
             "absolute top-0 z-50 h-full w-1.5 cursor-col-resize transition-colors duration-150",
-            "hover:bg-accent/30 active:bg-accent/50",
             handlePosition,
-            isResizing && "bg-accent/50",
           )}
           role="separator"
           aria-orientation="vertical"
