@@ -12,7 +12,13 @@ import {
 import { useState } from "react";
 import { useSettingsStore } from "@/features/settings/store";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
-import { fetchChanges, pullChanges, pushChanges } from "../api/git-remotes-api";
+import { toast } from "@/ui/toast";
+import {
+  fetchChanges,
+  pullChanges,
+  pushChanges,
+  type GitRemoteActionResult,
+} from "../api/git-remotes-api";
 import { discardAllChanges, initRepository } from "../api/git-status-api";
 import { useGitStore } from "../stores/git-store";
 import { type GitActionsMenuAnchorRect } from "../utils/git-actions-menu-position";
@@ -46,18 +52,47 @@ const GitActionsMenu = ({
   const { isRefreshing } = useGitStore();
   const confirmBeforeDiscard = useSettingsStore((state) => state.settings.confirmBeforeDiscard);
 
-  const handleAction = async (action: () => Promise<boolean>, actionName: string) => {
+  const handleAction = async (
+    action: () => Promise<boolean | GitRemoteActionResult>,
+    actionName: string,
+    messages?: {
+      loading?: string;
+      success?: string;
+      error?: string;
+    },
+  ) => {
     if (!repoPath) return;
 
+    let toastId: string | null = null;
     setIsLoading(true);
     try {
-      const success = await action();
-      if (success) {
+      if (messages?.loading) {
+        toastId = toast.show({
+          message: messages.loading,
+          type: "info",
+          duration: 0,
+        });
+      }
+
+      const result = await action();
+      const remoteResult =
+        typeof result === "boolean" ? { success: result, error: undefined } : result;
+
+      if (remoteResult.success) {
+        if (toastId) toast.dismiss(toastId);
+        toast.success(messages?.success ?? `${actionName} completed.`);
         onRefresh?.();
       } else {
-        console.error(`${actionName} failed`);
+        const errorMessage = remoteResult.error || messages?.error || `${actionName} failed.`;
+        if (toastId) toast.dismiss(toastId);
+        toast.error(errorMessage);
+        console.error(`${actionName} failed`, remoteResult.error);
       }
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : messages?.error || `${actionName} failed.`;
+      if (toastId) toast.dismiss(toastId);
+      toast.error(errorMessage);
       console.error(`${actionName} error:`, error);
     } finally {
       setIsLoading(false);
@@ -65,15 +100,27 @@ const GitActionsMenu = ({
   };
 
   const handlePush = () => {
-    handleAction(() => pushChanges(repoPath!), "Push");
+    handleAction(() => pushChanges(repoPath!), "Push", {
+      loading: "Pushing changes...",
+      success: "Changes pushed successfully.",
+      error: "Failed to push changes.",
+    });
   };
 
   const handlePull = () => {
-    handleAction(() => pullChanges(repoPath!), "Pull");
+    handleAction(() => pullChanges(repoPath!), "Pull", {
+      loading: "Pulling changes...",
+      success: "Changes pulled successfully.",
+      error: "Failed to pull changes.",
+    });
   };
 
   const handleFetch = () => {
-    handleAction(() => fetchChanges(repoPath!), "Fetch");
+    handleAction(() => fetchChanges(repoPath!), "Fetch", {
+      loading: "Fetching changes...",
+      success: "Fetched successfully.",
+      error: "Failed to fetch changes.",
+    });
   };
 
   const handleDiscardAllChanges = async () => {

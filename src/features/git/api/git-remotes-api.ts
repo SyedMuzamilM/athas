@@ -1,6 +1,11 @@
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
 import type { GitRemote } from "../types/git-types";
 
+export interface GitRemoteActionResult {
+  success: boolean;
+  error?: string;
+}
+
 export const getRemotes = async (repoPath: string): Promise<GitRemote[]> => {
   try {
     const remotes = await tauriInvoke<GitRemote[]>("git_get_remotes", {
@@ -37,13 +42,16 @@ export const pushChanges = async (
   repoPath: string,
   branch?: string,
   remote: string = "origin",
-): Promise<boolean> => {
+): Promise<GitRemoteActionResult> => {
   try {
     await tauriInvoke("git_push", { repoPath, branch, remote });
-    return true;
+    return { success: true };
   } catch (error) {
     console.error("Failed to push changes:", error);
-    return false;
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
 };
 
@@ -51,22 +59,31 @@ export const pullChanges = async (
   repoPath: string,
   branch?: string,
   remote: string = "origin",
-): Promise<boolean> => {
+): Promise<GitRemoteActionResult> => {
   try {
     await tauriInvoke("git_pull", { repoPath, branch, remote });
-    return true;
+    return { success: true };
   } catch (error) {
     console.error("Failed to pull changes:", error);
-    return false;
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
 };
 
-export const fetchChanges = async (repoPath: string, remote?: string): Promise<boolean> => {
+export const fetchChanges = async (
+  repoPath: string,
+  remote?: string,
+): Promise<GitRemoteActionResult> => {
   try {
     await tauriInvoke("git_fetch", { repoPath, remote });
-    return true;
+    return { success: true };
   } catch (error) {
     console.error("Failed to fetch changes:", error);
-    return false;
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
 };

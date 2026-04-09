@@ -344,6 +344,7 @@ const GitStatusPanel = ({
               onStage={() => handleStageFile(file.path)}
               onUnstage={() => handleUnstageFile(file.path)}
               disabled={isLoading}
+              showFileIcon
             />
           ))}
         </div>

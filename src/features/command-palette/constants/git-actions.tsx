@@ -1,4 +1,5 @@
 import { ArrowUp, GitBranch, GitCommit, RefreshCw } from "lucide-react";
+import type { GitRemoteActionResult } from "@/features/git/api/git-remotes-api";
 import type { Action } from "../models/action.types";
 
 interface GitActionsParams {
@@ -13,9 +14,9 @@ interface GitActionsParams {
     stageAllFiles: (path: string) => Promise<boolean>;
     unstageAllFiles: (path: string) => Promise<boolean>;
     commitChanges: (path: string, message: string) => Promise<boolean>;
-    pushChanges: (path: string) => Promise<boolean>;
-    pullChanges: (path: string) => Promise<boolean>;
-    fetchChanges: (path: string) => Promise<boolean>;
+    pushChanges: (path: string) => Promise<GitRemoteActionResult>;
+    pullChanges: (path: string) => Promise<GitRemoteActionResult>;
+    fetchChanges: (path: string) => Promise<GitRemoteActionResult>;
     discardAllChanges: (path: string) => Promise<boolean>;
   };
   onClose: () => void;
@@ -133,11 +134,14 @@ export const createGitActions = (params: GitActionsParams): Action[] => {
         }
         try {
           showToast({ message: "Pushing changes...", type: "info" });
-          const success = await gitOperations.pushChanges(rootFolderPath);
-          if (success) {
+          const result = await gitOperations.pushChanges(rootFolderPath);
+          if (result.success) {
             showToast({ message: "Changes pushed successfully", type: "success" });
           } else {
-            showToast({ message: "Failed to push changes", type: "error" });
+            showToast({
+              message: result.error || "Failed to push changes",
+              type: "error",
+            });
           }
         } catch (error) {
           showToast({ message: `Error: ${error}`, type: "error" });
@@ -159,12 +163,15 @@ export const createGitActions = (params: GitActionsParams): Action[] => {
         }
         try {
           showToast({ message: "Pulling changes...", type: "info" });
-          const success = await gitOperations.pullChanges(rootFolderPath);
-          if (success) {
+          const result = await gitOperations.pullChanges(rootFolderPath);
+          if (result.success) {
             showToast({ message: "Changes pulled successfully", type: "success" });
             window.dispatchEvent(new Event("refresh-git-data"));
           } else {
-            showToast({ message: "Failed to pull changes", type: "error" });
+            showToast({
+              message: result.error || "Failed to pull changes",
+              type: "error",
+            });
           }
         } catch (error) {
           showToast({ message: `Error: ${error}`, type: "error" });
@@ -185,11 +192,14 @@ export const createGitActions = (params: GitActionsParams): Action[] => {
           return;
         }
         try {
-          const success = await gitOperations.fetchChanges(rootFolderPath);
-          if (success) {
+          const result = await gitOperations.fetchChanges(rootFolderPath);
+          if (result.success) {
             showToast({ message: "Fetched successfully", type: "success" });
           } else {
-            showToast({ message: "Failed to fetch", type: "error" });
+            showToast({
+              message: result.error || "Failed to fetch",
+              type: "error",
+            });
           }
         } catch (error) {
           showToast({ message: `Error: ${error}`, type: "error" });
