@@ -1,5 +1,5 @@
 import type React from "react";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, type ReactNode } from "react";
 import { CsvPreview } from "@/extensions/viewers/csv/csv-preview";
 import { useLspIntegration } from "@/features/editor/hooks/use-lsp-integration";
 import { useEditorScroll } from "@/features/editor/hooks/use-scroll";
@@ -76,6 +76,11 @@ const CodeEditor = ({
 }: CodeEditorProps) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const semanticTokensRef = useRef<HTMLDivElement>(null);
+  const codeLensRef = useRef<HTMLDivElement>(null);
+  const inlayHintsRef = useRef<HTMLDivElement>(null);
+  const renameInputRef = useRef<HTMLDivElement>(null);
+  const lspScrollRafRef = useRef<number | null>(null);
   const { setRefs, setContent, setFileInfo } = useEditorStateStore.use.actions();
   const { setDisabled } = useEditorSettingsStore.use.actions();
 
@@ -182,6 +187,44 @@ const CodeEditor = ({
     enableInteractiveServices ? filePath : undefined,
     enableInteractiveServices,
   );
+
+  // Sync LSP overlay containers with textarea scroll via RAF (matches highlight layer timing)
+  const syncLspOverlayTransform = useCallback((scrollTop: number, scrollLeft: number) => {
+    const transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
+    for (const ref of [semanticTokensRef, codeLensRef, inlayHintsRef, renameInputRef]) {
+      if (ref.current) {
+        ref.current.style.transform = transform;
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const container = editorRef.current;
+    if (!container) return;
+
+    const textarea = container.querySelector("textarea");
+    if (!textarea) return;
+
+    const handleScroll = () => {
+      if (lspScrollRafRef.current !== null) return;
+      lspScrollRafRef.current = requestAnimationFrame(() => {
+        syncLspOverlayTransform(textarea.scrollTop, textarea.scrollLeft);
+        lspScrollRafRef.current = null;
+      });
+    };
+
+    textarea.addEventListener("scroll", handleScroll, { passive: true });
+    // Sync initial position
+    syncLspOverlayTransform(textarea.scrollTop, textarea.scrollLeft);
+
+    return () => {
+      textarea.removeEventListener("scroll", handleScroll);
+      if (lspScrollRafRef.current !== null) {
+        cancelAnimationFrame(lspScrollRafRef.current);
+        lspScrollRafRef.current = null;
+      }
+    };
+  }, [syncLspOverlayTransform]);
 
   // Combine mouse move handlers for hover and definition link
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -385,12 +428,12 @@ const CodeEditor = ({
           {/* Semantic Tokens */}
           {enableInteractiveServices && semanticTokens.length > 0 && (
             <SemanticTokensOverlay
+              ref={semanticTokensRef}
               tokens={semanticTokens}
               content={value}
               fontSize={zoomedFontSize}
               charWidth={zoomedFontSize * 0.6}
               scrollTop={editorRef.current?.querySelector("textarea")?.scrollTop ?? 0}
-              scrollLeft={editorRef.current?.querySelector("textarea")?.scrollLeft ?? 0}
               viewportHeight={editorRef.current?.clientHeight ?? 600}
             />
           )}
@@ -398,10 +441,10 @@ const CodeEditor = ({
           {/* Code Lens */}
           {enableInteractiveServices && codeLenses.length > 0 && (
             <CodeLensOverlay
+              ref={codeLensRef}
               lenses={codeLenses}
               fontSize={zoomedFontSize}
               scrollTop={editorRef.current?.querySelector("textarea")?.scrollTop ?? 0}
-              scrollLeft={editorRef.current?.querySelector("textarea")?.scrollLeft ?? 0}
               viewportHeight={editorRef.current?.clientHeight ?? 600}
             />
           )}
@@ -409,11 +452,11 @@ const CodeEditor = ({
           {/* Inlay Hints */}
           {enableInteractiveServices && inlayHints.length > 0 && (
             <InlayHintsOverlay
+              ref={inlayHintsRef}
               hints={inlayHints}
               fontSize={zoomedFontSize}
               charWidth={zoomedFontSize * 0.6}
               scrollTop={editorRef.current?.querySelector("textarea")?.scrollTop ?? 0}
-              scrollLeft={editorRef.current?.querySelector("textarea")?.scrollLeft ?? 0}
               viewportHeight={editorRef.current?.clientHeight ?? 600}
             />
           )}
@@ -424,13 +467,12 @@ const CodeEditor = ({
           {/* Rename Input */}
           {enableInteractiveServices && rename.renameState && (
             <RenameInput
+              ref={renameInputRef}
               symbol={rename.renameState.symbol}
               line={rename.renameState.line}
               column={rename.renameState.column}
               fontSize={zoomedFontSize}
               charWidth={zoomedFontSize * 0.6}
-              scrollTop={editorRef.current?.querySelector("textarea")?.scrollTop ?? 0}
-              scrollLeft={editorRef.current?.querySelector("textarea")?.scrollLeft ?? 0}
               inputRef={rename.inputRef}
               onSubmit={(newName) => void rename.executeRename(newName)}
               onCancel={rename.cancelRename}

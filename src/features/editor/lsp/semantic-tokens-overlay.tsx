@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { type ForwardedRef, forwardRef, useMemo } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { type SemanticToken, TOKEN_TYPE_NAMES } from "./use-semantic-tokens";
 
@@ -8,7 +8,6 @@ interface SemanticTokensOverlayProps {
   fontSize: number;
   charWidth: number;
   scrollTop: number;
-  scrollLeft: number;
   viewportHeight: number;
 }
 
@@ -31,63 +30,65 @@ const TOKEN_TYPE_COLORS: Record<string, string> = {
   decorator: "text-yellow-200/80",
 };
 
-const SemanticTokensOverlay = ({
-  tokens,
-  content,
-  fontSize,
-  charWidth,
-  scrollTop,
-  scrollLeft,
-  viewportHeight,
-}: SemanticTokensOverlayProps) => {
-  const lineHeight = Math.ceil(fontSize * EDITOR_CONSTANTS.LINE_HEIGHT_MULTIPLIER);
+const SemanticTokensOverlay = forwardRef(
+  (
+    { tokens, content, fontSize, charWidth, scrollTop, viewportHeight }: SemanticTokensOverlayProps,
+    ref: ForwardedRef<HTMLDivElement>,
+  ) => {
+    const lineHeight = Math.ceil(fontSize * EDITOR_CONSTANTS.LINE_HEIGHT_MULTIPLIER);
 
-  const visibleTokens = useMemo(() => {
-    const startLine = Math.floor(scrollTop / lineHeight);
-    const endLine = Math.ceil((scrollTop + viewportHeight) / lineHeight) + 1;
+    const visibleTokens = useMemo(() => {
+      const buffer = viewportHeight * 0.5;
+      const startLine = Math.floor(Math.max(0, scrollTop - buffer) / lineHeight);
+      const endLine = Math.ceil((scrollTop + viewportHeight + buffer) / lineHeight) + 1;
 
-    return tokens.filter((t) => t.line >= startLine && t.line <= endLine);
-  }, [tokens, scrollTop, viewportHeight, lineHeight]);
+      return tokens.filter((t) => t.line >= startLine && t.line <= endLine);
+    }, [tokens, scrollTop, viewportHeight, lineHeight]);
 
-  const lines = useMemo(() => content.split("\n"), [content]);
+    const lines = useMemo(() => content.split("\n"), [content]);
 
-  if (visibleTokens.length === 0) return null;
+    if (visibleTokens.length === 0) return null;
 
-  return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden" style={{ zIndex: 3 }}>
-      {visibleTokens.map((token) => {
-        const typeName = TOKEN_TYPE_NAMES[token.tokenType];
-        const colorClass = typeName ? TOKEN_TYPE_COLORS[typeName] : undefined;
+    return (
+      <div
+        ref={ref}
+        className="pointer-events-none absolute inset-0 overflow-hidden"
+        style={{ zIndex: 3 }}
+      >
+        {visibleTokens.map((token) => {
+          const typeName = TOKEN_TYPE_NAMES[token.tokenType];
+          const colorClass = typeName ? TOKEN_TYPE_COLORS[typeName] : undefined;
 
-        // Skip tokens that don't have a special color (let tree-sitter handle them)
-        if (!colorClass) return null;
+          if (!colorClass) return null;
 
-        const top = EDITOR_CONSTANTS.EDITOR_PADDING_TOP + token.line * lineHeight - scrollTop;
-        const left =
-          EDITOR_CONSTANTS.EDITOR_PADDING_LEFT + token.startChar * charWidth - scrollLeft;
-        const width = token.length * charWidth;
+          const top = EDITOR_CONSTANTS.EDITOR_PADDING_TOP + token.line * lineHeight;
+          const left = EDITOR_CONSTANTS.EDITOR_PADDING_LEFT + token.startChar * charWidth;
+          const width = token.length * charWidth;
 
-        const lineContent = lines[token.line] || "";
-        const tokenText = lineContent.slice(token.startChar, token.startChar + token.length);
+          const lineContent = lines[token.line] || "";
+          const tokenText = lineContent.slice(token.startChar, token.startChar + token.length);
 
-        return (
-          <span
-            key={`${token.line}:${token.startChar}:${token.length}`}
-            className={`absolute font-mono ${colorClass}`}
-            style={{
-              top: `${top}px`,
-              left: `${left}px`,
-              width: `${width}px`,
-              fontSize: `${fontSize}px`,
-              lineHeight: `${lineHeight}px`,
-            }}
-          >
-            {tokenText}
-          </span>
-        );
-      })}
-    </div>
-  );
-};
+          return (
+            <span
+              key={`${token.line}:${token.startChar}:${token.length}`}
+              className={`absolute editor-font ${colorClass}`}
+              style={{
+                top: `${top}px`,
+                left: `${left}px`,
+                width: `${width}px`,
+                fontSize: `${fontSize}px`,
+                lineHeight: `${lineHeight}px`,
+              }}
+            >
+              {tokenText}
+            </span>
+          );
+        })}
+      </div>
+    );
+  },
+);
+
+SemanticTokensOverlay.displayName = "SemanticTokensOverlay";
 
 export default SemanticTokensOverlay;
