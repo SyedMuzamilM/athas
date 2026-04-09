@@ -1879,6 +1879,9 @@ export const useFileSystemStore = createSelectors(
         const currentRootPath = get().rootFolderPath;
         if (currentRootPath === tab.path) {
           useWorkspaceTabsStore.getState().setActiveProjectTab(projectId);
+          set((state) => {
+            state.isSwitchingProject = false;
+          });
           return true;
         }
         logWorkspaceOpenStep("start", "switchToProject", tab.path);
