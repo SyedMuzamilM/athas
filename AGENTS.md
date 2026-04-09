@@ -50,10 +50,14 @@
 ## Code Style
 
 - Follow existing code style and keep changes aligned with nearby code.
+- Use kebab-case for file and folder names by default.
+- React component files, hook files, and utility files should use descriptive kebab-case names such as `settings-dialog.tsx`, `use-keymaps.ts`, or `theme-loader.ts`.
+- Avoid new vague filenames such as `helpers.ts`, `misc.ts`, or `utils.ts` when the file can be named after what it actually does.
 - Avoid unnecessary comments in UI components; prefer self-explanatory code.
 - Avoid unnecessary `cn(...)` calls; use it only for conditional or merged class names.
 - Use Tailwind utilities for normal component styling.
 - Use CSS variables for theme colors; do not hardcode hex values in UI code.
+- Keep font size, font family, theme colors, keymaps, and shortcuts in their existing system-level homes instead of redefining them ad hoc in feature components.
 - Interactive elements must remain accessible, including accessible names for icon-only controls and usable keyboard/focus behavior.
 
 ## Zustand
@@ -66,7 +70,14 @@
 ## Code Organization
 
 - Group feature-specific code under `src/features/[feature]/`.
+- Keep `src/ui` for reusable UI primitives, `src/hooks` for shared hooks, and `src/utils` for genuinely shared helpers with no feature-specific behavior.
+- Do not add feature logic to `src/` root shared folders just because it is convenient.
+- Keep settings-related concerns such as fonts, themes, and UI preferences under `src/features/settings/`.
+- Keep keymaps and shortcut logic under `src/features/keymaps/`.
+- Keep extension and theme implementation under `src/extensions/`.
 - Prefer subfolders such as `components`, `hooks`, `services`, `stores`, `types`, `utils`, and `tests` instead of leaving feature logic in the feature root.
+- If a feature contains a distinct subfeature, give it a dedicated nested folder and keep its components, hooks, and helpers close to that subfeature instead of scattering them across the whole feature.
+- If a file is only used by one subfeature, keep it inside that subfeature folder instead of promoting it to the feature root.
 - Do not put feature-specific code in global shared folders unless it is genuinely shared across features.
 - Keep feature tests under `src/features/[feature]/tests/` when practical.
 - New user-facing documentation belongs in the `www` repo under `www/docs/`, not in this repo.
