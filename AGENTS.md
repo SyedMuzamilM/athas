@@ -16,7 +16,7 @@
 - Run tests with `bun test`.
 - Run TypeScript checks with `bun typecheck`.
 - Run Rust checks with `bun check:rust` when touching Rust code.
-- When touching release flow, validate locally with `bun scripts/release.ts <channel> --dry-run` before anything else, then run `bun release:check`.
+- When touching release flow, validate locally with `bun scripts/release.ts <bump> --dry-run` before anything else, then run `bun release:check`.
 
 ## Workflow Rules
 
@@ -27,17 +27,12 @@
 
 ## Branches And Releases
 
-- Default to working directly on `master` unless the user explicitly wants a separate branch or pull request.
+- Default to working directly on `master`.
 - If a branch is needed, branch from `master`.
 - Keep branch names short and descriptive.
-- Keep release tags and stable releases on `master`.
-- Use prerelease versions to ship preview builds before a stable release instead of tagging ad hoc debug builds.
-- Use `alpha` for early or high-risk work that needs limited testing.
-- Use `beta` for feature-complete work that needs broader validation.
-- Use `rc` for builds that are expected to ship unless a blocker is found.
-- Cut a stable release only after the relevant `rc` build has been validated on the platforms affected by the change.
+- Keep releases and release tags on `master`.
 
-## Commits And PRs
+## Commits
 
 - Keep commits focused. One logical change per commit.
 - Commit titles should be short, direct, and describe the outcome of the change.
@@ -50,10 +45,7 @@
 - Avoid prefixes, filler, hype, and changelog-style noise in commit messages.
 - Never leave commitlint or message-format warnings unresolved.
 - Before creating a commit, run the checks that match the change.
-- If a PR exists, keep the title plain and keep the description short.
-- If a PR exists, update its description when the current diff changes in a meaningful way.
-- When editing commit or PR text that includes code, multiline content, or shell-sensitive characters, prefer a file-based edit over inline shell text.
-- When release, packaging, or versioning is involved, include the validation you ran in the PR description.
+- When editing commit text that includes code, multiline content, or shell-sensitive characters, prefer a file-based edit over inline shell text.
 
 ## Code Style
 
@@ -67,12 +59,9 @@
 ## Zustand
 
 - Always use the `createSelectors` wrapper for stores.
-- Prefer `store.use.property()` selectors over inline state selectors when available.
 - Group store actions inside an `actions` object.
 - Use `getState()` to access other stores inside actions instead of passing dependent state through parameters.
 - Use `immer` when store updates are deeply nested.
-- Use `persist` for state that must sync to local storage.
-- Use `createWithEqualityFn` or `useShallow` when selector stability matters and rerenders would otherwise be noisy.
 
 ## Code Organization
 
@@ -86,6 +75,6 @@
 
 - Validate release changes locally before publishing anything.
 - Do not use real release tags to debug release automation.
-- Keep Windows MSI versioning numeric-only via `tauri.bundle.windows.wix.version`; do not use prerelease app versions directly for MSI builds.
+- Keep Windows MSI versioning numeric-only via `tauri.bundle.windows.wix.version`.
 - Release automation is triggered by pushing `v*` tags.
-- Use `bun scripts/release.ts <channel> --dry-run` before running a real release command.
+- Use `bun scripts/release.ts <bump> --dry-run` before running a real release command.
