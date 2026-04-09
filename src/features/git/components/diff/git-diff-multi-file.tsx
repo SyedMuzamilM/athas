@@ -117,18 +117,28 @@ const CommitMetaHeader = memo(
 
     return (
       <div className="border-border border-b bg-primary-bg px-3 py-2">
-        {multiDiff.commitMessage && (
-          <div className="ui-text-sm font-medium text-text">{multiDiff.commitMessage}</div>
-        )}
-        {multiDiff.commitDescription && (
-          <div className="ui-text-sm mt-1 whitespace-pre-wrap text-text-lighter">
-            {multiDiff.commitDescription}
+        <div className="overflow-hidden rounded-lg border border-border/60 bg-secondary-bg/50">
+          <div className="border-border/60 border-b px-3 py-1.5">
+            <div className="ui-text-sm text-text">Commit Details</div>
+            <div className="ui-text-sm mt-0.5 font-mono text-text-lighter">
+              {multiDiff.commitHash}
+            </div>
           </div>
-        )}
-        <div className="ui-text-sm mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-text-lighter">
-          {multiDiff.commitAuthor && <span>{multiDiff.commitAuthor}</span>}
-          {multiDiff.commitDate && <span>{formatRelativeDate(multiDiff.commitDate)}</span>}
-          <span className="font-mono">{multiDiff.commitHash.slice(0, 7)}</span>
+          <div className="px-3 py-2.5">
+            {multiDiff.commitMessage && (
+              <div className="ui-text-sm font-medium text-text">{multiDiff.commitMessage}</div>
+            )}
+            {multiDiff.commitDescription && (
+              <div className="ui-text-sm mt-2 whitespace-pre-wrap text-text-lighter">
+                {multiDiff.commitDescription}
+              </div>
+            )}
+            <div className="ui-text-sm mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-text-lighter">
+              {multiDiff.commitAuthor && <span>{multiDiff.commitAuthor}</span>}
+              {multiDiff.commitDate && <span>{formatRelativeDate(multiDiff.commitDate)}</span>}
+              <span className="font-mono">{multiDiff.commitHash.slice(0, 7)}</span>
+            </div>
+          </div>
         </div>
       </div>
     );
