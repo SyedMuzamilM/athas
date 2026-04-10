@@ -42,7 +42,7 @@ let stashed = false;
 
 try {
   stashed = await stashWorkingTree();
-  await $`bash scripts/check-all.sh`.cwd(process.cwd());
+  await $`bash scripts/check.sh`.cwd(process.cwd());
 } finally {
   if (stashed) {
     await restoreWorkingTree();

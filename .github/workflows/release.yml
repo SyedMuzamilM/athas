@@ -83,7 +83,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          bun scripts/generate-release-notes.mjs \
+          bun scripts/release/generate-notes.mjs \
             --tag "${GITHUB_REF_NAME}" \
             --github-output "${GITHUB_OUTPUT}"
 
@@ -226,7 +226,7 @@ jobs:
 
       - name: Prepare Tauri Windows signing (Windows only)
         if: matrix.os == 'windows' && env.WINDOWS_SIGNING_SKIP != 'true'
-        run: node scripts/windows/prepare-tauri-signing.mjs
+        run: node scripts/release/windows/prepare-tauri-signing.mjs
 
       - uses: tauri-apps/tauri-action@v0
         env:
