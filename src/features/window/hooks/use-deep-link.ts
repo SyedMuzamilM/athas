@@ -28,7 +28,7 @@ function handleDeepLink(url: string) {
   try {
     const parsed = new URL(url);
 
-    if (parsed.protocol !== "athas:") {
+    if (!isSupportedDeepLinkProtocol(parsed.protocol)) {
       return;
     }
 
@@ -48,6 +48,10 @@ function handleDeepLink(url: string) {
   } catch (error) {
     console.error("Failed to parse deep link:", error);
   }
+}
+
+function isSupportedDeepLinkProtocol(protocol: string) {
+  return protocol === "athas:" || protocol === "athas-alpha:" || protocol === "athas-dev:";
 }
 
 async function installExtensionFromDeepLink(extensionId: string) {

@@ -1,7 +1,7 @@
 use std::fs;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
-use tauri::command;
+use tauri::{AppHandle, command};
 
 // Platform-specific CLI paths
 #[cfg(unix)]
@@ -51,17 +51,47 @@ pub fn check_cli_installed() -> Result<bool, String> {
 
 /// Shell script body shared by macOS install_cli_command and get_cli_install_command.
 /// Resolves file/folder arguments to absolute paths and opens them via deep-link URLs.
+fn app_identifier_suffix(app: &AppHandle) -> Option<&'static str> {
+   match app.config().identifier.as_str() {
+      "com.code.athas.alpha" => Some("alpha"),
+      "com.code.athas.dev" => Some("dev"),
+      _ => None,
+   }
+}
+
+fn deep_link_scheme(app: &AppHandle) -> &'static str {
+   match app_identifier_suffix(app) {
+      Some("alpha") => "athas-alpha",
+      Some("dev") => "athas-dev",
+      _ => "athas",
+   }
+}
+
 #[cfg(target_os = "macos")]
-const MACOS_CLI_SCRIPT: &str = r#"#!/bin/bash
+fn macos_app_name(app: &AppHandle) -> &'static str {
+   match app_identifier_suffix(app) {
+      Some("alpha") => "Athas Alpha",
+      Some("dev") => "Athas Dev",
+      _ => "Athas",
+   }
+}
+
+#[cfg(target_os = "macos")]
+fn build_macos_cli_script(app: &AppHandle) -> String {
+   let app_name = macos_app_name(app);
+   let deep_link_scheme = deep_link_scheme(app);
+
+   format!(
+      r#"#!/bin/bash
 # Athas CLI launcher
 
 if [ $# -eq 0 ]; then
-    if [ -d "/Applications/Athas.app" ]; then
-        open -a "/Applications/Athas.app"
-    elif [ -d "$HOME/Applications/Athas.app" ]; then
-        open -a "$HOME/Applications/Athas.app"
+    if [ -d "/Applications/{app_name}.app" ]; then
+        open -a "/Applications/{app_name}.app"
+    elif [ -d "$HOME/Applications/{app_name}.app" ]; then
+        open -a "$HOME/Applications/{app_name}.app"
     else
-        open -a "Athas"
+        open -a "{app_name}"
     fi
     exit 0
 fi
@@ -74,8 +104,8 @@ for arg in "$@"; do
     line=""
     file="$arg"
     if [[ "$arg" =~ ^(.+):([0-9]+)$ ]]; then
-        file="${BASH_REMATCH[1]}"
-        line="${BASH_REMATCH[2]}"
+        file="${{BASH_REMATCH[1]}}"
+        line="${{BASH_REMATCH[2]}}"
     fi
 
     # Resolve to absolute path
@@ -93,25 +123,27 @@ for arg in "$@"; do
 
     # URL-encode the path (percent-encode everything except safe chars)
     encoded=""
-    for (( i=0; i<${#abs}; i++ )); do
-        c="${abs:$i:1}"
+    for (( i=0; i<${{#abs}}; i++ )); do
+        c="${{abs:$i:1}}"
         case "$c" in
             [a-zA-Z0-9._/~-]) encoded+="$c" ;;
             *) encoded+=$(printf '%%%02X' "'$c") ;;
         esac
     done
 
-    url="athas://open?path=${encoded}"
-    [ -n "$line" ] && [ "$line" -gt 0 ] 2>/dev/null && url+="&line=${line}"
+    url="{deep_link_scheme}://open?path=${{encoded}}"
+    [ -n "$line" ] && [ "$line" -gt 0 ] 2>/dev/null && url+="&line=${{line}}"
     [ -n "$type_param" ] && url+="$type_param"
 
     open "$url"
 done
-"#;
+"#
+   )
+}
 
 #[cfg(target_os = "macos")]
 #[command]
-pub fn install_cli_command() -> Result<String, String> {
+pub fn install_cli_command(app: AppHandle) -> Result<String, String> {
    let cli_path = get_cli_script_path()?;
    let bin_dir = cli_path
       .parent()
@@ -121,7 +153,7 @@ pub fn install_cli_command() -> Result<String, String> {
       fs::create_dir_all(bin_dir).map_err(|e| format!("Failed to create directory: {}", e))?;
    }
 
-   fs::write(&cli_path, MACOS_CLI_SCRIPT)
+   fs::write(&cli_path, build_macos_cli_script(&app))
       .map_err(|e| format!("Failed to write CLI script: {}", e))?;
 
    let mut perms = fs::metadata(&cli_path)
@@ -313,11 +345,13 @@ endlocal
 
 #[cfg(target_os = "macos")]
 #[command]
-pub fn get_cli_install_command() -> Result<String, String> {
+pub fn get_cli_install_command(app: AppHandle) -> Result<String, String> {
+   let script = build_macos_cli_script(&app);
+
    Ok(format!(
       "mkdir -p ~/.local/bin && cat > ~/.local/bin/athas << 'SCRIPT'\n{}\nSCRIPT\nchmod +x \
        ~/.local/bin/athas",
-      MACOS_CLI_SCRIPT.trim()
+      script.trim()
    ))
 }
 

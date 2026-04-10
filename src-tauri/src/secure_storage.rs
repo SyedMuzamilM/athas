@@ -2,10 +2,13 @@ use tauri::AppHandle;
 use tauri_plugin_store::StoreExt;
 
 const SECURE_STORE_FILE: &str = "secure.json";
-const KEYCHAIN_SERVICE: &str = "com.code.athas";
 
-fn keyring_entry(key: &str) -> Result<keyring::Entry, String> {
-   keyring::Entry::new(KEYCHAIN_SERVICE, key)
+fn keychain_service(app: &AppHandle) -> &str {
+   app.config().identifier.as_str()
+}
+
+fn keyring_entry(app: &AppHandle, key: &str) -> Result<keyring::Entry, String> {
+   keyring::Entry::new(keychain_service(app), key)
       .map_err(|e| format!("Failed to initialize keychain entry: {e}"))
 }
 
@@ -50,7 +53,7 @@ fn store_delete(app: &AppHandle, key: &str) -> Result<(), String> {
 }
 
 pub fn store_secret(app: &AppHandle, key: &str, value: &str) -> Result<(), String> {
-   match keyring_entry(key) {
+   match keyring_entry(app, key) {
       Ok(entry) => match entry.set_password(value) {
          Ok(()) => {
             let _ = store_delete(app, key);
@@ -77,7 +80,7 @@ pub fn store_secret(app: &AppHandle, key: &str, value: &str) -> Result<(), Strin
 }
 
 pub fn get_secret(app: &AppHandle, key: &str) -> Result<Option<String>, String> {
-   match keyring_entry(key) {
+   match keyring_entry(app, key) {
       Ok(entry) => match entry.get_password() {
          Ok(value) => return Ok(Some(value)),
          Err(keyring::Error::NoEntry) => {}
@@ -102,7 +105,7 @@ pub fn get_secret(app: &AppHandle, key: &str) -> Result<Option<String>, String> 
 }
 
 pub fn remove_secret(app: &AppHandle, key: &str) -> Result<(), String> {
-   if let Ok(entry) = keyring_entry(key) {
+   if let Ok(entry) = keyring_entry(app, key) {
       match entry.delete_credential() {
          Ok(()) | Err(keyring::Error::NoEntry) => {}
          Err(error) => {
