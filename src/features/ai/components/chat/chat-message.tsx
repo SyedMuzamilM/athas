@@ -159,7 +159,7 @@ export const ChatMessage = memo(function ChatMessage({
     }
 
     return (
-      <div className="flex items-center gap-2 font-mono text-text-lighter text-xs">
+      <div className="flex items-center gap-2 editor-font text-text-lighter text-xs">
         <span className="flex items-center gap-1">
           <span className="inline-block size-1.5 animate-pulse rounded-full bg-text-lighter/70" />
           <span className="inline-block size-1.5 animate-pulse rounded-full bg-text-lighter/70 [animation-delay:150ms]" />

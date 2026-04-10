@@ -175,7 +175,7 @@ export const SignatureHelpTooltip = () => {
         transform: "translateY(-4px)",
       }}
     >
-      <div className="ui-font ui-text-sm font-mono text-text">{renderLabel()}</div>
+      <div className="ui-font ui-text-sm editor-font text-text">{renderLabel()}</div>
     </div>
   );
 };

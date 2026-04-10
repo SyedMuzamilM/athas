@@ -55,7 +55,12 @@ const AIChat = memo(function AIChat({
   const abortControllerRef = useRef<AbortController | null>(null);
   const shouldAutoScrollRef = useRef(true);
   const [permissionQueue, setPermissionQueue] = useState<
-    Array<{ requestId: string; description: string; permissionType: string; resource: string }>
+    Array<{
+      requestId: string;
+      description: string;
+      permissionType: string;
+      resource: string;
+    }>
   >([]);
   const [acpEvents, setAcpEvents] = useState<ChatAcpEvent[]>([]);
   const activeToolEventIdsRef = useRef<Map<string, string>>(new Map());
@@ -840,7 +845,7 @@ details: ${errorDetails || mainError}
                       ) : null}
                     </div>
                     <div
-                      className="mt-2 break-words font-mono text-text"
+                      className="mt-2 break-words editor-font text-text"
                       title={`${currentPermission.permissionType} • ${currentPermission.resource}`}
                     >
                       {currentPermission.description}
@@ -883,7 +888,12 @@ details: ${errorDetails || mainError}
 
           <ProviderApiKeyModal
             isOpen={chatState.apiKeyModalState.isOpen}
-            onClose={() => chatActions.setApiKeyModalState({ isOpen: false, providerId: null })}
+            onClose={() =>
+              chatActions.setApiKeyModalState({
+                isOpen: false,
+                providerId: null,
+              })
+            }
             providerId={chatState.apiKeyModalState.providerId || ""}
             onSave={chatActions.saveApiKey}
             onRemove={chatActions.removeApiKey}

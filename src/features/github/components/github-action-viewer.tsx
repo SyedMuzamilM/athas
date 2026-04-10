@@ -177,7 +177,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
               {details?.headBranch ? (
                 <>
                   <span>&middot;</span>
-                  <span className="inline-flex min-w-0 max-w-full items-center rounded-md bg-secondary-bg/80 px-1.5 py-0.5 font-mono text-text-lighter">
+                  <span className="inline-flex min-w-0 max-w-full items-center rounded-md bg-secondary-bg/80 px-1.5 py-0.5 editor-font text-text-lighter">
                     <span className="truncate">{details.headBranch}</span>
                   </span>
                 </>
@@ -254,7 +254,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
               {details.headSha ? (
                 <>
                   <span>&middot;</span>
-                  <code className="rounded bg-secondary-bg/80 px-1.5 py-0.5 font-mono text-text-lighter">
+                  <code className="rounded bg-secondary-bg/80 px-1.5 py-0.5 editor-font text-text-lighter">
                     {details.headSha.slice(0, 7)}
                   </code>
                 </>

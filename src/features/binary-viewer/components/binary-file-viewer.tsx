@@ -297,7 +297,7 @@ export function BinaryFileViewer({ filePath, fileName, rootFolderPath }: BinaryF
               <span className="ui-font ui-text-sm font-medium text-text">Hex Preview</span>
             </div>
             <div className="overflow-auto p-4">
-              <pre className="ui-text-sm font-mono text-text-lighter leading-[18px]">
+              <pre className="ui-text-sm editor-font text-text-lighter leading-[18px]">
                 {metadata.hexPreview}
               </pre>
             </div>

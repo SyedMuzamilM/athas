@@ -73,7 +73,7 @@ export function PRViewerHeader({
             <div className="ui-font ui-text-sm mt-1 flex flex-wrap items-center gap-x-2 text-text-lighter">
               <span>{`athas#${pr.number}`}</span>
               <span>&middot;</span>
-              <span className="inline-flex min-w-0 max-w-full items-center rounded-md bg-secondary-bg/80 px-1.5 py-0.5 font-mono text-text-lighter">
+              <span className="inline-flex min-w-0 max-w-full items-center rounded-md bg-secondary-bg/80 px-1.5 py-0.5 editor-font text-text-lighter">
                 <span className="min-w-0 truncate">{pr.baseRef}</span>
                 <span className="shrink-0 px-1">&larr;</span>
                 <span className="min-w-0 truncate">{pr.headRef}</span>

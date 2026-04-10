@@ -29,7 +29,7 @@ export const CommitItem = memo(({ commit, issueBaseUrl, repoPath }: CommitItemPr
       />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <code className="ui-text-sm rounded bg-primary-bg px-1.5 py-0.5 font-mono text-text-lighter">
+          <code className="ui-text-sm rounded bg-primary-bg px-1.5 py-0.5 editor-font text-text-lighter">
             {shortSha}
           </code>
           <p className="ui-text-sm font-medium text-text">{commit.messageHeadline}</p>
@@ -46,7 +46,7 @@ export const CommitItem = memo(({ commit, issueBaseUrl, repoPath }: CommitItemPr
           </div>
         )}
         <div className="ui-text-sm mt-1 flex flex-wrap items-center gap-2 text-text-lighter">
-          <span className="font-mono text-text-lighter">{authorName}</span>
+          <span className="editor-font text-text-lighter">{authorName}</span>
           <span>committed {getTimeAgo(commit.authoredDate)}</span>
           <Tooltip content="Copy full commit SHA" side="top">
             <Button

@@ -257,7 +257,7 @@ const PreviewLine = memo(({ lineNumber, content, tokens }: LineData) => {
   }, [content, normalizedTokens]);
 
   return (
-    <div className="ui-text-sm flex items-start font-mono leading-[18px]">
+    <div className="ui-text-sm flex items-start editor-font leading-[18px]">
       <span className="sticky left-0 z-10 mr-3 inline-block w-8 shrink-0 select-none bg-primary-bg px-3 text-right text-text-lighter/50 tabular-nums">
         {lineNumber}
       </span>

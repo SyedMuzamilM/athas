@@ -29,7 +29,7 @@ export default function CellRenderer({
   if (value === null || value === undefined) {
     return (
       <span
-        className="rounded bg-text-lighter/10 px-1 py-0.5 font-mono text-text-lighter text-xs italic"
+        className="rounded bg-text-lighter/10 px-1 py-0.5 editor-font text-text-lighter text-xs italic"
         onContextMenu={handleContextMenu}
       >
         NULL
@@ -45,13 +45,13 @@ export default function CellRenderer({
           onClick={() => setExpanded(!expanded)}
           variant="ghost"
           size="sm"
-          className="block h-auto max-w-[280px] truncate p-0 text-left font-mono text-accent"
+          className="block h-auto max-w-[280px] truncate p-0 text-left editor-font text-accent"
           title="Click to expand JSON"
         >
           {expanded ? value : truncateText(value, 50)}
         </Button>
         {expanded && (
-          <pre className="mt-1 max-h-40 overflow-auto rounded bg-secondary-bg/80 p-2 font-mono text-xs">
+          <pre className="mt-1 max-h-40 overflow-auto rounded bg-secondary-bg/80 p-2 editor-font text-xs">
             {formatJson(value)}
           </pre>
         )}

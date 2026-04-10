@@ -38,7 +38,7 @@ const MatchLine = ({
       onMouseEnter={onHover}
       variant="ghost"
       size="sm"
-      className="ui-text-sm flex h-auto w-full items-start justify-start gap-2 px-4 py-1 text-left font-mono hover:bg-hover"
+      className="ui-text-sm flex h-auto w-full items-start justify-start gap-2 px-4 py-1 text-left editor-font hover:bg-hover"
     >
       <span className="w-10 shrink-0 text-right text-text-lighter">{match.line_number}</span>
       <span className="flex-1 truncate text-text">
