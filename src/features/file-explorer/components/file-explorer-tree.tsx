@@ -833,7 +833,7 @@ function FileExplorerTreeComponent({
       onMouseUp={handleContainerMouseUp}
       onMouseLeave={handleContainerMouseLeave}
     >
-      {filteredFiles.length === 0 ? (
+      {!rootFolderPath ? (
         <div className="file-tree-empty-state absolute inset-0 flex items-center justify-center">
           <div className="ui-font flex flex-col items-center text-center">
             <span className="text-[0.78em] text-text-lighter">No folder open</span>
@@ -845,6 +845,12 @@ function FileExplorerTreeComponent({
             >
               Open Folder
             </Button>
+          </div>
+        </div>
+      ) : filteredFiles.length === 0 ? (
+        <div className="file-tree-empty-state absolute inset-0 flex items-center justify-center">
+          <div className="ui-font flex flex-col items-center text-center">
+            <span className="text-[0.78em] text-text-lighter">Folder is empty</span>
           </div>
         </div>
       ) : (
