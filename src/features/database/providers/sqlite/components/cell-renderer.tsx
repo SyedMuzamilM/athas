@@ -46,7 +46,7 @@ export default function CellRenderer({
           variant="ghost"
           size="sm"
           className="block h-auto max-w-[280px] truncate p-0 text-left editor-font text-accent"
-          title="Click to expand JSON"
+          tooltip="Click to expand JSON"
         >
           {expanded ? value : truncateText(value, 50)}
         </Button>
@@ -86,7 +86,7 @@ export default function CellRenderer({
         variant="ghost"
         size="sm"
         className="block h-auto truncate p-0 text-left text-accent underline decoration-accent/40"
-        title={`FK: ${foreignKey.to_table}.${foreignKey.to_column}`}
+        tooltip={`FK: ${foreignKey.to_table}.${foreignKey.to_column}`}
         onContextMenu={handleContextMenu}
       >
         {String(value)}
@@ -117,7 +117,7 @@ export default function CellRenderer({
             expanded ? "whitespace-pre-wrap" : "truncate",
             isPrimaryKey && "font-semibold text-text",
           )}
-          title="Click to expand"
+          tooltip="Click to expand"
         >
           {expanded ? text : truncateText(text, 100)}
         </Button>

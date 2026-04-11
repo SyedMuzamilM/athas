@@ -200,7 +200,7 @@ export default function DataViewComponent({
                           onAddColumnFilter(column);
                         }}
                         className="opacity-0 group-hover:opacity-100"
-                        title="Add filter"
+                        tooltip="Add filter"
                       >
                         <Filter className="text-text-lighter hover:text-text" />
                       </Button>

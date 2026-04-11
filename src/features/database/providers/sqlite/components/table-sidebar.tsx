@@ -106,7 +106,7 @@ export default function TableSidebar({
                 variant="ghost"
                 size="sm"
                 className="mx-1 block h-auto w-[calc(100%-0.5rem)] truncate rounded-lg px-2.5 py-1.5 text-left text-xs hover:bg-hover"
-                title={q}
+                tooltip={q}
                 aria-label={`Run query: ${q}`}
               >
                 <Code className="mr-1.5 inline" />

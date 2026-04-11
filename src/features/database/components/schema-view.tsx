@@ -49,7 +49,7 @@ export default function SchemaView({
               size="icon-xs"
               onClick={() => onAddColumnFilter(column.name)}
               className="text-text-lighter opacity-60 hover:text-text hover:opacity-100"
-              title="Filter by this column"
+              tooltip="Filter by this column"
             >
               <Filter />
             </Button>

@@ -352,7 +352,7 @@ function InfoView({
                 size="xs"
                 onClick={() => onSelectHistory(q)}
                 className="w-full justify-start truncate"
-                title={q}
+                tooltip={q}
               >
                 {q}
               </Button>

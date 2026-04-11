@@ -70,7 +70,7 @@ export default function InfoView({
                   variant="ghost"
                   size="sm"
                   className="ui-font block h-auto w-full truncate justify-start px-2 py-1 text-left text-xs hover:bg-hover"
-                  title={query}
+                  tooltip={query}
                 >
                   {query}
                 </Button>

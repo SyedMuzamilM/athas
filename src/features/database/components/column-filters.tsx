@@ -86,7 +86,7 @@ export default function ColumnFilters({
               variant="ghost"
               size="icon-xs"
               className="text-text-lighter hover:text-red-500"
-              title="Remove filter"
+              tooltip="Remove filter"
             >
               <X />
             </Button>
