@@ -17,7 +17,6 @@ import { useSettingsStore } from "@/features/settings/store";
 import { Button, buttonVariants } from "@/ui/button";
 import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
 import Keybinding from "@/ui/keybinding";
-import Tooltip from "@/ui/tooltip";
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
 import VimStatusIndicator from "@/features/vim/components/vim-status-indicator";
@@ -314,28 +313,27 @@ export function EditorStatusActions() {
 
       {activeBuffer && isEditorContent(activeBuffer) && (
         <div className="relative flex items-center">
-          <Tooltip content="Select language mode" side="bottom">
-            <Button
-              ref={languageButtonRef}
-              type="button"
-              onClick={() => {
-                setIsLanguageOpen((open) => !open);
-                setLanguageSearch("");
-              }}
-              variant="ghost"
-              size="sm"
-              className={cn(
-                statusChipClass,
-                "cursor-pointer",
-                isLanguageOpen && "bg-hover text-text",
-              )}
-              aria-label="Select language mode"
-              aria-expanded={isLanguageOpen}
-              aria-haspopup="listbox"
-            >
-              {currentFileDisplayName || "Plain Text"}
-            </Button>
-          </Tooltip>
+          <Button
+            ref={languageButtonRef}
+            type="button"
+            onClick={() => {
+              setIsLanguageOpen((open) => !open);
+              setLanguageSearch("");
+            }}
+            variant="ghost"
+            size="sm"
+            className={cn(
+              statusChipClass,
+              "cursor-pointer",
+              isLanguageOpen && "bg-hover text-text",
+            )}
+            aria-expanded={isLanguageOpen}
+            aria-haspopup="listbox"
+            tooltip="Select language mode"
+            tooltipSide="bottom"
+          >
+            {currentFileDisplayName || "Plain Text"}
+          </Button>
           <Dropdown
             isOpen={isLanguageOpen}
             anchorRef={languageButtonRef}
@@ -396,19 +394,19 @@ export function EditorStatusActions() {
       <VimStatusIndicator compact />
 
       <div className="relative flex items-center self-center">
-        <Tooltip content={config.title} side="bottom">
-          <Button
-            ref={buttonRef}
-            type="button"
-            onClick={() => setIsLspOpen((open) => !open)}
-            variant="ghost"
-            size="icon-xs"
-            className={cn(actionButtonClass, config.color, isLspOpen && "bg-hover text-text")}
-            aria-label="Language server status"
-          >
-            <span className="flex size-full items-center justify-center">{config.icon}</span>
-          </Button>
-        </Tooltip>
+        <Button
+          ref={buttonRef}
+          type="button"
+          onClick={() => setIsLspOpen((open) => !open)}
+          variant="ghost"
+          size="icon-xs"
+          className={cn(actionButtonClass, config.color, isLspOpen && "bg-hover text-text")}
+          aria-label="Language server status"
+          tooltip={config.title}
+          tooltipSide="bottom"
+        >
+          <span className="flex size-full items-center justify-center">{config.icon}</span>
+        </Button>
         <Dropdown
           isOpen={isLspOpen}
           anchorRef={buttonRef}
@@ -508,24 +506,23 @@ export function EditorStatusActions() {
       </div>
 
       <div className="relative flex items-center self-center">
-        <Tooltip content="Editor preferences" side="bottom">
-          <Button
-            ref={viewButtonRef}
-            type="button"
-            onClick={() => setIsViewMenuOpen((open) => !open)}
-            variant="ghost"
-            size="icon-xs"
-            className={cn(
-              menuTriggerClass,
-              isViewMenuOpen && "border-border/60 bg-hover/80 text-text",
-            )}
-            aria-label="Editor preferences"
-          >
-            <span className="flex size-full items-center justify-center">
-              <SlidersHorizontal />
-            </span>
-          </Button>
-        </Tooltip>
+        <Button
+          ref={viewButtonRef}
+          type="button"
+          onClick={() => setIsViewMenuOpen((open) => !open)}
+          variant="ghost"
+          size="icon-xs"
+          className={cn(
+            menuTriggerClass,
+            isViewMenuOpen && "border-border/60 bg-hover/80 text-text",
+          )}
+          tooltip="Editor preferences"
+          tooltipSide="bottom"
+        >
+          <span className="flex size-full items-center justify-center">
+            <SlidersHorizontal />
+          </span>
+        </Button>
         <Dropdown
           isOpen={isViewMenuOpen}
           anchorRef={viewButtonRef}

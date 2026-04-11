@@ -156,6 +156,12 @@ export const defaultKeymaps: Keybinding[] = [
     source: "default",
     when: "editorFocus",
   },
+  {
+    key: "cmd+i",
+    command: "editor.inlineEdit",
+    source: "default",
+    when: "editorFocus",
+  },
 
   // View Operations
   { key: "cmd+b", command: "workbench.toggleSidebar", source: "default" },

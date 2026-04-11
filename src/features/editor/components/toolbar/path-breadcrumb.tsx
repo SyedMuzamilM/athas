@@ -51,23 +51,22 @@ export function PathBreadcrumb({
           <div key={`${segment}-${index}`} className="flex shrink-0 items-center gap-0.5">
             {index > 0 && <ChevronRight className="mx-0.5 shrink-0 text-text-lighter" />}
             {interactive ? (
-              <Tooltip content={getSegmentPath(index)} side="bottom">
-                <Button
-                  ref={(element) => setSegmentRef?.(index, element)}
-                  onClick={(event) => onSegmentClick?.(index, event)}
-                  variant="ghost"
-                  size="xs"
-                  className={cn(
-                    "min-w-0 gap-1 whitespace-nowrap rounded px-1 py-0.5 text-xs",
-                    isLast
-                      ? "font-medium text-text hover:text-text"
-                      : "text-text-lighter hover:text-text",
-                  )}
-                  aria-label={getSegmentPath(index)}
-                >
-                  {segment}
-                </Button>
-              </Tooltip>
+              <Button
+                ref={(element) => setSegmentRef?.(index, element)}
+                onClick={(event) => onSegmentClick?.(index, event)}
+                variant="ghost"
+                size="xs"
+                className={cn(
+                  "min-w-0 gap-1 whitespace-nowrap rounded px-1 py-0.5 text-xs",
+                  isLast
+                    ? "font-medium text-text hover:text-text"
+                    : "text-text-lighter hover:text-text",
+                )}
+                tooltip={getSegmentPath(index)}
+                tooltipSide="bottom"
+              >
+                {segment}
+              </Button>
             ) : (
               <Tooltip content={getSegmentPath(index)} side="bottom">
                 <span

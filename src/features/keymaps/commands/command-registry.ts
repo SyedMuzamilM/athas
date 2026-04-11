@@ -1,6 +1,7 @@
 import { editorAPI } from "@/features/editor/extensions/api";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
+import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar-store";
 import { useJumpListStore } from "@/features/editor/stores/jump-list-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
@@ -281,6 +282,15 @@ const editCommands: Command[] = [
     category: "Edit",
     keybinding: "shift+alt+f",
     execute: () => {},
+  },
+  {
+    id: "editor.inlineEdit",
+    title: "AI Inline Edit",
+    category: "Edit",
+    keybinding: "cmd+i",
+    execute: () => {
+      useInlineEditToolbarStore.getState().actions.show();
+    },
   },
 ];
 

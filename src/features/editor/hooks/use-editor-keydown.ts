@@ -215,8 +215,6 @@ export function useEditorKeyDown({
       const isAltTextInput = shouldTreatAltAsTextInput(e);
       const hasBlockedModifier =
         e.metaKey || (e.ctrlKey && !isAltGraph) || (e.altKey && !isAltGraph && !isAltTextInput);
-      const isInlineEditShortcut =
-        (e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "i";
 
       if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === "s") {
         e.preventDefault();
@@ -238,12 +236,6 @@ export function useEditorKeyDown({
       if (e.ctrlKey && !e.metaKey && !e.altKey && e.key.toLowerCase() === "y") {
         e.preventDefault();
         editorAPI.redo();
-        return;
-      }
-
-      if (isInlineEditShortcut) {
-        e.preventDefault();
-        inlineEditToolbarActions.show();
         return;
       }
 

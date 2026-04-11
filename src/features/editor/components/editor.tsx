@@ -1071,8 +1071,8 @@ export function Editor({
                     size="icon-xs"
                     onClick={() => inlineEditState.inlineEditToolbarActions.hide()}
                     className="text-text-lighter hover:text-text"
-                    aria-label="Close inline edit"
-                    title="Close inline edit (Escape)"
+                    tooltip="Close inline edit"
+                    shortcut="escape"
                   >
                     <X />
                   </Button>
@@ -1115,7 +1115,8 @@ export function Editor({
                         ? "Applying inline edit"
                         : "Apply inline edit"
                     }
-                    title="Apply inline edit (Enter)"
+                    tooltip="Apply inline edit"
+                    shortcut="enter"
                   >
                     <CornerDownLeft />
                     {inlineEditState.isInlineEditRunning ? "Applying..." : "Send"}

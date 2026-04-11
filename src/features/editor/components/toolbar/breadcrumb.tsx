@@ -9,7 +9,6 @@ import { useExtensionActions } from "@/extensions/ui/hooks/use-extension-actions
 import { ExtensionToolbarAction } from "@/extensions/ui/components/extension-toolbar-action";
 import { useSettingsStore } from "@/features/settings/store";
 import { Button } from "@/ui/button";
-import Tooltip from "@/ui/tooltip";
 import { FilePathBreadcrumb } from "./file-path-breadcrumb";
 
 export interface BreadcrumbProps {
@@ -106,40 +105,39 @@ export default function Breadcrumb({
         {((isMarkdownFile() && activeBuffer.type !== "markdownPreview") ||
           (isHtmlFile() && activeBuffer.type !== "htmlPreview") ||
           (isCsvFile() && activeBuffer.type !== "csvPreview")) && (
-          <Tooltip content="Preview" side="bottom">
-            <Button
-              onClick={handlePreviewClick}
-              variant="ghost"
-              size="icon-xs"
-              className="rounded text-text-lighter"
-              aria-label="Preview"
-            >
-              <Eye />
-            </Button>
-          </Tooltip>
+          <Button
+            onClick={handlePreviewClick}
+            variant="ghost"
+            size="icon-xs"
+            className="rounded text-text-lighter"
+            tooltip="Preview"
+            tooltipSide="bottom"
+          >
+            <Eye />
+          </Button>
         )}
-        <Tooltip content="AI inline edit" shortcut="Mod+I" side="bottom">
-          <Button
-            onClick={handleInlineEditClick}
-            variant="ghost"
-            size="icon-xs"
-            className="rounded text-text-lighter"
-            aria-label="AI inline edit"
-          >
-            <Sparkles />
-          </Button>
-        </Tooltip>
-        <Tooltip content="Find in file" shortcut="Mod+F" side="bottom">
-          <Button
-            onClick={onSearchClick}
-            variant="ghost"
-            size="icon-xs"
-            className="rounded text-text-lighter"
-            aria-label="Find in file"
-          >
-            <Search />
-          </Button>
-        </Tooltip>
+        <Button
+          onClick={handleInlineEditClick}
+          variant="ghost"
+          size="icon-xs"
+          className="rounded text-text-lighter"
+          tooltip="AI inline edit"
+          commandId="editor.inlineEdit"
+          tooltipSide="bottom"
+        >
+          <Sparkles />
+        </Button>
+        <Button
+          onClick={onSearchClick}
+          variant="ghost"
+          size="icon-xs"
+          className="rounded text-text-lighter"
+          tooltip="Find in file"
+          commandId="workbench.showFind"
+          tooltipSide="bottom"
+        >
+          <Search />
+        </Button>
         <div className="mx-1 h-3.5 w-px bg-border/70" />
         <EditorStatusActions />
       </>
