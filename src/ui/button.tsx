@@ -1,6 +1,8 @@
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
+import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
+import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 
 export const buttonVariants = cva(
@@ -44,6 +46,10 @@ export type ButtonProps = React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
     active?: boolean;
     asChild?: boolean;
+    tooltip?: string;
+    shortcut?: string;
+    commandId?: string;
+    tooltipSide?: "top" | "bottom" | "left" | "right";
   };
 
 export function Button({
@@ -52,18 +58,37 @@ export function Button({
   size = "md",
   active,
   asChild = false,
+  tooltip,
+  shortcut,
+  commandId,
+  tooltipSide,
+  "aria-label": ariaLabel,
   ...props
 }: ButtonProps) {
+  const commandShortcut = useCommandShortcut(commandId);
+  const effectiveShortcut = commandId ? commandShortcut : shortcut;
+
   const Comp = asChild ? Slot : "button";
 
-  return (
+  const element = (
     <Comp
       data-slot="button"
       data-variant={variant}
       data-size={size}
       data-active={active}
       className={cn(buttonVariants({ variant, size }), className)}
+      aria-label={ariaLabel ?? (tooltip ? tooltip : undefined)}
       {...props}
     />
+  );
+
+  if (!tooltip) {
+    return element;
+  }
+
+  return (
+    <Tooltip content={tooltip} shortcut={effectiveShortcut} side={tooltipSide}>
+      {element}
+    </Tooltip>
   );
 }

@@ -1,4 +1,4 @@
-import { buttonVariants } from "@/ui/button";
+import { Button, type ButtonProps, buttonVariants } from "@/ui/button";
 import { cn } from "@/utils/cn";
 
 export const PANE_HEADER_BASE = "flex min-h-7 items-center gap-1.5 bg-primary-bg px-1.5 py-1";
@@ -30,6 +30,15 @@ export function paneChipClassName(className?: string) {
   return cn(PANE_CHIP_BASE, className);
 }
 
-export function paneIconButtonClassName(className?: string) {
-  return cn(PANE_ICON_BUTTON_BASE, className);
+export type PaneIconButtonProps = Omit<ButtonProps, "variant" | "size">;
+
+export function PaneIconButton({ className, ...props }: PaneIconButtonProps) {
+  return (
+    <Button
+      variant="secondary"
+      size="icon-sm"
+      className={cn("shrink-0 rounded-lg text-text-lighter", className)}
+      {...props}
+    />
+  );
 }
