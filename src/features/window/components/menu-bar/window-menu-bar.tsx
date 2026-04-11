@@ -44,73 +44,73 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
     () => ({
       File: (
         <Menu aria-label="File">
-          <MenuItem shortcut="Ctrl+Shift+N" onClick={() => handleClickEmit("menu_new_window")}>
+          <MenuItem shortcut="mod+shift+n" onClick={() => handleClickEmit("menu_new_window")}>
             New Window
           </MenuItem>
           <MenuItem onClick={() => handleClickEmit("menu_new_file")}>New File</MenuItem>
-          <MenuItem shortcut="Ctrl+O" onClick={() => handleClickEmit("menu_open_folder")}>
+          <MenuItem shortcut="mod+o" onClick={() => handleClickEmit("menu_open_folder")}>
             Open Folder
           </MenuItem>
           <MenuItem onClick={() => handleClickEmit("menu_close_folder")}>Close Folder</MenuItem>
           <MenuItem separator />
-          <MenuItem shortcut="Ctrl+S" onClick={() => handleClickEmit("menu_save")}>
+          <MenuItem shortcut="mod+s" onClick={() => handleClickEmit("menu_save")}>
             Save
           </MenuItem>
-          <MenuItem shortcut="Ctrl+Shift+S" onClick={() => handleClickEmit("menu_save_as")}>
+          <MenuItem shortcut="mod+shift+s" onClick={() => handleClickEmit("menu_save_as")}>
             Save As...
           </MenuItem>
           <MenuItem separator />
-          <MenuItem shortcut="Ctrl+W" onClick={() => handleClickEmit("menu_close_tab")}>
+          <MenuItem shortcut="mod+w" onClick={() => handleClickEmit("menu_close_tab")}>
             Close Tab
           </MenuItem>
           <MenuItem separator />
-          <MenuItem shortcut="Ctrl+Q" onClick={async () => await exit(0)}>
+          <MenuItem shortcut="mod+q" onClick={async () => await exit(0)}>
             Quit
           </MenuItem>
         </Menu>
       ),
       Edit: (
         <Menu aria-label="Edit">
-          <MenuItem shortcut="Ctrl+Z" onClick={() => handleClickEmit("menu_undo")}>
+          <MenuItem shortcut="mod+z" onClick={() => handleClickEmit("menu_undo")}>
             Undo
           </MenuItem>
-          <MenuItem shortcut="Ctrl+Shift+Z" onClick={() => handleClickEmit("menu_redo")}>
+          <MenuItem shortcut="mod+shift+z" onClick={() => handleClickEmit("menu_redo")}>
             Redo
           </MenuItem>
           <MenuItem separator />
-          <MenuItem shortcut="Ctrl+X">Cut</MenuItem>
-          <MenuItem shortcut="Ctrl+C">Copy</MenuItem>
-          <MenuItem shortcut="Ctrl+V">Paste</MenuItem>
-          <MenuItem shortcut="Ctrl+A">Select All</MenuItem>
+          <MenuItem shortcut="mod+x">Cut</MenuItem>
+          <MenuItem shortcut="mod+c">Copy</MenuItem>
+          <MenuItem shortcut="mod+v">Paste</MenuItem>
+          <MenuItem shortcut="mod+a">Select All</MenuItem>
           <MenuItem separator />
-          <MenuItem shortcut="Ctrl+F" onClick={() => handleClickEmit("menu_find")}>
+          <MenuItem shortcut="mod+f" onClick={() => handleClickEmit("menu_find")}>
             Find
           </MenuItem>
-          <MenuItem shortcut="Ctrl+Alt+F" onClick={() => handleClickEmit("menu_find_replace")}>
+          <MenuItem shortcut="mod+alt+f" onClick={() => handleClickEmit("menu_find_replace")}>
             Find and Replace
           </MenuItem>
           <MenuItem separator />
-          <MenuItem shortcut="Ctrl+Shift+P" onClick={() => handleClickEmit("menu_command_palette")}>
+          <MenuItem shortcut="mod+shift+p" onClick={() => handleClickEmit("menu_command_palette")}>
             Command Palette
           </MenuItem>
         </Menu>
       ),
       View: (
         <Menu aria-label="View">
-          <MenuItem shortcut="Ctrl+B" onClick={() => handleClickEmit("menu_toggle_sidebar")}>
+          <MenuItem shortcut="mod+b" onClick={() => handleClickEmit("menu_toggle_sidebar")}>
             Toggle Sidebar
           </MenuItem>
-          <MenuItem shortcut="Ctrl+J" onClick={() => handleClickEmit("menu_toggle_terminal")}>
+          <MenuItem shortcut="mod+j" onClick={() => handleClickEmit("menu_toggle_terminal")}>
             Toggle Terminal
           </MenuItem>
-          <MenuItem shortcut="Ctrl+R" onClick={() => handleClickEmit("menu_toggle_ai_chat")}>
+          <MenuItem shortcut="mod+r" onClick={() => handleClickEmit("menu_toggle_ai_chat")}>
             Toggle AI Chat
           </MenuItem>
           <MenuItem separator />
           <MenuItem onClick={() => handleClickEmit("menu_split_editor")}>Split Editor</MenuItem>
           <MenuItem separator />
           <MenuItem
-            shortcut="Alt+M"
+            shortcut="alt+m"
             onClick={() => setActiveMenu((value) => (value ? null : "File"))}
           >
             Toggle Menu Bar
@@ -130,17 +130,17 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
       ),
       Go: (
         <Menu aria-label="Go">
-          <MenuItem shortcut="Ctrl+P" onClick={() => handleClickEmit("menu_quick_open")}>
+          <MenuItem shortcut="mod+p" onClick={() => handleClickEmit("menu_quick_open")}>
             Quick Open
           </MenuItem>
-          <MenuItem shortcut="Ctrl+G" onClick={() => handleClickEmit("menu_go_to_line")}>
+          <MenuItem shortcut="mod+g" onClick={() => handleClickEmit("menu_go_to_line")}>
             Go to Line
           </MenuItem>
           <MenuItem separator />
-          <MenuItem shortcut="Ctrl+Alt+Right" onClick={() => handleClickEmit("menu_next_tab")}>
+          <MenuItem shortcut="mod+alt+right" onClick={() => handleClickEmit("menu_next_tab")}>
             Next Tab
           </MenuItem>
-          <MenuItem shortcut="Ctrl+Alt+Left" onClick={() => handleClickEmit("menu_prev_tab")}>
+          <MenuItem shortcut="mod+alt+left" onClick={() => handleClickEmit("menu_prev_tab")}>
             Previous Tab
           </MenuItem>
         </Menu>
@@ -148,7 +148,7 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
       Window: (
         <Menu aria-label="Window">
           <MenuItem
-            shortcut="Alt+F9"
+            shortcut="alt+f9"
             onClick={async () => {
               await getCurrentWindow().minimize();
               setActiveMenu(null);
@@ -157,7 +157,7 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
             Minimize
           </MenuItem>
           <MenuItem
-            shortcut="Alt+F10"
+            shortcut="alt+f10"
             onClick={async () => {
               await getCurrentWindow().maximize();
               setActiveMenu(null);
@@ -166,12 +166,12 @@ const CustomMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
             Maximize
           </MenuItem>
           <MenuItem separator />
-          <MenuItem shortcut="Ctrl+Q" onClick={async () => await exit(0)}>
+          <MenuItem shortcut="mod+q" onClick={async () => await exit(0)}>
             Quit
           </MenuItem>
           <MenuItem separator />
           <MenuItem
-            shortcut="F11"
+            shortcut="f11"
             onClick={async () => {
               const window = getCurrentWindow();
               const isFull = await window.isFullscreen();

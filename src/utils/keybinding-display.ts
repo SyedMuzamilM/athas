@@ -15,11 +15,12 @@ function formatKey(key: string) {
   if (key === " ") return "Space";
   if (key.startsWith("Arrow")) return key.replace("Arrow", "");
   if (key.length === 1) return key.toUpperCase();
+  if (/^f\d{1,2}$/.test(key)) return key.toUpperCase();
   return key;
 }
 
 export function keybindingToDisplay(binding: string): string[] {
-  const parsed = parseKeybinding(binding.replace(/\bMod\b/g, "cmd"));
+  const parsed = parseKeybinding(binding.replace(/\bmod\b/gi, "cmd"));
   const keys: string[] = [];
 
   for (const part of parsed.parts) {

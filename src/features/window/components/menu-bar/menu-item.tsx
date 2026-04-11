@@ -1,5 +1,6 @@
-import { type ReactNode, useMemo } from "react";
-import { currentPlatform } from "@/utils/platform";
+import type { ReactNode } from "react";
+import { Button } from "@/ui/button";
+import Keybinding from "@/ui/keybinding";
 
 interface Props {
   children?: ReactNode;
@@ -9,42 +10,21 @@ interface Props {
 }
 
 const MenuItem = ({ children, shortcut, onClick, separator }: Props) => {
-  // Convert shortcut to user's OS
-  const shortcutOsSpecific = useMemo(() => {
-    if (currentPlatform !== "macos" || !shortcut) return shortcut;
-
-    // Order matters
-    return shortcut
-      .replace(/Ctrl\+Alt\+Shift\+/g, "⌘⌥⇧")
-      .replace(/Ctrl\+Shift\+/g, "⌘⇧")
-      .replace(/Ctrl\+Alt\+/g, "⌘⌥")
-      .replace(/Alt\+Shift\+/g, "⌥⇧")
-      .replace(/Ctrl\+/g, "⌘")
-      .replace(/Alt\+/g, "⌥")
-      .replace(/Shift\+/g, "⇧")
-      .replace(/Right/g, "→")
-      .replace(/Left/g, "←")
-      .replace(/Up/g, "↑")
-      .replace(/Down/g, "↓");
-  }, [currentPlatform, shortcut]);
-
   if (separator) {
     return <div className="my-1 border-border/70 border-t" />;
   }
 
   return (
-    <button
+    <Button
       role="menuitem"
-      className="ui-font ui-text-sm flex w-full cursor-pointer items-center justify-between gap-3 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-left text-text transition-colors hover:bg-hover"
+      variant="ghost"
+      size="sm"
       onClick={onClick}
+      className="ui-font ui-text-sm flex h-auto w-full cursor-pointer items-center justify-between gap-3 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-left text-text transition-colors hover:bg-hover"
     >
       <span className="min-w-0 flex-1 truncate whitespace-nowrap">{children}</span>
-      {shortcut && (
-        <span className="ui-text-sm ml-8 shrink-0 whitespace-nowrap text-text-lighter/90">
-          {shortcutOsSpecific}
-        </span>
-      )}
-    </button>
+      {shortcut && <Keybinding binding={shortcut} className="ml-8 shrink-0" />}
+    </Button>
   );
 };
 
