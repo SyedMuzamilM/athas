@@ -64,7 +64,7 @@ export function SettingRow({
               size="icon-xs"
               onClick={onReset}
               aria-label={resetLabel || `Reset ${label}`}
-              title={resetLabel || `Reset ${label}`}
+              tooltip={resetLabel || `Reset ${label}`}
             >
               <RotateCcw />
             </Button>

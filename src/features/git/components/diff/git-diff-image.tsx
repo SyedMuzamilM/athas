@@ -72,7 +72,7 @@ const ImageDiffViewer = memo(({ diff, fileName, onClose, commitHash }: ImageDiff
           variant="ghost"
           size="icon-sm"
           className="text-text-lighter disabled:opacity-50"
-          title="Zoom out"
+          tooltip="Zoom out"
           aria-label="Zoom out"
         >
           <ZoomOut />
@@ -86,7 +86,7 @@ const ImageDiffViewer = memo(({ diff, fileName, onClose, commitHash }: ImageDiff
           variant="ghost"
           size="icon-sm"
           className="text-text-lighter disabled:opacity-50"
-          title="Zoom in"
+          tooltip="Zoom in"
           aria-label="Zoom in"
         >
           <ZoomIn />

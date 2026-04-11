@@ -330,7 +330,7 @@ function CodeBlock({
               size="xs"
               onClick={() => onApplyCode(code)}
               className="whitespace-nowrap opacity-0 group-hover:opacity-100"
-              title="Apply this code to current buffer"
+              tooltip="Apply this code to current buffer"
             >
               Apply
             </Button>

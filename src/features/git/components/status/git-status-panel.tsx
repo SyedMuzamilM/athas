@@ -15,7 +15,6 @@ import { useContextMenu } from "@/hooks/use-context-menu";
 import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
 import { ContextMenu } from "@/ui/context-menu";
-import Tooltip from "@/ui/tooltip";
 import { createStash } from "../../api/git-stash-api";
 import {
   discardFileChanges,
@@ -476,49 +475,46 @@ const GitStatusPanel = ({
           actions={
             <>
               {unstagedFiles.length > 0 && (
-                <Tooltip content="Stash all unstaged changes" side="bottom">
-                  <Button
-                    onClick={handleStashAllUnstaged}
-                    disabled={isLoading}
-                    variant="ghost"
-                    size="icon-sm"
-                    className={gitSidebarSectionActionButtonClassName("disabled:opacity-50")}
-                    title="Stash all unstaged changes"
-                    aria-label="Stash all unstaged changes"
-                  >
-                    <Archive />
-                  </Button>
-                </Tooltip>
+                <Button
+                  onClick={handleStashAllUnstaged}
+                  disabled={isLoading}
+                  variant="ghost"
+                  size="icon-sm"
+                  className={gitSidebarSectionActionButtonClassName("disabled:opacity-50")}
+                  tooltip="Stash all unstaged changes"
+                  tooltipSide="bottom"
+                  aria-label="Stash all unstaged changes"
+                >
+                  <Archive />
+                </Button>
               )}
               {unstagedFiles.length > 0 && (
-                <Tooltip content="Stage all changes" side="bottom">
-                  <Button
-                    onClick={handleStageAll}
-                    disabled={isLoading}
-                    variant="ghost"
-                    size="icon-sm"
-                    className={gitSidebarSectionActionButtonClassName("disabled:opacity-50")}
-                    title="Stage all changes"
-                    aria-label="Stage all changes"
-                  >
-                    <Plus />
-                  </Button>
-                </Tooltip>
+                <Button
+                  onClick={handleStageAll}
+                  disabled={isLoading}
+                  variant="ghost"
+                  size="icon-sm"
+                  className={gitSidebarSectionActionButtonClassName("disabled:opacity-50")}
+                  tooltip="Stage all changes"
+                  tooltipSide="bottom"
+                  aria-label="Stage all changes"
+                >
+                  <Plus />
+                </Button>
               )}
               {stagedFiles.length > 0 && (
-                <Tooltip content="Unstage all changes" side="bottom">
-                  <Button
-                    onClick={handleUnstageAll}
-                    disabled={isLoading}
-                    variant="ghost"
-                    size="icon-sm"
-                    className={gitSidebarSectionActionButtonClassName("disabled:opacity-50")}
-                    title="Unstage all changes"
-                    aria-label="Unstage all changes"
-                  >
-                    <Minus />
-                  </Button>
-                </Tooltip>
+                <Button
+                  onClick={handleUnstageAll}
+                  disabled={isLoading}
+                  variant="ghost"
+                  size="icon-sm"
+                  className={gitSidebarSectionActionButtonClassName("disabled:opacity-50")}
+                  tooltip="Unstage all changes"
+                  tooltipSide="bottom"
+                  aria-label="Unstage all changes"
+                >
+                  <Minus />
+                </Button>
               )}
             </>
           }

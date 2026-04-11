@@ -199,7 +199,7 @@ const GitWorktreeManager = ({
                 )}
                 data-active={isAddFormOpen}
                 aria-label={isAddFormOpen ? "Hide add form" : "Add worktree"}
-                title={isAddFormOpen ? "Hide add form" : "Add worktree"}
+                tooltip={isAddFormOpen ? "Hide add form" : "Add worktree"}
               >
                 <Plus />
               </Button>
@@ -210,7 +210,7 @@ const GitWorktreeManager = ({
                 size="icon-sm"
                 className={gitSidebarSectionActionButtonClassName("disabled:opacity-50")}
                 aria-label="Prune worktrees"
-                title="Prune worktrees"
+                tooltip="Prune worktrees"
               >
                 <RefreshCw className={cn(isLoading && "animate-spin")} />
               </Button>

@@ -4,6 +4,7 @@ import { Check, Search, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getRelativeTime } from "@/features/ai/lib/formatting";
 import type { Chat } from "@/features/ai/types/ai-chat";
+import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { ProviderIcon } from "../icons/provider-icons";
 
@@ -212,18 +213,20 @@ export default function ChatHistoryDropdown({
                               </div>
                             </div>
 
-                            <button
+                            <Button
                               type="button"
+                              variant="ghost"
+                              size="icon-sm"
                               onClick={(event) => {
                                 event.stopPropagation();
                                 onDeleteChat(chat.id, event);
                               }}
-                              className="ml-2 flex size-6 shrink-0 items-center justify-center rounded-md text-text-lighter opacity-0 transition-all hover:bg-red-500/10 hover:text-red-400 group-hover:opacity-100"
+                              className="ml-2 shrink-0 opacity-0 transition-all hover:bg-red-500/10 hover:text-red-400 group-hover:opacity-100"
                               aria-label={`Delete ${chat.title}`}
-                              title="Delete chat"
+                              tooltip="Delete chat"
                             >
                               <Trash2 size={13} />
-                            </button>
+                            </Button>
                           </div>
                         );
                       })

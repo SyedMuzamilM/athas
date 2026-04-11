@@ -212,7 +212,7 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
                         variant="outline"
                         size="xs"
                         className="gap-1 px-2 py-1 text-[9px]"
-                        title="Apply stash (keep in stash list)"
+                        tooltip="Apply stash (keep in stash list)"
                       >
                         <Download />
                         Apply
@@ -224,7 +224,7 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
                         variant="outline"
                         size="xs"
                         className="gap-1 px-2 py-1 text-[9px]"
-                        title="Pop stash (apply and remove from stash list)"
+                        tooltip="Pop stash (apply and remove from stash list)"
                       >
                         <Upload />
                         Pop
@@ -236,7 +236,7 @@ const GitStashManager = ({ isOpen, onClose, repoPath, onRefresh }: GitStashManag
                         variant="danger"
                         size="xs"
                         className="gap-1 px-2 py-1 text-[9px]"
-                        title="Drop stash (delete permanently)"
+                        tooltip="Drop stash (delete permanently)"
                       >
                         <Trash2 />
                         Drop

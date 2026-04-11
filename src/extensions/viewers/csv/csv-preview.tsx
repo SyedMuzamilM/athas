@@ -116,7 +116,7 @@ export function CsvPreview() {
               variant="outline"
               size="xs"
               className="h-6 gap-1 text-text-lighter"
-              title="Toggle header row"
+              tooltip="Toggle header row"
             >
               <Rows /> {hasHeader ? "Header On" : "Header Off"}
             </Button>
@@ -127,7 +127,7 @@ export function CsvPreview() {
               variant="outline"
               size="xs"
               className="h-6 gap-1 text-text-lighter"
-              title="Copy as CSV"
+              tooltip="Copy as CSV"
             >
               <Download /> CSV
             </Button>
@@ -138,7 +138,7 @@ export function CsvPreview() {
               variant="outline"
               size="xs"
               className="h-6 gap-1 text-text-lighter"
-              title="Copy as JSON"
+              tooltip="Copy as JSON"
             >
               <FileJson /> JSON
             </Button>

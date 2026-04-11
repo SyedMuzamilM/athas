@@ -16,7 +16,7 @@ export function ProActionButton({ onProClick, children, ...props }: ProActionBut
     <Button
       {...props}
       onClick={isPro ? onProClick : promptUpgrade}
-      title={isPro ? props.title : isSignedInFree ? "Upgrade to Pro" : "Sign in to continue"}
+      tooltip={isPro ? props.tooltip : isSignedInFree ? "Upgrade to Pro" : "Sign in to continue"}
     >
       {isSignedInFree && <Lock className="size-3.5" />}
       {children}

@@ -186,7 +186,7 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
                   ? "font-medium text-text hover:text-text"
                   : "text-text-lighter hover:text-text",
               )}
-              title={crumb.label}
+              tooltip={crumb.label}
             >
               <span className="truncate">{crumb.label}</span>
             </Button>

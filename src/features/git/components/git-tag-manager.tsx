@@ -180,7 +180,7 @@ const GitTagManager = ({ isOpen, onClose, repoPath, onRefresh }: GitTagManagerPr
                       variant="ghost"
                       size="xs"
                       className="text-red-400 hover:bg-red-500/10 hover:text-red-300"
-                      title="Delete tag"
+                      tooltip="Delete tag"
                     >
                       <Trash2 />
                     </Button>

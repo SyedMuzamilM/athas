@@ -118,7 +118,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
             variant="ghost"
             size="xs"
             className="text-[11px] text-text-lighter hover:text-text"
-            title="Reset to default"
+            tooltip="Reset to default"
             aria-label="Reset to default keybinding"
           >
             Reset
@@ -131,7 +131,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
             variant="ghost"
             size="xs"
             className="text-[11px] text-text-lighter hover:text-error"
-            title="Remove keybinding"
+            tooltip="Remove keybinding"
             aria-label="Remove keybinding"
           >
             Remove

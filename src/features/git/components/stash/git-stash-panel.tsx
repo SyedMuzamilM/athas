@@ -133,7 +133,7 @@ const GitStashPanel = ({
                       variant="ghost"
                       size="icon-xs"
                       className="text-text-lighter disabled:opacity-50"
-                      title="Apply stash"
+                      tooltip="Apply stash"
                       aria-label="Apply stash"
                     >
                       <Download />
@@ -145,7 +145,7 @@ const GitStashPanel = ({
                       variant="ghost"
                       size="icon-xs"
                       className="text-text-lighter disabled:opacity-50"
-                      title="Pop stash"
+                      tooltip="Pop stash"
                       aria-label="Pop stash"
                     >
                       <Upload />
@@ -157,7 +157,7 @@ const GitStashPanel = ({
                       variant="ghost"
                       size="icon-xs"
                       className="text-red-400 hover:bg-red-900/20 hover:text-red-300 disabled:opacity-50"
-                      title="Drop stash"
+                      tooltip="Drop stash"
                       aria-label="Drop stash"
                     >
                       <Trash2 />

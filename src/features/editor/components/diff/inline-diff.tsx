@@ -247,7 +247,7 @@ function InlineDiffComponent({
                     size="xs"
                     onClick={handleRevert}
                     className="h-auto px-1.5 py-0.5 text-[11px]"
-                    title="Revert this change"
+                    tooltip="Revert this change"
                     aria-label="Revert change"
                   >
                     ↺
@@ -259,7 +259,8 @@ function InlineDiffComponent({
                   size="xs"
                   onClick={onClose}
                   className="h-auto px-1.5 py-0.5 text-[11px]"
-                  title="Close"
+                  tooltip="Close"
+                  shortcut="escape"
                   aria-label="Close diff"
                 >
                   ✕

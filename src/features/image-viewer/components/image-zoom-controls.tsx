@@ -17,16 +17,16 @@ export function ImageZoomControls({
 }: ImageZoomControlsProps) {
   return (
     <div className="flex items-center gap-2">
-      <Button onClick={onZoomOut} variant="ghost" size="xs" title="Zoom out">
+      <Button onClick={onZoomOut} variant="ghost" size="xs" tooltip="Zoom out">
         <Minus />
       </Button>
       <span className={cn("ui-font min-w-[50px] px-2 text-center", "text-text-lighter text-xs")}>
         {Math.round(zoom * 100)}%
       </span>
-      <Button onClick={onZoomIn} variant="ghost" size="xs" title="Zoom in">
+      <Button onClick={onZoomIn} variant="ghost" size="xs" tooltip="Zoom in">
         <Plus />
       </Button>
-      <Button onClick={onResetZoom} variant="ghost" size="xs" title="Reset zoom">
+      <Button onClick={onResetZoom} variant="ghost" size="xs" tooltip="Reset zoom">
         <RotateCcw />
       </Button>
     </div>

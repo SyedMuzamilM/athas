@@ -172,7 +172,7 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
             variant="ghost"
             size="xs"
             onClick={handleOpenExternal}
-            title="Open in external viewer"
+            tooltip="Open in external viewer"
           >
             <ExternalLink className="text-text" />
           </Button>

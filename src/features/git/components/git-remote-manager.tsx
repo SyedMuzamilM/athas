@@ -162,7 +162,7 @@ const GitRemoteManager = ({ isOpen, onClose, repoPath, onRefresh }: GitRemoteMan
                       variant="ghost"
                       size="xs"
                       className="text-red-400 hover:bg-red-500/10 hover:text-red-300"
-                      title="Remove remote"
+                      tooltip="Remove remote"
                     >
                       <Trash2 />
                     </Button>

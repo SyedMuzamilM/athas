@@ -109,7 +109,7 @@ const DiffHeader = memo(
                     variant="ghost"
                     size="icon-xs"
                     className={iconButtonClass}
-                    title="Expand all"
+                    tooltip="Expand all"
                     aria-label="Expand all files"
                   >
                     <ChevronDown />
@@ -119,7 +119,7 @@ const DiffHeader = memo(
                     variant="ghost"
                     size="icon-xs"
                     className={iconButtonClass}
-                    title="Collapse all"
+                    tooltip="Collapse all"
                     aria-label="Collapse all files"
                   >
                     <ChevronUp />
@@ -138,7 +138,7 @@ const DiffHeader = memo(
                       "flex h-5 items-center gap-1 rounded px-1.5 transition-colors hover:bg-hover hover:text-text",
                       showWhitespace ? "bg-hover text-text" : "text-text-lighter",
                     )}
-                    title={showWhitespace ? "Hide whitespace" : "Show whitespace"}
+                    tooltip={showWhitespace ? "Hide whitespace" : "Show whitespace"}
                     aria-label={showWhitespace ? "Hide whitespace" : "Show whitespace"}
                   >
                     <Trash2 />
@@ -155,7 +155,7 @@ const DiffHeader = memo(
                           segmentedButtonClass,
                           viewMode === "unified" && "bg-hover text-text",
                         )}
-                        title="Unified view"
+                        tooltip="Unified view"
                         aria-label="Unified diff view"
                       >
                         <Rows3 />
@@ -168,7 +168,7 @@ const DiffHeader = memo(
                           segmentedButtonClass,
                           viewMode === "split" && "bg-hover text-text",
                         )}
-                        title="Split view"
+                        tooltip="Split view"
                         aria-label="Split diff view"
                       >
                         <Columns2 />
@@ -185,7 +185,8 @@ const DiffHeader = memo(
                 variant="ghost"
                 size="icon-xs"
                 className={iconButtonClass}
-                title="Close"
+                tooltip="Close"
+                shortcut="escape"
                 aria-label="Close diff view"
               >
                 <X />

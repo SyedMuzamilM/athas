@@ -179,7 +179,7 @@ export function ContextSelector({
             "text-text-lighter text-xs transition-colors",
             "hover:text-text focus:outline-none",
           )}
-          title="Add context files"
+          tooltip="Add context files"
           aria-label="Add context files"
           aria-expanded={isOpen}
           aria-haspopup="true"

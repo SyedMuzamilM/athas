@@ -177,7 +177,7 @@ export function SearchPopover({
                 className={searchToggleButtonVariants({
                   active: option.active,
                 })}
-                title={option.label}
+                tooltip={option.label}
                 aria-label={option.label}
                 aria-pressed={option.active}
               >
@@ -242,7 +242,7 @@ export function SearchReplaceToggle({
       variant="ghost"
       size="icon-xs"
       className={searchIconButtonVariants()}
-      title={isExpanded ? "Hide replace" : "Show replace"}
+      tooltip={isExpanded ? "Hide replace" : "Show replace"}
       aria-label={isExpanded ? "Hide replace" : "Show replace"}
     >
       <ChevronRight className={cn("transition-transform", isExpanded && "rotate-90")} />
@@ -369,7 +369,7 @@ export function SearchInput({
               className={searchToggleButtonVariants({
                 active: option.active,
               })}
-              title={option.label}
+              tooltip={option.label}
               aria-label={option.label}
               aria-pressed={option.active}
             >

@@ -1025,7 +1025,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
                   "w-fit gap-0 px-1.5 text-text-lighter hover:text-text",
                   slashCommandState.active && "border-border-strong bg-hover text-text",
                 )}
-                title="Show slash commands"
+                tooltip="Show slash commands"
                 aria-label="Show slash commands"
               >
                 <Slash size={12} />
@@ -1044,7 +1044,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
                 "w-fit gap-1 px-1.5 text-text-lighter hover:text-text",
                 isListening && "border-blue-500/30 bg-blue-500/10 text-blue-400",
               )}
-              title={
+              tooltip={
                 isMacDevSpeechRecognitionBlocked
                   ? "Voice input is disabled in macOS dev mode"
                   : !isSpeechRecognitionSupported
@@ -1073,13 +1073,10 @@ const AIChatInputBar = memo(function AIChatInputBar({
                     ? "text-accent hover:text-accent/80"
                     : "text-text-lighter hover:text-text",
               )}
-              title={
-                isStreaming
-                  ? "Stop generation (Escape)"
-                  : queueCount > 0
-                    ? "Add to queue (Enter)"
-                    : "Send message (Enter)"
+              tooltip={
+                isStreaming ? "Stop generation" : queueCount > 0 ? "Add to queue" : "Send message"
               }
+              shortcut={isStreaming ? "escape" : "enter"}
               aria-label={isStreaming ? "Stop generation" : "Send message"}
             >
               {isStreaming ? "Stop" : "Send"}

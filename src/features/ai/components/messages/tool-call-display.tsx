@@ -187,7 +187,7 @@ export default function ToolCallDisplay({
             size="icon-xs"
             onClick={() => onOpenInEditor?.(input.file_path)}
             className="rounded-full text-text-lighter/60 hover:text-text-lighter/90"
-            title="Open in editor"
+            tooltip="Open in editor"
             aria-label="Open file in editor"
           >
             <ExternalLink />

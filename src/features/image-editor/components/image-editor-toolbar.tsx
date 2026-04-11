@@ -82,7 +82,7 @@ export function ImageEditorToolbar({
           variant="ghost"
           size="xs"
           disabled={isProcessing}
-          title="Edit operations"
+          tooltip="Edit operations"
         >
           <span className="text-xs">Edit</span>
           <ChevronDown className="ml-1" />
@@ -177,7 +177,7 @@ export function ImageEditorToolbar({
           variant="ghost"
           size="xs"
           disabled={isProcessing}
-          title="Convert format"
+          tooltip="Convert format"
         >
           <span className="text-xs">Convert</span>
           <ChevronDown className="ml-1" />
@@ -252,7 +252,7 @@ export function ImageEditorToolbar({
         variant="ghost"
         size="xs"
         disabled={!canUndo || isProcessing}
-        title="Undo last operation"
+        tooltip="Undo last operation"
       >
         <Undo2 />
       </Button>
@@ -264,7 +264,7 @@ export function ImageEditorToolbar({
           variant="ghost"
           size="xs"
           disabled={isProcessing}
-          title="Save changes"
+          tooltip="Save changes"
           className="text-accent"
         >
           <Save />
