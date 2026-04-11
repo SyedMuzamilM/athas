@@ -198,7 +198,7 @@ const AiUsageStatusIndicator = () => {
           isOpen && "border-border/60 bg-hover/80",
         )}
         style={{ minHeight: 0, minWidth: 0 }}
-        title={`${planLabel} • ${modeLabel}`}
+        tooltip={`${planLabel} • ${modeLabel}`}
       >
         <span className="ui-font ui-text-sm">{indicatorLabel}</span>
       </Button>
@@ -228,8 +228,8 @@ const AiUsageStatusIndicator = () => {
               variant="secondary"
               size="icon-sm"
               className="px-0 text-text-lighter"
+              tooltip="AI Settings"
               aria-label="Open AI settings"
-              title="AI Settings"
             >
               <Settings2 />
             </Button>
@@ -258,10 +258,11 @@ const AiUsageStatusIndicator = () => {
           </div>
         ) : (
           <>
-            <button
+            <Button
               type="button"
               onClick={() => void openBillingDashboard()}
-              className="border-border/60 block w-full border-b p-2.5 text-left transition-colors hover:bg-hover/40"
+              variant="ghost"
+              className="ui-font block h-auto w-full justify-start border-border/60 border-b rounded-none p-2.5 text-left transition-colors hover:bg-hover/40"
             >
               <div className="mb-1.5 flex items-center justify-between">
                 <span className="ui-text-sm text-text-lighter">Usage</span>
@@ -295,7 +296,7 @@ const AiUsageStatusIndicator = () => {
               ) : (
                 <div className="ui-text-sm text-text-lighter/80">Usage unavailable</div>
               )}
-            </button>
+            </Button>
           </>
         )}
       </Dropdown>
@@ -357,7 +358,8 @@ const Footer = () => {
             className="rounded-md bg-primary-bg/40 text-text-lighter"
             data-active={uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "terminal"}
             style={{ minHeight: 0, minWidth: 0 }}
-            title="Toggle Terminal"
+            tooltip="Toggle Terminal"
+            commandId="workbench.toggleTerminal"
           >
             <TerminalIcon />
           </Button>
@@ -384,11 +386,12 @@ const Footer = () => {
               uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "diagnostics"
             }
             style={{ minHeight: 0, minWidth: 0 }}
-            title={
+            tooltip={
               diagnosticsCount > 0
                 ? `${diagnosticsCount} diagnostic${diagnosticsCount === 1 ? "" : "s"}`
                 : "Toggle Diagnostics Panel"
             }
+            commandId="workbench.toggleDiagnostics"
           >
             <AlertCircle />
             {diagnosticsCount > 0 && <span className="ui-text-sm ml-0.5">{diagnosticsCount}</span>}
@@ -402,7 +405,7 @@ const Footer = () => {
             size="xs"
             className="rounded-md bg-primary-bg/40 px-2 text-blue-400"
             style={{ minHeight: 0, minWidth: 0 }}
-            title={`${extensionUpdatesCount} extension update${extensionUpdatesCount === 1 ? "" : "s"} available`}
+            tooltip={`${extensionUpdatesCount} extension update${extensionUpdatesCount === 1 ? "" : "s"} available`}
           >
             <Puzzle />
             <span className="ui-text-sm ml-0.5">{extensionUpdatesCount}</span>
@@ -422,7 +425,7 @@ const Footer = () => {
                 : "text-blue-400 hover:text-blue-300",
             )}
             style={{ minHeight: 0, minWidth: 0 }}
-            title={
+            tooltip={
               downloading
                 ? "Downloading update..."
                 : installing
@@ -448,7 +451,8 @@ const Footer = () => {
           className="rounded-md bg-primary-bg/40 text-text-lighter"
           data-active={settings.isAIChatVisible}
           style={{ minHeight: 0, minWidth: 0 }}
-          title="Toggle AI Chat"
+          tooltip="Toggle AI Chat"
+          commandId="workbench.toggleAIChat"
         >
           <Sparkles />
         </Button>
