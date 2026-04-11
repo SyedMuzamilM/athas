@@ -80,6 +80,7 @@ jobs:
 
       - name: Generate release metadata
         id: release_meta
+        shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
