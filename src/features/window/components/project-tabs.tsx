@@ -440,7 +440,7 @@ const ProjectTabs = () => {
                       "hover:bg-hover/60 hover:text-text",
                       "opacity-0 group-hover/tab:opacity-100 group-focus-within/tab:opacity-100",
                     )}
-                    title="Project actions"
+                    tooltip="Project actions"
                     aria-label="Project actions"
                   >
                     <EllipsisVertical />
@@ -479,7 +479,7 @@ const ProjectTabs = () => {
             size="icon-xs"
             onClick={handleAddProject}
             className="h-full w-6 rounded-none border-0 text-text-lighter opacity-0 transition-opacity duration-150 ease-out group-hover:opacity-100 focus-visible:opacity-100 hover:bg-hover/60 hover:text-text"
-            title="Open folder"
+            tooltip="Open folder"
             aria-label="Open folder"
           >
             <Plus />

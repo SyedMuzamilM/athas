@@ -22,7 +22,8 @@ export function NewTabMenu({ onClose }: NewTabMenuProps) {
       size="icon-sm"
       onClick={handleClick}
       className="text-text-lighter hover:border-border/70 hover:text-text"
-      title="New Tab (Cmd+T)"
+      tooltip="New Tab"
+      commandId="workbench.newTab"
       aria-label="New Tab"
     >
       <Plus />

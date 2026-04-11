@@ -125,7 +125,8 @@ const TabBarItem = memo(function TabBarItem({
               "hover:bg-hover/80 hover:text-text",
               buffer.isPinned || isActive ? "opacity-100" : "opacity-0 group-hover/tab:opacity-100",
             )}
-            title={buffer.isPinned ? "Unpin tab" : `Close ${buffer.name}`}
+            tooltip={buffer.isPinned ? "Unpin tab" : `Close ${buffer.name}`}
+            shortcut={buffer.isPinned ? undefined : "mod+w"}
             tabIndex={-1}
             draggable={false}
           >

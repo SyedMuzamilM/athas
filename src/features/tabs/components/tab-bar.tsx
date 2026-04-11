@@ -24,7 +24,6 @@ import { useSidebarStore } from "@/features/layout/stores/sidebar-store";
 import { useTerminalStore } from "@/features/terminal/stores/terminal-store";
 import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-dialog";
 import { Button } from "@/ui/button";
-import Tooltip from "@/ui/tooltip";
 import { calculateDisplayNames } from "../utils/path-shortener";
 import { NewTabMenu } from "./new-tab-menu";
 import TabBarItem from "./tab-bar-item";
@@ -812,32 +811,34 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
         onDrop={handleTabBarDrop}
       >
         <div className="flex shrink-0 items-center gap-0.5">
-          <Tooltip content="Go Back (Ctrl+-)" side="bottom">
-            <Button
-              type="button"
-              onClick={handleJumpBack}
-              disabled={!canGoBack}
-              variant="ghost"
-              size="icon-sm"
-              className="shrink-0 rounded-lg text-text-lighter"
-              aria-label="Go back to previous location"
-            >
-              <ArrowLeft />
-            </Button>
-          </Tooltip>
-          <Tooltip content="Go Forward (Ctrl+Shift+-)" side="bottom">
-            <Button
-              type="button"
-              onClick={handleJumpForward}
-              disabled={!canGoForward}
-              variant="ghost"
-              size="icon-sm"
-              className="shrink-0 rounded-lg text-text-lighter"
-              aria-label="Go forward to next location"
-            >
-              <ArrowRight />
-            </Button>
-          </Tooltip>
+          <Button
+            type="button"
+            onClick={handleJumpBack}
+            disabled={!canGoBack}
+            variant="ghost"
+            size="icon-sm"
+            className="shrink-0 rounded-lg text-text-lighter"
+            tooltip="Go Back"
+            tooltipSide="bottom"
+            commandId="navigation.goBack"
+            aria-label="Go back to previous location"
+          >
+            <ArrowLeft />
+          </Button>
+          <Button
+            type="button"
+            onClick={handleJumpForward}
+            disabled={!canGoForward}
+            variant="ghost"
+            size="icon-sm"
+            className="shrink-0 rounded-lg text-text-lighter"
+            tooltip="Go Forward"
+            tooltipSide="bottom"
+            commandId="navigation.goForward"
+            aria-label="Go forward to next location"
+          >
+            <ArrowRight />
+          </Button>
         </div>
 
         <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto overflow-y-hidden [-ms-overflow-style:none] [overscroll-behavior-x:contain] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -882,49 +883,46 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
 
         <div className="flex shrink-0 items-center gap-1 pl-0.5">
           {paneId && isInSplit && (
-            <Tooltip content="Close Split" side="bottom">
-              <Button
-                type="button"
-                onClick={() => closePane(paneId)}
-                variant="ghost"
-                size="icon-sm"
-                className="shrink-0 rounded-lg text-text-lighter"
-                aria-label="Close split pane"
-              >
-                <PanelLeftClose />
-              </Button>
-            </Tooltip>
+            <Button
+              type="button"
+              onClick={() => closePane(paneId)}
+              variant="ghost"
+              size="icon-sm"
+              className="shrink-0 rounded-lg text-text-lighter"
+              tooltip="Close Split"
+              tooltipSide="bottom"
+              aria-label="Close split pane"
+            >
+              <PanelLeftClose />
+            </Button>
           )}
           {paneId && activeBufferId && (
-            <Tooltip content="Split Editor" side="bottom">
-              <Button
-                type="button"
-                onClick={handleSplitActivePane}
-                variant="ghost"
-                size="icon-sm"
-                className="shrink-0 rounded-lg text-text-lighter"
-                aria-label="Split editor"
-              >
-                <SplitSquareHorizontal />
-              </Button>
-            </Tooltip>
+            <Button
+              type="button"
+              onClick={handleSplitActivePane}
+              variant="ghost"
+              size="icon-sm"
+              className="shrink-0 rounded-lg text-text-lighter"
+              tooltip="Split Editor"
+              tooltipSide="bottom"
+              aria-label="Split editor"
+            >
+              <SplitSquareHorizontal />
+            </Button>
           )}
           {paneId && (
-            <Tooltip
-              content={isPaneFullscreen ? "Exit Full Screen" : "Full Screen Editor"}
-              side="bottom"
+            <Button
+              type="button"
+              onClick={handleTogglePaneFullscreen}
+              variant="ghost"
+              size="icon-sm"
+              className="shrink-0 rounded-lg text-text-lighter"
+              tooltip={isPaneFullscreen ? "Exit Full Screen" : "Full Screen Editor"}
+              tooltipSide="bottom"
+              aria-label="Toggle editor full screen"
             >
-              <Button
-                type="button"
-                onClick={handleTogglePaneFullscreen}
-                variant="ghost"
-                size="icon-sm"
-                className="shrink-0 rounded-lg text-text-lighter"
-                aria-label="Toggle editor full screen"
-              >
-                {isPaneFullscreen ? <Minimize2 /> : <Maximize2 />}
-              </Button>
-            </Tooltip>
+              {isPaneFullscreen ? <Minimize2 /> : <Maximize2 />}
+            </Button>
           )}
           <div className="flex shrink-0 items-center">
             <NewTabMenu />

@@ -134,7 +134,8 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
                   ? "opacity-100"
                   : "opacity-0 group-hover/tab:opacity-100",
               )}
-              title={terminal.isPinned ? "Unpin terminal" : `Close ${terminal.name}`}
+              tooltip={terminal.isPinned ? "Unpin terminal" : `Close ${terminal.name}`}
+              shortcut={terminal.isPinned ? undefined : "mod+w"}
               tabIndex={-1}
               draggable={false}
             >
