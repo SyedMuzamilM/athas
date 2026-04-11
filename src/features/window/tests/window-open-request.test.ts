@@ -8,6 +8,7 @@ describe("parseWindowOpenUrl", () => {
     const url = new URL("athas://open?path=/Users/test/foo.txt&line=42");
     const result = parseWindowOpenUrl(url);
     expect(result).toEqual({
+      type: "path",
       path: "/Users/test/foo.txt",
       isDirectory: false,
       line: 42,
@@ -18,6 +19,7 @@ describe("parseWindowOpenUrl", () => {
     const url = new URL("athas://open?path=/Users/test/project&type=directory");
     const result = parseWindowOpenUrl(url);
     expect(result).toEqual({
+      type: "path",
       path: "/Users/test/project",
       isDirectory: true,
       line: undefined,
@@ -28,6 +30,7 @@ describe("parseWindowOpenUrl", () => {
     const url = new URL("athas://open?path=/Users/test/foo.txt");
     const result = parseWindowOpenUrl(url);
     expect(result).toEqual({
+      type: "path",
       path: "/Users/test/foo.txt",
       isDirectory: false,
       line: undefined,
@@ -38,6 +41,7 @@ describe("parseWindowOpenUrl", () => {
     const url = new URL("http://localhost/?target=open&type=directory&path=/Users/test/project");
     const result = parseWindowOpenUrl(url);
     expect(result).toEqual({
+      type: "path",
       path: "/Users/test/project",
       isDirectory: true,
       line: undefined,
@@ -50,8 +54,30 @@ describe("parseWindowOpenUrl", () => {
     );
     const result = parseWindowOpenUrl(url);
     expect(result).toEqual({
+      type: "remote",
       remoteConnectionId: "conn-1",
       remoteConnectionName: "My Server",
+    });
+  });
+
+  it("parses web viewer requests", () => {
+    const url = new URL("athas://open?type=web&url=https%3A%2F%2Fathas.dev%2Fdocs");
+    const result = parseWindowOpenUrl(url);
+    expect(result).toEqual({
+      type: "web",
+      url: "https://athas.dev/docs",
+    });
+  });
+
+  it("parses terminal requests", () => {
+    const url = new URL(
+      "athas://open?type=terminal&command=npm%20test&cwd=%2FUsers%2Ftest%2Fproject",
+    );
+    const result = parseWindowOpenUrl(url);
+    expect(result).toEqual({
+      type: "terminal",
+      command: "npm test",
+      workingDirectory: "/Users/test/project",
     });
   });
 
