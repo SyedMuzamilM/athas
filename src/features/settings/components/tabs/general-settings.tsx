@@ -210,7 +210,7 @@ export const GeneralSettings = () => {
                   disabled={cliChecking}
                   variant="secondary"
                   size="xs"
-                  title="Copy install command to clipboard"
+                  tooltip="Copy install command to clipboard"
                 >
                   Copy
                 </Button>

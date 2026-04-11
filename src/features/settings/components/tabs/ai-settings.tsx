@@ -217,7 +217,7 @@ export const AISettings = () => {
                   variant="secondary"
                   size="icon-xs"
                   onClick={handleResetOllamaUrl}
-                  title="Reset to default"
+                  tooltip="Reset to default"
                   aria-label="Reset Ollama URL to default"
                 >
                   <RotateCcw />
@@ -354,7 +354,7 @@ export const AISettings = () => {
               size="xs"
               onClick={loadAutocompleteModels}
               disabled={isLoadingAutocompleteModels || !aiCompletionAllowedByPolicy}
-              title="Refresh model list"
+              tooltip="Refresh model list"
             >
               <RefreshCw className={cn(isLoadingAutocompleteModels && "animate-spin")} />
             </Button>

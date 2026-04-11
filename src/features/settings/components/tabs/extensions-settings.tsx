@@ -119,11 +119,11 @@ const ExtensionRow = ({
       ) : extension.isInstalled ? (
         <div className="flex shrink-0 items-center gap-2">
           {hasUpdate && onUpdate && (
-            <Button onClick={onUpdate} variant="primary" size="xs" title="Update available">
+            <Button onClick={onUpdate} variant="primary" size="xs" tooltip="Update available">
               Update
             </Button>
           )}
-          <Button onClick={onToggle} variant="danger" size="xs" title="Uninstall">
+          <Button onClick={onToggle} variant="danger" size="xs" tooltip="Uninstall">
             Uninstall
           </Button>
         </div>
@@ -133,7 +133,7 @@ const ExtensionRow = ({
           variant="secondary"
           size="xs"
           className="shrink-0"
-          title="Install"
+          tooltip="Install"
         >
           Install
         </Button>
