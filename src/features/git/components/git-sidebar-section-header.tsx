@@ -4,8 +4,8 @@ import type { ReactNode } from "react";
 import { Button } from "@/ui/button";
 import {
   PANE_GROUP_BASE,
+  PANE_ICON_BUTTON_BASE,
   paneHeaderClassName,
-  paneIconButtonClassName,
   paneTitleClassName,
 } from "@/ui/pane";
 import { cn } from "@/utils/cn";
@@ -72,6 +72,6 @@ const GitSidebarSectionHeader = ({
 };
 
 export const gitSidebarSectionActionButtonClassName = (className?: string) =>
-  cn(paneIconButtonClassName("size-6"), className);
+  cn(PANE_ICON_BUTTON_BASE, "size-6", className);
 
 export default GitSidebarSectionHeader;

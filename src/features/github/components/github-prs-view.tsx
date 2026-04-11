@@ -33,9 +33,8 @@ import { useUIState } from "@/features/window/stores/ui-state-store";
 import { Button, buttonVariants } from "@/ui/button";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import { Dropdown, dropdownItemClassName, dropdownTriggerClassName } from "@/ui/dropdown";
-import { paneHeaderClassName, paneIconButtonClassName } from "@/ui/pane";
+import { PaneIconButton, paneHeaderClassName } from "@/ui/pane";
 import { Tab, TabsList } from "@/ui/tabs";
-import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import { getFolderName } from "@/utils/path-helpers";
 import { useGitHubStore } from "../stores/github-store";
@@ -455,81 +454,69 @@ const GitHubPRsView = memo(() => {
 
           <div className={paneHeaderClassName("justify-between rounded-lg")}>
             <div>
-              <Tooltip content="Filter pull requests" side="bottom">
-                <Button
-                  ref={filterTriggerRef}
-                  onClick={() => setIsFilterOpen(!isFilterOpen)}
-                  variant="ghost"
-                  size="sm"
-                  disabled={activeSection !== "pull-requests"}
-                  className={dropdownTriggerClassName("ui-text-sm")}
-                >
-                  <GitPullRequest className="shrink-0" />
-                  <span className="truncate">
-                    {activeSection === "pull-requests"
-                      ? filterLabels[currentFilter]
-                      : activeSection === "issues"
-                        ? "Issues"
-                        : "Actions"}
-                  </span>
-                  {activeSection === "pull-requests" ? <ChevronDown /> : null}
-                </Button>
-              </Tooltip>
+              <Button
+                ref={filterTriggerRef}
+                onClick={() => setIsFilterOpen(!isFilterOpen)}
+                variant="ghost"
+                size="sm"
+                disabled={activeSection !== "pull-requests"}
+                className={dropdownTriggerClassName("ui-text-sm")}
+                tooltip="Filter pull requests"
+                tooltipSide="bottom"
+              >
+                <GitPullRequest className="shrink-0" />
+                <span className="truncate">
+                  {activeSection === "pull-requests"
+                    ? filterLabels[currentFilter]
+                    : activeSection === "issues"
+                      ? "Issues"
+                      : "Actions"}
+                </span>
+                {activeSection === "pull-requests" ? <ChevronDown /> : null}
+              </Button>
             </div>
             <div className="flex min-w-0 items-center gap-1.5">
               <div>
-                <Tooltip content={effectiveRepoPath ?? "Select repository"} side="bottom">
-                  <Button
-                    ref={repoTriggerRef}
-                    onClick={() =>
-                      setIsRepoMenuOpen((value) => {
-                        const nextOpen = !value;
-                        if (nextOpen) {
-                          void refreshWorkspaceRepositories();
-                        }
-                        return nextOpen;
-                      })
-                    }
-                    variant="ghost"
-                    size="sm"
-                    className={dropdownTriggerClassName("ui-text-sm max-w-40")}
-                  >
-                    <FolderOpen className="shrink-0" />
-                    <span className="truncate">
-                      {effectiveRepoPath ? getFolderName(effectiveRepoPath) : "Select Repo"}
-                    </span>
-                    <ChevronDown />
-                  </Button>
-                </Tooltip>
+                <Button
+                  ref={repoTriggerRef}
+                  onClick={() =>
+                    setIsRepoMenuOpen((value) => {
+                      const nextOpen = !value;
+                      if (nextOpen) {
+                        void refreshWorkspaceRepositories();
+                      }
+                      return nextOpen;
+                    })
+                  }
+                  variant="ghost"
+                  size="sm"
+                  className={dropdownTriggerClassName("ui-text-sm max-w-40")}
+                  tooltip={effectiveRepoPath ?? "Select repository"}
+                  tooltipSide="bottom"
+                >
+                  <FolderOpen className="shrink-0" />
+                  <span className="truncate">
+                    {effectiveRepoPath ? getFolderName(effectiveRepoPath) : "Select Repo"}
+                  </span>
+                  <ChevronDown />
+                </Button>
               </div>
 
-              <Tooltip
-                content={
+              <PaneIconButton
+                onClick={handleRefreshActiveSection}
+                disabled={isLoading || !effectiveRepoPath}
+                className="disabled:opacity-50"
+                tooltip={
                   activeSection === "pull-requests"
                     ? "Refresh pull requests"
                     : activeSection === "issues"
                       ? "Refresh issues"
                       : "Refresh workflow runs"
                 }
-                side="bottom"
+                tooltipSide="bottom"
               >
-                <Button
-                  onClick={handleRefreshActiveSection}
-                  disabled={isLoading || !effectiveRepoPath}
-                  variant="ghost"
-                  size="icon-sm"
-                  className={cn(paneIconButtonClassName(), "size-6", "disabled:opacity-50")}
-                  aria-label={
-                    activeSection === "pull-requests"
-                      ? "Refresh pull requests"
-                      : activeSection === "issues"
-                        ? "Refresh issues"
-                        : "Refresh workflow runs"
-                  }
-                >
-                  <RefreshCw className={isLoading ? "animate-spin" : ""} />
-                </Button>
-              </Tooltip>
+                <RefreshCw className={isLoading ? "animate-spin" : ""} />
+              </PaneIconButton>
             </div>
           </div>
 

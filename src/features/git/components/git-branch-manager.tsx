@@ -6,7 +6,7 @@ import { Button } from "@/ui/button";
 import { Dropdown } from "@/ui/dropdown";
 import Input from "@/ui/input";
 import { dropdownTriggerClassName } from "@/ui/dropdown";
-import { paneIconButtonClassName } from "@/ui/pane";
+import { PaneIconButton } from "@/ui/pane";
 import { cn } from "@/utils/cn";
 import { checkoutBranch, createBranch, deleteBranch, getBranches } from "../api/git-branches-api";
 import { createStash } from "../api/git-stash-api";
@@ -264,7 +264,7 @@ const GitBranchManager = ({
             <span className="ui-text-sm truncate font-medium text-text">{currentBranch}</span>
           </div>
           <div className="flex items-center gap-1">
-            <Button
+            <PaneIconButton
               onClick={() => {
                 setShowSearch((prev) => {
                   const next = !prev;
@@ -273,16 +273,14 @@ const GitBranchManager = ({
                   return next;
                 });
               }}
-              variant="ghost"
-              size="icon-sm"
-              className={cn(paneIconButtonClassName("size-6"), showSearch && "bg-hover text-text")}
+              className={cn(showSearch && "bg-hover text-text")}
+              tooltip="Search branches"
               aria-label="Toggle branch search"
-              title="Search branches"
               type="button"
             >
               <Search />
-            </Button>
-            <Button
+            </PaneIconButton>
+            <PaneIconButton
               onClick={() => {
                 setShowCreate((prev) => {
                   const next = !prev;
@@ -290,26 +288,21 @@ const GitBranchManager = ({
                   return next;
                 });
               }}
-              variant="ghost"
-              size="icon-sm"
-              className={cn(paneIconButtonClassName("size-6"), showCreate && "bg-hover text-text")}
+              className={cn(showCreate && "bg-hover text-text")}
+              tooltip="Create branch"
               aria-label="Toggle create branch"
-              title="Create branch"
               type="button"
             >
               <Plus />
-            </Button>
-            <Button
+            </PaneIconButton>
+            <PaneIconButton
               onClick={() => setIsDropdownOpen(false)}
-              variant="ghost"
-              size="icon-sm"
-              className={paneIconButtonClassName("size-6")}
+              tooltip="Close"
               aria-label="Close branch dropdown"
-              title="Close"
               type="button"
             >
               <X />
-            </Button>
+            </PaneIconButton>
           </div>
         </div>
 
@@ -421,7 +414,7 @@ const GitBranchManager = ({
                         "hover:bg-git-deleted/10 hover:opacity-80 hover:text-git-deleted",
                         "disabled:opacity-50 sm:group-hover:opacity-100",
                       )}
-                      title={`Delete ${branch}`}
+                      tooltip={`Delete ${branch}`}
                       aria-label={`Delete branch ${branch}`}
                       type="button"
                     >

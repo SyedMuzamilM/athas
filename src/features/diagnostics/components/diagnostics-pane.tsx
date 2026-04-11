@@ -27,10 +27,9 @@ import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import type { ContextMenuItem } from "@/ui/context-menu";
 import { ContextMenu } from "@/ui/context-menu";
-import { PANE_CHIP_BASE, paneHeaderClassName, paneIconButtonClassName } from "@/ui/pane";
+import { PANE_CHIP_BASE, PaneIconButton, paneHeaderClassName } from "@/ui/pane";
 import { SearchPopover } from "@/ui/search";
 import { cn } from "@/utils/cn";
-import Tooltip from "@/ui/tooltip";
 import type { Diagnostic, DiagnosticCodeAction } from "../types/diagnostics";
 
 interface DiagnosticsPaneProps {
@@ -774,7 +773,7 @@ const DiagnosticsPane = ({
           <span className={cn("ui-font ui-text-sm", problemSummaryTone)}>{problemSummary}</span>
 
           <div className="ml-auto flex items-center gap-1">
-            <Button
+            <PaneIconButton
               type="button"
               onClick={() => {
                 setIsSearchVisible((visible) => {
@@ -784,30 +783,21 @@ const DiagnosticsPane = ({
                   return true;
                 });
               }}
-              variant="ghost"
-              size="icon-sm"
               className={cn(
-                paneIconButtonClassName(),
                 (isSearchVisible || hasSearch) && "border-border/70 bg-hover text-text",
               )}
-              title="Search problems"
+              tooltip="Search problems"
             >
               <Search />
-            </Button>
+            </PaneIconButton>
 
-            <Button
+            <PaneIconButton
               type="button"
               onClick={(event) => {
                 filterContextMenu.open(event, "filters");
               }}
-              variant="ghost"
-              size="icon-sm"
-              className={cn(
-                "relative",
-                paneIconButtonClassName(),
-                hasFilterSettings && "text-accent",
-              )}
-              title="Filter problems"
+              className={cn("relative", hasFilterSettings && "text-accent")}
+              tooltip="Filter problems"
             >
               <Filter />
               {activeFilterCount > 0 && (
@@ -819,34 +809,24 @@ const DiagnosticsPane = ({
                   {activeFilterCount}
                 </Badge>
               )}
-            </Button>
+            </PaneIconButton>
 
             {isEmbedded && onFullScreen && (
-              <Tooltip content={isFullScreen ? "Exit Full Screen" : "Full Screen"} side="bottom">
-                <Button
-                  type="button"
-                  onClick={onFullScreen}
-                  variant="ghost"
-                  size="icon-sm"
-                  className={paneIconButtonClassName()}
-                  aria-label={isFullScreen ? "Exit full screen" : "Full screen"}
-                >
-                  {isFullScreen ? <Minimize2 /> : <Maximize2 />}
-                </Button>
-              </Tooltip>
+              <PaneIconButton
+                type="button"
+                onClick={onFullScreen}
+                tooltip={isFullScreen ? "Exit Full Screen" : "Full Screen"}
+                tooltipSide="bottom"
+                aria-label={isFullScreen ? "Exit full screen" : "Full screen"}
+              >
+                {isFullScreen ? <Minimize2 /> : <Maximize2 />}
+              </PaneIconButton>
             )}
 
             {!isEmbedded && (
-              <Button
-                type="button"
-                onClick={onClose}
-                variant="ghost"
-                size="icon-sm"
-                className={paneIconButtonClassName()}
-                title="Close problems pane"
-              >
+              <PaneIconButton type="button" onClick={onClose} tooltip="Close problems pane">
                 <X />
-              </Button>
+              </PaneIconButton>
             )}
           </div>
 
@@ -874,19 +854,13 @@ const DiagnosticsPane = ({
                 placeholder="Search problems"
                 inputRef={searchInputRef}
                 extraActions={
-                  <Button
+                  <PaneIconButton
                     type="button"
                     onClick={(event) => {
                       filterContextMenu.open(event, "filters");
                     }}
-                    variant="ghost"
-                    size="icon-sm"
-                    className={cn(
-                      "relative",
-                      paneIconButtonClassName(),
-                      hasFilterSettings && "text-accent",
-                    )}
-                    title="Filter problems"
+                    className={cn("relative", hasFilterSettings && "text-accent")}
+                    tooltip="Filter problems"
                   >
                     <Filter />
                     {activeFilterCount > 0 && (
@@ -898,7 +872,7 @@ const DiagnosticsPane = ({
                         {activeFilterCount}
                       </Badge>
                     )}
-                  </Button>
+                  </PaneIconButton>
                 }
               />
             </div>

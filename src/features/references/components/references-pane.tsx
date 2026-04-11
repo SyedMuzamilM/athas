@@ -11,8 +11,7 @@ import { useCallback, useMemo, useState } from "react";
 import { editorAPI } from "@/features/editor/extensions/api";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
-import { Button } from "@/ui/button";
-import { PANE_CHIP_BASE, paneHeaderClassName, paneIconButtonClassName } from "@/ui/pane";
+import { PANE_CHIP_BASE, PaneIconButton, paneHeaderClassName } from "@/ui/pane";
 import { useReferencesStore } from "../stores/references-store";
 import type { Reference } from "../types/reference";
 
@@ -98,21 +97,19 @@ const ReferencesPane = ({ onFullScreen, isFullScreen = false }: ReferencesPanePr
         </div>
         <div className="flex items-center gap-0.5">
           {onFullScreen && (
-            <Button
+            <PaneIconButton
               onClick={onFullScreen}
-              className={paneIconButtonClassName()}
-              aria-label={isFullScreen ? "Exit fullscreen" : "Fullscreen"}
+              tooltip={isFullScreen ? "Exit fullscreen" : "Fullscreen"}
             >
               {isFullScreen ? <Minimize2 /> : <Maximize2 />}
-            </Button>
+            </PaneIconButton>
           )}
-          <Button
+          <PaneIconButton
             onClick={() => useReferencesStore.getState().actions.clear()}
-            className={paneIconButtonClassName()}
-            aria-label="Clear references"
+            tooltip="Clear references"
           >
             <X />
-          </Button>
+          </PaneIconButton>
         </div>
       </div>
 

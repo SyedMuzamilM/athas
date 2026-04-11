@@ -10,7 +10,7 @@ import { useToast } from "@/features/layout/contexts/toast-context";
 import { Button } from "@/ui/button";
 import { Dropdown } from "@/ui/dropdown";
 import Input from "@/ui/input";
-import { paneIconButtonClassName } from "@/ui/pane";
+import { PaneIconButton } from "@/ui/pane";
 import { cn } from "@/utils/cn";
 
 interface AgentSelectorProps {
@@ -228,18 +228,14 @@ export function AgentSelector({ variant = "header", onOpenSettings }: AgentSelec
   return (
     <>
       {variant === "header" ? (
-        <Button
+        <PaneIconButton
           ref={triggerRef}
           onClick={() => setIsOpen(!isOpen)}
           type="button"
-          variant="ghost"
-          size="icon-sm"
-          className={paneIconButtonClassName()}
-          aria-label="New chat"
-          title="New chat"
+          tooltip="New chat"
         >
           <Plus />
-        </Button>
+        </PaneIconButton>
       ) : (
         <Button
           ref={triggerRef}
@@ -332,8 +328,8 @@ export function AgentSelector({ variant = "header", onOpenSettings }: AgentSelec
                             ? "bg-accent/15 text-accent"
                             : "text-text-lighter hover:bg-secondary-bg hover:text-text",
                         )}
+                        tooltip="Athas Agent settings"
                         aria-label="Open Athas Agent settings"
-                        title="Athas Agent settings"
                       >
                         <Settings2 />
                       </Button>

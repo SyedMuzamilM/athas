@@ -14,7 +14,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useSettingsStore } from "@/features/settings/store";
 import { Button } from "@/ui/button";
 import { Dropdown } from "@/ui/dropdown";
-import { PANE_GROUP_BASE, paneHeaderClassName, paneIconButtonClassName } from "@/ui/pane";
+import { PANE_GROUP_BASE, PaneIconButton, paneHeaderClassName } from "@/ui/pane";
 import { Tab, TabsList } from "@/ui/tabs";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
@@ -556,7 +556,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   };
 
   const renderActionsButton = () => (
-    <Button
+    <PaneIconButton
       onClick={(e) => {
         const rect = e.currentTarget.getBoundingClientRect();
         setGitActionsMenuAnchor({
@@ -570,14 +570,10 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         setShowGitActionsMenu(!showGitActionsMenu);
         setIsRepoMenuOpen(false);
       }}
-      variant="ghost"
-      size="icon-sm"
-      className={cn(paneIconButtonClassName(), "size-6")}
-      title="Git Actions"
-      aria-label="Git Actions"
+      tooltip="Git Actions"
     >
       <MoreHorizontal />
-    </Button>
+    </PaneIconButton>
   );
 
   const renderSelectRepositoryButton = () => (
@@ -590,8 +586,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         "mt-1.5 ui-font ui-text-sm text-accent transition-colors hover:text-accent/80",
         "disabled:cursor-not-allowed disabled:opacity-50",
       )}
-      title="Select repository folder"
-      aria-label="Select repository folder"
+      tooltip="Select repository folder"
     >
       {isSelectingRepo ? "Selecting..." : "Browse Repository"}
     </Button>
@@ -727,7 +722,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           </div>
 
           <div className="flex shrink-0 items-center gap-1">
-            <Button
+            <PaneIconButton
               ref={repoTriggerRef}
               onClick={() => {
                 setIsRepoMenuOpen((value) => {
@@ -739,25 +734,20 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                 });
                 setShowGitActionsMenu(false);
               }}
-              variant="ghost"
-              size="icon-sm"
-              className={cn(paneIconButtonClassName(), "size-6")}
-              title={activeRepoPath}
+              tooltip={activeRepoPath}
               aria-label={`Repository: ${getFolderName(activeRepoPath)}`}
             >
               <FolderOpen />
-            </Button>
-            <Button
+            </PaneIconButton>
+            <PaneIconButton
               onClick={handleManualRefresh}
               disabled={isLoadingGitData || isRefreshing}
-              variant="ghost"
-              size="icon-sm"
-              className={cn(paneIconButtonClassName(), "size-6", "disabled:opacity-50")}
-              title="Refresh"
+              className="disabled:opacity-50"
+              tooltip="Refresh"
               aria-label="Refresh git status"
             >
               <RefreshCw className={isLoadingGitData || isRefreshing ? "animate-spin" : ""} />
-            </Button>
+            </PaneIconButton>
             {renderActionsButton()}
           </div>
         </div>

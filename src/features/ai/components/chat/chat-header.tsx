@@ -3,15 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
-import { Button } from "@/ui/button";
 import Input from "@/ui/input";
-import {
-  PANE_CHIP_BASE,
-  paneHeaderClassName,
-  paneIconButtonClassName,
-  paneTitleClassName,
-} from "@/ui/pane";
-import Tooltip from "@/ui/tooltip";
+import { PANE_CHIP_BASE, PaneIconButton, paneHeaderClassName, paneTitleClassName } from "@/ui/pane";
 import { cn } from "@/utils/cn";
 import { useAIChatStore } from "../../store/store";
 import ChatHistoryDropdown from "../history/sidebar";
@@ -128,19 +121,16 @@ export function ChatHeader({ onDeleteChat }: ChatHeaderProps) {
       </div>
 
       <div className="flex shrink-0 items-center gap-1.5">
-        <Tooltip content="Chat History" side="bottom">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            ref={historyButtonRef}
-            onClick={() => setIsChatHistoryVisible(!isChatHistoryVisible)}
-            className={paneIconButtonClassName()}
-            aria-label="Toggle chat history"
-          >
-            <History />
-          </Button>
-        </Tooltip>
+        <PaneIconButton
+          type="button"
+          ref={historyButtonRef}
+          onClick={() => setIsChatHistoryVisible(!isChatHistoryVisible)}
+          tooltip="Chat History"
+          tooltipSide="bottom"
+          aria-label="Toggle chat history"
+        >
+          <History />
+        </PaneIconButton>
 
         <AgentSelector variant="header" onOpenSettings={() => openSettingsDialog("ai")} />
       </div>
