@@ -21,6 +21,7 @@ import { useVimStore } from "@/features/vim/stores/vim-store";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useZoomStore } from "@/features/window/stores/zoom-store";
+import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import Command, {
   CommandEmpty,
   CommandHeader,
@@ -312,6 +313,9 @@ const CommandPalette = () => {
           prioritizedActions.map((action, index) => {
             const isRecent =
               settings.coreFeatures.persistentCommands && lastEnteredActions.includes(action.id);
+            const binding = action.commandId
+              ? keymapRegistry.getKeybinding(action.commandId)?.key
+              : undefined;
             return (
               <CommandItem
                 key={action.id}
@@ -326,9 +330,9 @@ const CommandPalette = () => {
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-xs">{action.label}</div>
                 </div>
-                {action.keybinding && (
+                {binding && (
                   <div className="shrink-0">
-                    <Keybinding keys={action.keybinding} />
+                    <Keybinding binding={binding} />
                   </div>
                 )}
               </CommandItem>

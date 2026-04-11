@@ -49,7 +49,6 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
       description: "Edit selected text using AI inline",
       icon: <Sparkles />,
       category: "AI",
-      keybinding: ["⌘", "E"],
       action: () => {
         const selection = window.getSelection();
         if (selection?.toString()) {

@@ -65,7 +65,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       description: isSidebarVisible ? "Hide the sidebar panel" : "Show the sidebar panel",
       icon: <PanelLeft />,
       category: "View",
-      keybinding: ["⌘", "B"],
+      commandId: "workbench.toggleSidebar",
       action: () => {
         setIsSidebarVisible(!isSidebarVisible);
         onClose();
@@ -91,7 +91,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       description: "Toggle integrated terminal panel",
       icon: <Terminal />,
       category: "View",
-      keybinding: ["⌘", "`"],
+      commandId: "workbench.toggleTerminalAlt",
       action: () => {
         if (isBottomPaneVisible && bottomPaneActiveTab === "terminal") {
           setIsBottomPaneVisible(false);
@@ -112,7 +112,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       description: "Toggle diagnostics panel",
       icon: <AlertCircle />,
       category: "View",
-      keybinding: ["⌘", "⇧", "J"],
+      commandId: "workbench.toggleDiagnostics",
       action: () => {
         if (isBottomPaneVisible && bottomPaneActiveTab === "diagnostics") {
           setIsBottomPaneVisible(false);
@@ -129,7 +129,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       description: settings.isAIChatVisible ? "Hide AI chat panel" : "Show AI chat panel",
       icon: <MessageSquare />,
       category: "View",
-      keybinding: ["⌘", "R"],
+      commandId: "workbench.toggleAIChat",
       action: () => {
         useSettingsStore.getState().toggleAIChatVisible();
         onClose();
@@ -141,7 +141,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       description: isFindVisible ? "Hide find in file" : "Show find in file",
       icon: <Search />,
       category: "View",
-      keybinding: ["⌘", "F"],
+      commandId: "workbench.showFind",
       action: () => {
         setIsFindVisible(!isFindVisible);
         onClose();
@@ -156,7 +156,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
           : "Move sidebar to left side",
       icon: <ArrowLeftRight />,
       category: "View",
-      keybinding: ["⌘", "⇧", "B"],
+      commandId: "workbench.toggleSidebarPosition",
       action: () => {
         updateSetting("sidebarPosition", settings.sidebarPosition === "left" ? "right" : "left");
         onClose();
@@ -201,7 +201,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       description: "Increase editor zoom level",
       icon: <ZoomIn />,
       category: "View",
-      keybinding: ["⌘", "+"],
+      commandId: "workbench.zoomIn",
       action: () => {
         zoomIn("editor");
         onClose();
@@ -213,7 +213,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       description: "Decrease editor zoom level",
       icon: <ZoomOut />,
       category: "View",
-      keybinding: ["⌘", "-"],
+      commandId: "workbench.zoomOut",
       action: () => {
         zoomOut("editor");
         onClose();
@@ -225,7 +225,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       description: "Reset editor zoom to default level",
       icon: <RotateCcw />,
       category: "View",
-      keybinding: ["⌘", "0"],
+      commandId: "workbench.zoomReset",
       action: () => {
         resetZoom("editor");
         onClose();

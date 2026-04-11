@@ -74,7 +74,6 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       description: "Open settings dialog",
       icon: <Settings />,
       category: "Settings",
-      keybinding: ["⌘", ","],
       action: () => {
         onClose();
         setIsSettingsDialogVisible(true);
@@ -160,7 +159,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       description: "Choose a color theme",
       icon: <Palette />,
       category: "Theme",
-      keybinding: ["⌘", "T"],
+      commandId: "workbench.showThemeSelector",
       action: () => {
         onClose();
         setIsThemeSelectorVisible(true);

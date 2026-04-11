@@ -72,7 +72,7 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       description: "Search across files in workspace",
       icon: <Search />,
       category: "Navigation",
-      keybinding: ["⌘", "⇧", "F"],
+      commandId: "workbench.showGlobalSearch",
       action: () => {
         onClose();
         setIsGlobalSearchVisible(true);
@@ -95,7 +95,7 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       description: "Jump to a specific line number",
       icon: <Hash />,
       category: "Navigation",
-      keybinding: ["⌘", "G"],
+      commandId: "editor.goToLine",
       action: () => {
         onClose();
         window.dispatchEvent(new CustomEvent("menu-go-to-line"));
@@ -107,7 +107,7 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       description: "Jump to any file with fuzzy search",
       icon: <FileText />,
       category: "Navigation",
-      keybinding: ["⌘", "P"],
+      commandId: "file.quickOpen",
       action: () => {
         onClose();
         setIsQuickOpenVisible(true);

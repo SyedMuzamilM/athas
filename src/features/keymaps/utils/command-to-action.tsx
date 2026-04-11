@@ -1,6 +1,5 @@
 import { Terminal } from "lucide-react";
 import type { Action } from "@/features/command-palette/models/action.types";
-import { keybindingToDisplay } from "@/utils/keybinding-display";
 import type { Command } from "../types";
 
 /**
@@ -13,7 +12,7 @@ export function commandToAction(command: Command, onClose: () => void): Action {
     description: command.description || command.id,
     icon: command.icon || <Terminal />,
     category: command.category || "Other",
-    keybinding: command.keybinding ? keybindingToDisplay(command.keybinding) : undefined,
+    commandId: command.id,
     action: () => {
       command.execute();
       onClose();

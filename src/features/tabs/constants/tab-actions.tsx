@@ -27,7 +27,7 @@ export const createTabActions = (params: TabActionsParams): Action[] => {
       description: "Close current tab",
       icon: <X />,
       category: "File",
-      keybinding: ["⌘", "W"],
+      commandId: "file.close",
       action: () => {
         if (activeBufferId) {
           closeBuffer(activeBufferId);
@@ -41,7 +41,7 @@ export const createTabActions = (params: TabActionsParams): Action[] => {
       description: "Switch to the next open tab",
       icon: <ArrowRight />,
       category: "File",
-      keybinding: ["Ctrl", "⇟"],
+      commandId: "workbench.nextTab",
       action: () => {
         switchToNextBuffer();
         onClose();
@@ -53,7 +53,7 @@ export const createTabActions = (params: TabActionsParams): Action[] => {
       description: "Switch to the previous open tab",
       icon: <ArrowLeft />,
       category: "File",
-      keybinding: ["Ctrl", "⇞"],
+      commandId: "workbench.previousTab",
       action: () => {
         switchToPreviousBuffer();
         onClose();
@@ -65,7 +65,7 @@ export const createTabActions = (params: TabActionsParams): Action[] => {
       description: "Reopen the most recently closed tab",
       icon: <RotateCcw />,
       category: "File",
-      keybinding: ["⌘", "Shift", "T"],
+      commandId: "file.reopenClosed",
       action: async () => {
         await reopenClosedTab();
         onClose();

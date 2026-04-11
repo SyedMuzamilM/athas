@@ -16,7 +16,7 @@ export const createDatabaseActions = (params: DatabaseActionsParams): Action[] =
       description: "Open database connection dialog",
       icon: <Database />,
       category: "Database",
-      keybinding: ["\u2318", "\u21e7", "D"],
+      commandId: "database.connect",
       action: () => {
         onClose();
         setIsDatabaseConnectionVisible(true);

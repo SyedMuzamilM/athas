@@ -24,7 +24,7 @@ export const createFileActions = (params: FileActionsParams): Action[] => {
       description: "Save current file with a new name",
       icon: <FilePlus />,
       category: "File",
-      keybinding: ["⌘", "⇧", "S"],
+      commandId: "file.saveAs",
       action: () => {
         onClose();
         window.dispatchEvent(new CustomEvent("menu-save-as"));

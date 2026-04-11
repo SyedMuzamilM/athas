@@ -6,7 +6,8 @@ export interface Action {
   description: string;
   icon: ReactNode;
   category: string;
-  keybinding?: string[];
+  /** Registered command id to look up the current binding from the keymap registry. */
+  commandId?: string;
   action: () => void;
 }
 

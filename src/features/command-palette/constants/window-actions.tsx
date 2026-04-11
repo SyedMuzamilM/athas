@@ -37,7 +37,7 @@ export const createWindowActions = (params: WindowActionsParams): Action[] => {
       description: "Enter or exit fullscreen mode",
       icon: <Maximize />,
       category: "Window",
-      keybinding: ["F11"],
+      commandId: "window.toggleFullscreen",
       action: () => {
         window.dispatchEvent(new CustomEvent("toggle-fullscreen"));
         onClose();
