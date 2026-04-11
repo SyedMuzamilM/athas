@@ -18,7 +18,6 @@ import { useState } from "react";
 import type { RefObject } from "react";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
-import { WebViewerToolbarButton } from "./web-viewer-toolbar-button";
 
 interface WebViewerToolbarProps {
   canGoBack: boolean;
@@ -77,22 +76,24 @@ export function WebViewerToolbar({
   return (
     <div className="flex h-11 shrink-0 items-center gap-0.5 border-border border-b bg-secondary-bg px-2">
       <div className="flex items-center gap-0.5">
-        <WebViewerToolbarButton
+        <Button
+          variant="ghost"
+          size="icon-sm"
           onClick={onGoBack}
           disabled={!canGoBack}
-          title="Go back"
-          aria-label="Go back"
+          tooltip="Go back"
         >
           <ArrowLeft />
-        </WebViewerToolbarButton>
-        <WebViewerToolbarButton
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon-sm"
           onClick={onGoForward}
           disabled={!canGoForward}
-          title="Go forward"
-          aria-label="Go forward"
+          tooltip="Go forward"
         >
           <ArrowRight />
-        </WebViewerToolbarButton>
+        </Button>
       </div>
 
       <div className="mx-1.5 h-5 w-px bg-border" />
@@ -120,8 +121,7 @@ export function WebViewerToolbar({
               size="icon-xs"
               onClick={isLoading ? onStopLoading : onRefresh}
               className="text-text-lighter hover:text-text"
-              title={isLoading ? "Stop loading" : "Refresh"}
-              aria-label={isLoading ? "Stop loading" : "Refresh"}
+              tooltip={isLoading ? "Stop loading" : "Refresh"}
             >
               {isLoading ? <X className="h-3.5 w-3.5" /> : <RefreshCw className="h-3.5 w-3.5" />}
             </Button>
@@ -131,8 +131,7 @@ export function WebViewerToolbar({
               size="icon-xs"
               onClick={onCopyUrl}
               className="text-text-lighter hover:text-text"
-              title="Copy URL"
-              aria-label="Copy URL"
+              tooltip="Copy URL"
             >
               {copied ? (
                 <Check className="h-3.5 w-3.5 text-success" />
@@ -148,13 +147,14 @@ export function WebViewerToolbar({
 
       <div className="flex items-center gap-0.5">
         <div className="relative">
-          <WebViewerToolbarButton
+          <Button
+            variant="ghost"
+            size="icon-sm"
             onClick={() => setShowZoomPopover(!showZoomPopover)}
-            title="Zoom controls"
-            aria-label="Zoom controls"
+            tooltip="Zoom controls"
           >
             <ZoomIn />
-          </WebViewerToolbarButton>
+          </Button>
           {showZoomPopover && (
             <>
               <div className="fixed inset-0 z-[9998]" onClick={() => setShowZoomPopover(false)} />
@@ -162,51 +162,49 @@ export function WebViewerToolbar({
                 role="menu"
                 className="absolute top-full right-0 z-[9999] mt-1 flex items-center gap-1 rounded-lg border border-border bg-secondary-bg p-1.5 shadow-lg"
               >
-                <WebViewerToolbarButton
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
                   onClick={onZoomOut}
                   disabled={zoomLevel <= 0.25}
-                  title="Zoom out"
-                  aria-label="Zoom out"
+                  tooltip="Zoom out"
                 >
                   <Minus />
-                </WebViewerToolbarButton>
+                </Button>
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
                   onClick={onResetZoom}
                   className="min-w-[44px] px-1.5 text-[11px] text-text-light"
-                  title="Reset zoom"
-                  aria-label="Reset zoom"
+                  tooltip="Reset zoom"
                 >
                   {Math.round(zoomLevel * 100)}%
                 </Button>
-                <WebViewerToolbarButton
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
                   onClick={onZoomIn}
                   disabled={zoomLevel >= 3}
-                  title="Zoom in"
-                  aria-label="Zoom in"
+                  tooltip="Zoom in"
                 >
                   <Plus />
-                </WebViewerToolbarButton>
+                </Button>
               </div>
             </>
           )}
         </div>
-        <WebViewerToolbarButton
+        <Button
+          variant="ghost"
+          size="icon-sm"
           onClick={onOpenDevTools}
-          title="Open Developer Tools"
-          aria-label="Open Developer Tools"
+          tooltip="Open Developer Tools"
         >
           <Code2 />
-        </WebViewerToolbarButton>
-        <WebViewerToolbarButton
-          onClick={onOpenExternal}
-          title="Open in browser"
-          aria-label="Open in browser"
-        >
+        </Button>
+        <Button variant="ghost" size="icon-sm" onClick={onOpenExternal} tooltip="Open in browser">
           <ExternalLink />
-        </WebViewerToolbarButton>
+        </Button>
       </div>
     </div>
   );
