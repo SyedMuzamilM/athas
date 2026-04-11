@@ -74,11 +74,7 @@ fn register_managed_state(app: &mut tauri::App<Wry>) {
 fn emit_cli_open_requests(app: &tauri::App<Wry>) {
    let cwd = std::env::current_dir().unwrap_or_default();
    let args: Vec<String> = std::env::args().skip(1).collect();
-   let open_requests: Vec<commands::development::cli_args::OpenRequest> = args
-      .iter()
-      .filter(|a| !a.starts_with('-'))
-      .filter_map(|a| commands::development::cli_args::parse_open_arg(a, &cwd))
-      .collect();
+   let open_requests = commands::development::cli_args::parse_cli_args(&args, &cwd);
 
    if open_requests.is_empty() {
       return;
