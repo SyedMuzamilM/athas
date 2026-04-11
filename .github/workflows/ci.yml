@@ -36,7 +36,7 @@ jobs:
         run: bun install
 
       - name: Run frontend checks
-        run: bash scripts/check-frontend.sh
+        run: bash scripts/check/frontend.sh
 
   rust:
     if: github.repository == 'athasdev/athas'
@@ -62,4 +62,4 @@ jobs:
           version: 1.0
 
       - name: Run Rust checks
-        run: bash scripts/check-rust.sh
+        run: bash scripts/check/rust.sh
