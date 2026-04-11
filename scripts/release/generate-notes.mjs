@@ -1,8 +1,6 @@
 #!/usr/bin/env bun
 
 import { execFileSync } from "node:child_process";
-import { readFile } from "node:fs/promises";
-import path from "node:path";
 import process from "node:process";
 
 function parseArgs(argv) {
@@ -160,23 +158,6 @@ function sectionForPullRequest(pullRequest) {
   return "Other";
 }
 
-async function readHandwrittenNotes(currentTag) {
-  const overridePath = path.join(process.cwd(), ".github", "release-notes", `${currentTag}.md`);
-  try {
-    const raw = await readFile(overridePath, "utf8");
-    const trimmed = raw.trim();
-    if (trimmed.length === 0) {
-      return null;
-    }
-    return trimmed;
-  } catch (error) {
-    if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
-      return null;
-    }
-    throw error;
-  }
-}
-
 async function fetchGitHubJson(pathname, token) {
   const response = await fetch(`https://api.github.com${pathname}`, {
     headers: {
@@ -326,44 +307,31 @@ async function main() {
     ? `Athas v${release.version} prerelease`
     : `Athas v${release.version}`;
 
-  const handwrittenNotes = await readHandwrittenNotes(currentTag);
-  let previousTag = args["previous-tag"] ?? null;
-  let releaseBody;
+  const previousTag = args["previous-tag"] ?? getPreviousTag(currentTag);
+  const repository = args.repo ?? process.env.GITHUB_REPOSITORY ?? "athasdev/athas";
+  const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || "";
+  const [owner, repo] = repository.split("/");
 
-  if (handwrittenNotes) {
+  let pullRequests = [];
+  if (token && owner && repo) {
     try {
-      previousTag = previousTag ?? getPreviousTag(currentTag);
-    } catch {
-      previousTag = null;
+      pullRequests = await getPullRequestsForRange(owner, repo, previousTag, currentTag, token);
+    } catch (error) {
+      console.warn(
+        `Warning: failed to fetch pull requests for release notes, falling back to git log.\n${String(error)}`,
+      );
     }
-    releaseBody = handwrittenNotes;
-  } else {
-    previousTag = previousTag ?? getPreviousTag(currentTag);
-    const repository = args.repo ?? process.env.GITHUB_REPOSITORY ?? "athasdev/athas";
-    const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || "";
-    const [owner, repo] = repository.split("/");
-
-    let pullRequests = [];
-    if (token && owner && repo) {
-      try {
-        pullRequests = await getPullRequestsForRange(owner, repo, previousTag, currentTag, token);
-      } catch (error) {
-        console.warn(
-          `Warning: failed to fetch pull requests for release notes, falling back to git log.\n${String(error)}`,
-        );
-      }
-    }
-
-    const commitSubjects = getCommitSubjects(previousTag, currentTag);
-    releaseBody = buildNotes({
-      currentTag,
-      previousTag,
-      release,
-      pullRequests,
-      commitSubjects,
-      repository,
-    });
   }
+
+  const commitSubjects = getCommitSubjects(previousTag, currentTag);
+  const releaseBody = buildNotes({
+    currentTag,
+    previousTag,
+    release,
+    pullRequests,
+    commitSubjects,
+    repository,
+  });
 
   if (githubOutput) {
     await writeGitHubOutput(githubOutput, {
