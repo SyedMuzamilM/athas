@@ -5,8 +5,28 @@ import type { Platform as NodePlatform, PlatformArch } from "@/extensions/types/
 /**
  * Single source of truth for platform detection.
  * The Tauri v2 `platform()` call is synchronous — evaluated once at module load.
+ * Falls back to a sensible default when evaluated outside a browser/webview
+ * (for example during unit tests in node) so modules that transitively import
+ * from platform can still load without a window reference.
  */
-export const currentPlatform: Platform = platform();
+function detectPlatform(): Platform {
+  if (typeof window === "undefined") {
+    if (typeof process !== "undefined" && process.platform) {
+      if (process.platform === "darwin") return "macos";
+      if (process.platform === "win32") return "windows";
+      if (process.platform === "linux") return "linux";
+    }
+    return "macos";
+  }
+
+  try {
+    return platform();
+  } catch {
+    return "macos";
+  }
+}
+
+export const currentPlatform: Platform = detectPlatform();
 
 export const IS_MAC: boolean = currentPlatform === "macos";
 export const IS_WINDOWS: boolean = currentPlatform === "windows";
@@ -49,8 +69,25 @@ export const NODE_PLATFORM: NodePlatform = IS_MAC ? "darwin" : IS_WINDOWS ? "win
 
 /**
  * Current CPU architecture from the Tauri OS plugin (synchronous).
+ * Falls back to a default when evaluated outside a webview so tests can
+ * still load modules that transitively import platform.
  */
-export const ARCH: string = arch();
+function detectArch(): string {
+  if (typeof window === "undefined") {
+    if (typeof process !== "undefined" && process.arch) {
+      return process.arch === "arm64" ? "aarch64" : process.arch;
+    }
+    return "aarch64";
+  }
+
+  try {
+    return arch();
+  } catch {
+    return "aarch64";
+  }
+}
+
+export const ARCH: string = detectArch();
 
 /**
  * Platform+architecture identifier for extension CDN packages.
