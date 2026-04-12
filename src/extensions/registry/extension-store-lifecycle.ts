@@ -67,7 +67,10 @@ export async function installExtensionLifecycle(params: {
   extensionId: string;
   extension: AvailableExtension;
   onProgress: (progress: number) => void;
-  onLanguageInstalled: (runtimeManifest: AvailableExtension["manifest"]) => void;
+  onLanguageInstalled: (
+    runtimeManifest: AvailableExtension["manifest"],
+    runtimeIssues: AvailableExtension["runtimeIssues"],
+  ) => void;
   onNonLanguageInstalled: () => void;
   reloadInstalledExtensions: () => Promise<void>;
 }) {
@@ -86,10 +89,17 @@ export async function installExtensionLifecycle(params: {
     await installLanguageExtensionManifest(extensionId, extension.manifest, onProgress);
 
     const primaryLanguageId = languageConfigs[0].id;
-    const toolPaths = await resolveToolPaths(primaryLanguageId, extension.manifest, {
+    const resolvedTools = await resolveToolPaths(primaryLanguageId, extension.manifest, {
       ensureInstalled: true,
     });
-    const runtimeManifest = buildRuntimeManifest(extension.manifest, toolPaths);
+    const runtimeManifest = buildRuntimeManifest(extension.manifest, resolvedTools.toolPaths);
+
+    if (extension.manifest.lsp && !runtimeManifest.lsp) {
+      const runtimeIssue =
+        resolvedTools.issues.find((issue) => issue.tool === "lsp")?.message ||
+        "Language server could not be installed. Reinstall the language tools.";
+      throw new Error(runtimeIssue);
+    }
 
     extensionRegistry.registerExtension(runtimeManifest, {
       isBundled: false,
@@ -97,7 +107,7 @@ export async function installExtensionLifecycle(params: {
       state: "installed",
     });
 
-    onLanguageInstalled(runtimeManifest);
+    onLanguageInstalled(runtimeManifest, resolvedTools.issues);
 
     for (const languageConfig of languageConfigs) {
       await registerLanguageProvider({

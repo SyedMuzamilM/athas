@@ -77,6 +77,7 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
                 manifest,
                 isInstalled: installed.has(manifest.id),
                 isInstalling: false,
+                runtimeIssues: [],
               });
             }
 
@@ -97,7 +98,7 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
 
         try {
           const availableExtensions = get().availableExtensions;
-          const { backendInstalled, indexedDBInstalled } =
+          const { backendInstalled, indexedDBInstalled, runtimeIssues } =
             await loadInstalledExtensionsSnapshot(availableExtensions);
           const installedExtensions = buildInstalledExtensionsMap({
             backendInstalled,
@@ -111,6 +112,7 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
 
             for (const [id, ext] of state.availableExtensions) {
               ext.isInstalled = state.installedExtensions.has(id);
+              ext.runtimeIssues = runtimeIssues.get(id) || [];
             }
           });
         } catch (error) {
@@ -151,6 +153,7 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
             ext.isInstalling = true;
             ext.installProgress = 0;
             ext.installError = undefined;
+            ext.runtimeIssues = [];
           }
         });
 
@@ -167,14 +170,16 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
                   }
                 });
               },
-              onLanguageInstalled: (runtimeManifest) => {
+              onLanguageInstalled: (runtimeManifest, runtimeIssues) => {
                 set((state) => {
                   const ext = state.availableExtensions.get(extensionId);
                   if (ext) {
                     ext.isInstalling = false;
                     ext.isInstalled = true;
                     ext.installProgress = 100;
+                    ext.installError = undefined;
                     ext.manifest = runtimeManifest;
+                    ext.runtimeIssues = runtimeIssues || [];
                     state.installedExtensions.set(
                       extensionId,
                       buildInstalledExtensionMetadata(extensionId, ext),
@@ -204,6 +209,7 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
             if (ext) {
               ext.isInstalling = false;
               ext.installError = errorMessage;
+              ext.runtimeIssues = [];
             }
           });
 
@@ -226,6 +232,7 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
                 const ext = state.availableExtensions.get(extensionId);
                 if (ext) {
                   ext.isInstalled = false;
+                  ext.runtimeIssues = [];
                 }
                 state.installedExtensions.delete(extensionId);
                 state.availableExtensions = new Map(state.availableExtensions);
@@ -236,6 +243,7 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
                 const ext = state.availableExtensions.get(extensionId);
                 if (ext) {
                   ext.isInstalled = false;
+                  ext.runtimeIssues = [];
                 }
               });
             },

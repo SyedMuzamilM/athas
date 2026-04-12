@@ -199,6 +199,23 @@ class ExtensionRegistry {
       serverPath = `${extension.path}/${serverPath.substring(2)}`;
     }
 
+    const looksLikeBareCommand =
+      !serverPath.includes("/") && !serverPath.includes("\\") && !serverPath.includes(":");
+    if (looksLikeBareCommand) {
+      logger.warn(
+        "ExtensionRegistry",
+        `Rejecting bare-command LSP path for ${filePath}: ${serverPath}`,
+      );
+      return null;
+    }
+
+    if (typeof window !== "undefined" && serverPath.startsWith("/")) {
+      logger.debug(
+        "ExtensionRegistry",
+        `Resolved absolute LSP path for ${filePath}: ${serverPath}`,
+      );
+    }
+
     logger.debug("ExtensionRegistry", `Resolved LSP server path for ${filePath}: ${serverPath}`);
 
     return serverPath;

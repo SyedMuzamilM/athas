@@ -7,6 +7,7 @@ use super::{
 use anyhow::{Context, Result, bail};
 use lsp_types::*;
 use std::{
+   fs,
    path::{Path, PathBuf},
    time::Instant,
 };
@@ -77,6 +78,52 @@ impl LspManager {
       }
    }
 
+   fn validate_server_path(server_path: &Path) -> Result<()> {
+      if server_path.exists() {
+         #[cfg(unix)]
+         {
+            use std::os::unix::fs::PermissionsExt;
+
+            let metadata = fs::metadata(server_path).with_context(|| {
+               format!(
+                  "Failed to inspect language server binary at '{}'",
+                  server_path.display()
+               )
+            })?;
+
+            let extension = server_path
+               .extension()
+               .and_then(|ext| ext.to_str())
+               .unwrap_or_default();
+            let is_js_entrypoint = matches!(extension, "js" | "mjs" | "cjs");
+            let executable = metadata.permissions().mode() & 0o111 != 0;
+
+            if !is_js_entrypoint && !executable {
+               bail!(
+                  "Language server binary exists but is not executable: '{}'. Reinstall the \
+                   language tools.",
+                  server_path.display()
+               );
+            }
+         }
+
+         return Ok(());
+      }
+
+      if server_path.components().count() == 1 {
+         bail!(
+            "LSP tool '{}' is unavailable. Athas could not resolve an installed binary. Reinstall \
+             the language tools.",
+            server_path.display()
+         );
+      }
+
+      bail!(
+         "Language server binary not found at '{}'. Reinstall the language tools.",
+         server_path.display()
+      );
+   }
+
    pub async fn start_lsp_for_workspace(
       &self,
       workspace_path: PathBuf,
@@ -115,6 +162,8 @@ impl LspManager {
             server_config.name.clone(),
          )
       };
+
+      Self::validate_server_path(&server_path)?;
 
       let root_uri = Url::from_file_path(&workspace_path)
          .map_err(|_| anyhow::anyhow!("Invalid workspace path"))?;
@@ -195,6 +244,8 @@ impl LspManager {
             server_config.name.clone(),
          )
       };
+
+      Self::validate_server_path(&server_path)?;
 
       // Check if LSP already running for this workspace+language
       if let Some(ref_count) =

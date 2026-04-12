@@ -11,7 +11,11 @@ import {
   resolveInstalledExtensionId,
   resolveToolPaths,
 } from "./extension-store-runtime";
-import type { AvailableExtension, ExtensionInstallationMetadata } from "./extension-store-types";
+import type {
+  AvailableExtension,
+  ExtensionInstallationMetadata,
+  ExtensionRuntimeIssue,
+} from "./extension-store-types";
 
 interface IndexedDbInstalledExtension {
   languageId: string;
@@ -24,8 +28,10 @@ export async function loadInstalledExtensionsSnapshot(
 ): Promise<{
   backendInstalled: ExtensionInstallationMetadata[];
   indexedDBInstalled: IndexedDbInstalledExtension[];
+  runtimeIssues: Map<string, ExtensionRuntimeIssue[]>;
 }> {
   let backendInstalled: ExtensionInstallationMetadata[] = [];
+  const runtimeIssues = new Map<string, ExtensionRuntimeIssue[]>();
 
   try {
     backendInstalled = await invoke<ExtensionInstallationMetadata[]>(
@@ -46,13 +52,16 @@ export async function loadInstalledExtensionsSnapshot(
     const aliases = languageConfig?.aliases;
 
     if (extension) {
-      const toolPaths = await resolveToolPaths(languageId, extension);
-      const runtimeManifest = buildRuntimeManifest(extension, toolPaths);
+      const resolvedTools = await resolveToolPaths(languageId, extension, {
+        repairMissing: true,
+      });
+      const runtimeManifest = buildRuntimeManifest(extension, resolvedTools.toolPaths);
       extensionRegistry.registerExtension(runtimeManifest, {
         isBundled: false,
         isEnabled: true,
         state: "installed",
       });
+      runtimeIssues.set(extensionId, resolvedTools.issues);
     }
 
     try {
@@ -72,6 +81,7 @@ export async function loadInstalledExtensionsSnapshot(
   return {
     backendInstalled,
     indexedDBInstalled,
+    runtimeIssues,
   };
 }
 

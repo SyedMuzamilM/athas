@@ -21,23 +21,51 @@ import { useLspStore } from "./lsp-store";
 
 export interface LspError {
   message: string;
+  code?: string;
+}
+
+function normalizeLspError(error: unknown): LspError {
+  if (error instanceof Error) {
+    return { message: error.message };
+  }
+
+  if (typeof error === "string") {
+    return { message: error };
+  }
+
+  if (error && typeof error === "object") {
+    const candidate = error as { message?: unknown; code?: unknown };
+    if (typeof candidate.message === "string" && candidate.message.trim().length > 0) {
+      return {
+        message: candidate.message,
+        code: typeof candidate.code === "string" ? candidate.code : undefined,
+      };
+    }
+    try {
+      return { message: JSON.stringify(error) };
+    } catch {
+      return { message: String(error) };
+    }
+  }
+
+  return { message: String(error) };
 }
 
 function stringifyLspError(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  if (typeof error === "string") return error;
-  if (error && typeof error === "object") {
-    const candidate = (error as { message?: unknown }).message;
-    if (typeof candidate === "string" && candidate.trim().length > 0) {
-      return candidate;
-    }
-    try {
-      return JSON.stringify(error);
-    } catch {
-      return String(error);
-    }
+  return normalizeLspError(error).message;
+}
+
+function getUserFacingLspErrorMessage(error: unknown): string {
+  const normalized = normalizeLspError(error);
+
+  switch (normalized.code) {
+    case "tool_not_found":
+      return `${normalized.message} Open Extensions and reinstall the language tools.`;
+    case "tool_not_executable":
+      return `${normalized.message} The installed binary is present but cannot run.`;
+    default:
+      return normalized.message;
   }
-  return String(error);
 }
 
 function isBenignHoverError(error: unknown): boolean {
@@ -54,6 +82,7 @@ export class LspClient {
   private activeLanguageServers = new Set<string>(); // workspace:language format
   private activeLanguages = new Set<string>(); // Track active language IDs for status
   private activeServerFiles = new Map<string, Set<string>>(); // workspace:language -> tracked files
+  private failedLanguageServers = new Set<string>(); // workspace:language format
 
   private constructor() {
     this.setupDiagnosticsListener();
@@ -369,17 +398,18 @@ export class LspClient {
 
       logger.debug("LSPClient", `Using LSP server: ${serverPath} for language: ${languageId}`);
 
-      // Track this language server BEFORE invoking backend to prevent race conditions
       if (languageId) {
         const serverKey = `${workspacePath}:${languageId}`;
-        this.activeLanguageServers.add(serverKey);
-        this.addTrackedFile(serverKey, filePath);
-        // Track language with proper display name
-        const displayName = this.getLanguageDisplayName(languageId);
-        this.activeLanguages.add(displayName);
-        // Update status store
-        this.updateLspStatus();
+        if (this.failedLanguageServers.has(serverKey)) {
+          logger.debug(
+            "LSPClient",
+            `Skipping LSP restart for ${languageId} in ${workspacePath} after a previous startup failure`,
+          );
+          return;
+        }
       }
+
+      useLspStore.getState().actions.updateLspStatus("connecting");
 
       logger.debug("LSPClient", `Invoking lsp_start_for_file with:`, {
         filePath,
@@ -396,15 +426,19 @@ export class LspClient {
           serverArgs,
           initializationOptions: initializationOptions || null,
         });
-      } catch (error) {
-        // If backend call fails, remove from tracking
         if (languageId) {
           const serverKey = `${workspacePath}:${languageId}`;
-          this.activeLanguageServers.delete(serverKey);
-          this.removeTrackedFile(serverKey, filePath);
+          this.failedLanguageServers.delete(serverKey);
+          this.activeLanguageServers.add(serverKey);
+          this.addTrackedFile(serverKey, filePath);
           const displayName = this.getLanguageDisplayName(languageId);
-          this.activeLanguages.delete(displayName);
+          this.activeLanguages.add(displayName);
           this.updateLspStatus();
+        }
+      } catch (error) {
+        if (languageId) {
+          const serverKey = `${workspacePath}:${languageId}`;
+          this.failedLanguageServers.add(serverKey);
         }
         throw error;
       }
@@ -412,9 +446,8 @@ export class LspClient {
       logger.debug("LSPClient", "LSP started successfully for file:", filePath);
     } catch (error) {
       logger.error("LSPClient", "Failed to start LSP for file:", error);
-      // Update status to error
       const { actions } = useLspStore.getState();
-      actions.setLspError(`Failed to start LSP: ${stringifyLspError(error)}`);
+      actions.setLspError(getUserFacingLspErrorMessage(error));
       throw error;
     }
   }
@@ -461,6 +494,7 @@ export class LspClient {
           if (!stillActiveForServer) {
             this.activeLanguageServers.delete(activeKey);
           }
+          this.failedLanguageServers.delete(activeKey);
         }
 
         const displayName = this.getLanguageDisplayName(languageId);
@@ -505,7 +539,7 @@ export class LspClient {
       await this.notifyDocumentOpen(filePath, content);
     } catch (error) {
       logger.error("LSPClient", "Failed to restart LSP for file:", error);
-      actions.setLspError(`Failed to restart LSP: ${stringifyLspError(error)}`);
+      actions.setLspError(getUserFacingLspErrorMessage(error));
       throw error;
     }
   }
@@ -900,7 +934,8 @@ export class LspClient {
 
   async isLanguageSupported(filePath: string): Promise<boolean> {
     try {
-      return await invoke<boolean>("lsp_is_language_supported", { filePath });
+      const { extensionRegistry } = await import("@/extensions/registry/extension-registry");
+      return Boolean(extensionRegistry.getLspServerPath(filePath));
     } catch (error) {
       logger.error("LSPClient", "LSP language support check error:", error);
       return false;

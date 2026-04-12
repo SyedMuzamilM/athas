@@ -112,32 +112,13 @@ export function EditorStatusActions() {
   const currentFileDisplayName = getLanguageDisplayNameOrNull(currentFileLanguageId);
 
   useEffect(() => {
-    let cancelled = false;
+    if (!activeBuffer?.path || currentServerEntry) {
+      setIsCurrentFileLspAvailable(false);
+      return;
+    }
 
-    const checkCurrentFileSupport = async () => {
-      if (!activeBuffer?.path || currentServerEntry) {
-        setIsCurrentFileLspAvailable(false);
-        return;
-      }
-
-      const hasConfiguredServer = Boolean(extensionRegistry.getLspServerPath(activeBuffer.path));
-      if (!hasConfiguredServer) {
-        setIsCurrentFileLspAvailable(false);
-        return;
-      }
-
-      const supported = await lspClient.isLanguageSupported(activeBuffer.path);
-      if (!cancelled) {
-        setIsCurrentFileLspAvailable(supported);
-      }
-    };
-
-    void checkCurrentFileSupport();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activeBuffer?.path, currentServerEntry, lspClient]);
+    setIsCurrentFileLspAvailable(Boolean(extensionRegistry.getLspServerPath(activeBuffer.path)));
+  }, [activeBuffer?.path, currentServerEntry]);
 
   const handleRestartServer = async (serverKey: string, displayName: string) => {
     setBusyServerKey(serverKey);
@@ -494,6 +475,10 @@ export function EditorStatusActions() {
                     {lspStatus.lastError}
                   </div>
                 )}
+                <div className="px-0.5 text-[10px] text-text-lighter">
+                  Reinstall the affected language tools from Extensions if the server binary is
+                  missing or failed to launch.
+                </div>
               </div>
             ) : (
               <div className="flex items-center gap-2 rounded-lg px-2 py-2 text-text-lighter">

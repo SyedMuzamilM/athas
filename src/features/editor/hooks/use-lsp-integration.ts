@@ -220,7 +220,13 @@ export const useLspIntegration = ({
     }
 
     // Only trigger completions when user actually types
-    if (!filePath || !editorRef.current || !isLspSupported || lastInputTimestamp === 0) {
+    if (
+      !filePath ||
+      !editorRef.current ||
+      !isLspSupported ||
+      lastInputTimestamp === 0 ||
+      !openedDocumentsRef.current.has(filePath)
+    ) {
       if (completionTimerRef.current) {
         clearTimeout(completionTimerRef.current);
       }

@@ -7,11 +7,12 @@ import {
   getWasmUrlForLanguage,
 } from "../languages/language-packager";
 import { extensionInstaller } from "../installer/extension-installer";
-import type { AvailableExtension } from "./extension-store-types";
+import type { AvailableExtension, ExtensionRuntimeIssue } from "./extension-store-types";
 import type { ExtensionManifest, ToolRuntime } from "../types/extension-manifest";
 
 type ToolType = "lsp" | "formatter" | "linter";
 type ToolPathMap = Partial<Record<ToolType, string>>;
+type ToolIssueMap = Partial<Record<ToolType, string>>;
 type BackendToolRuntime = Extract<
   ToolRuntime,
   "bun" | "node" | "python" | "go" | "rust" | "binary"
@@ -30,6 +31,52 @@ interface BackendLanguageToolConfigSet {
   lsp?: BackendToolConfig;
   formatter?: BackendToolConfig;
   linter?: BackendToolConfig;
+}
+
+interface ResolvedToolPathsResult {
+  toolPaths: ToolPathMap;
+  issues: ExtensionRuntimeIssue[];
+}
+
+function extractFailedToolMessage(toolStatus: unknown): string | null {
+  if (!toolStatus || typeof toolStatus !== "object") {
+    return null;
+  }
+
+  if ("Failed" in toolStatus && typeof toolStatus.Failed === "string") {
+    return toolStatus.Failed;
+  }
+
+  if ("failed" in toolStatus && typeof toolStatus.failed === "string") {
+    return toolStatus.failed;
+  }
+
+  return null;
+}
+
+function buildRuntimeIssues(
+  toolConfig: BackendLanguageToolConfigSet | undefined,
+  issues: ToolIssueMap,
+) {
+  if (!toolConfig) return [];
+
+  const runtimeIssues: ExtensionRuntimeIssue[] = [];
+  const toolTypes: ToolType[] = ["lsp", "formatter", "linter"];
+
+  for (const toolType of toolTypes) {
+    if (!toolConfig[toolType]) {
+      continue;
+    }
+
+    const message = issues[toolType];
+    if (!message) {
+      continue;
+    }
+
+    runtimeIssues.push({ tool: toolType, message });
+  }
+
+  return runtimeIssues;
 }
 
 function getCommandDefault(
@@ -185,7 +232,9 @@ export function resolveInstalledExtensionId(
 async function installLanguageTools(
   languageId: string,
   manifest?: ExtensionManifest,
-): Promise<void> {
+): Promise<ToolIssueMap> {
+  const issues: ToolIssueMap = {};
+
   try {
     const status = await invoke<{ lsp?: string; formatter?: string; linter?: string }>(
       "install_language_tools",
@@ -196,16 +245,18 @@ async function installLanguageTools(
     );
 
     for (const [tool, toolStatus] of Object.entries(status)) {
-      if (typeof toolStatus === "object" && toolStatus && "Failed" in toolStatus) {
-        console.warn(
-          `Tool installation failed for ${languageId}/${tool}: ${(toolStatus as { Failed: string }).Failed}`,
-        );
+      const failureMessage = extractFailedToolMessage(toolStatus);
+      if (failureMessage) {
+        issues[tool as ToolType] = failureMessage;
+        console.warn(`Tool installation failed for ${languageId}/${tool}: ${failureMessage}`);
       }
     }
   } catch (error) {
     console.error(`Failed to install tools for ${languageId}:`, error);
     throw error;
   }
+
+  return issues;
 }
 
 async function getToolPath(
@@ -228,35 +279,61 @@ async function getToolPath(
 export async function resolveToolPaths(
   languageId: string,
   manifest?: ExtensionManifest,
-  options: { ensureInstalled?: boolean } = {},
-): Promise<ToolPathMap> {
+  options: { ensureInstalled?: boolean; repairMissing?: boolean } = {},
+): Promise<ResolvedToolPathsResult> {
+  const toolConfig = getLanguageToolConfigSet(manifest);
+  let issues: ToolIssueMap = {};
+
   if (options.ensureInstalled) {
-    await installLanguageTools(languageId, manifest);
+    issues = await installLanguageTools(languageId, manifest);
   }
 
-  const [lsp, formatter, linter] = await Promise.all([
-    getToolPath(languageId, "lsp", manifest),
-    getToolPath(languageId, "formatter", manifest),
-    getToolPath(languageId, "linter", manifest),
-  ]);
+  const resolvePaths = async () => {
+    const [lsp, formatter, linter] = await Promise.all([
+      getToolPath(languageId, "lsp", manifest),
+      getToolPath(languageId, "formatter", manifest),
+      getToolPath(languageId, "linter", manifest),
+    ]);
 
-  const toolConfig = getLanguageToolConfigSet(manifest);
+    return { lsp, formatter, linter };
+  };
+
+  let toolPaths = await resolvePaths();
+  const missingTools = (["lsp", "formatter", "linter"] as ToolType[]).filter((toolType) => {
+    return Boolean(toolConfig?.[toolType]) && !toolPaths[toolType];
+  });
+
+  if (options.repairMissing && missingTools.length > 0) {
+    const installIssues = await installLanguageTools(languageId, manifest);
+    issues = { ...installIssues, ...issues };
+    toolPaths = await resolvePaths();
+  }
+
   if (toolConfig) {
-    if (toolConfig.lsp && !lsp) {
+    if (toolConfig.lsp && !toolPaths.lsp) {
+      issues.lsp =
+        issues.lsp || "Language server binary could not be resolved. Reinstall the language tools.";
       console.warn(`LSP configured for ${languageId} but binary path could not be resolved`);
     }
-    if (toolConfig.formatter && !formatter) {
+    if (toolConfig.formatter && !toolPaths.formatter) {
+      issues.formatter =
+        issues.formatter || "Formatter binary could not be resolved. Reinstall the language tools.";
       console.warn(`Formatter configured for ${languageId} but binary path could not be resolved`);
     }
-    if (toolConfig.linter && !linter) {
+    if (toolConfig.linter && !toolPaths.linter) {
+      issues.linter =
+        issues.linter || "Linter binary could not be resolved. Reinstall the language tools.";
       console.warn(`Linter configured for ${languageId} but binary path could not be resolved`);
     }
   }
 
   return {
-    ...(lsp ? { lsp } : {}),
-    ...(formatter ? { formatter } : {}),
-    ...(linter ? { linter } : {}),
+    toolPaths: {
+      ...(toolPaths.lsp ? { lsp: toolPaths.lsp } : {}),
+      ...(toolPaths.formatter ? { formatter: toolPaths.formatter } : {}),
+      ...(toolPaths.linter ? { linter: toolPaths.linter } : {}),
+    },
+    issues: buildRuntimeIssues(toolConfig, issues),
   };
 }
 
@@ -275,33 +352,42 @@ export function buildRuntimeManifest(
   };
 
   if (runtimeManifest.lsp) {
-    const defaultServer = getCommandDefault(runtimeManifest.lsp.server);
-    runtimeManifest.lsp = {
-      ...runtimeManifest.lsp,
-      server: {
-        default: toolPaths.lsp || defaultServer,
-      },
-    };
+    if (toolPaths.lsp) {
+      runtimeManifest.lsp = {
+        ...runtimeManifest.lsp,
+        server: {
+          default: toolPaths.lsp,
+        },
+      };
+    } else {
+      delete runtimeManifest.lsp;
+    }
   }
 
   if (runtimeManifest.formatter) {
-    const defaultCommand = getCommandDefault(runtimeManifest.formatter.command);
-    runtimeManifest.formatter = {
-      ...runtimeManifest.formatter,
-      command: {
-        default: toolPaths.formatter || defaultCommand,
-      },
-    };
+    if (toolPaths.formatter) {
+      runtimeManifest.formatter = {
+        ...runtimeManifest.formatter,
+        command: {
+          default: toolPaths.formatter,
+        },
+      };
+    } else {
+      delete runtimeManifest.formatter;
+    }
   }
 
   if (runtimeManifest.linter) {
-    const defaultCommand = getCommandDefault(runtimeManifest.linter.command);
-    runtimeManifest.linter = {
-      ...runtimeManifest.linter,
-      command: {
-        default: toolPaths.linter || defaultCommand,
-      },
-    };
+    if (toolPaths.linter) {
+      runtimeManifest.linter = {
+        ...runtimeManifest.linter,
+        command: {
+          default: toolPaths.linter,
+        },
+      };
+    } else {
+      delete runtimeManifest.linter;
+    }
   }
 
   return runtimeManifest;

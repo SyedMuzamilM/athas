@@ -1,5 +1,12 @@
 import type { ExtensionManifest } from "../types/extension-manifest";
 
+export type ExtensionToolType = "lsp" | "formatter" | "linter";
+
+export interface ExtensionRuntimeIssue {
+  tool: ExtensionToolType;
+  message: string;
+}
+
 export interface ExtensionInstallationMetadata {
   id: string;
   name: string;
@@ -14,4 +21,5 @@ export interface AvailableExtension {
   isInstalling: boolean;
   installProgress?: number;
   installError?: string;
+  runtimeIssues?: ExtensionRuntimeIssue[];
 }

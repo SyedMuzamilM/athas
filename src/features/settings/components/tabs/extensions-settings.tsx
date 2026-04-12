@@ -1,4 +1,5 @@
 import {
+  AlertCircle,
   Blocks,
   Database,
   Languages,
@@ -12,6 +13,7 @@ import { useCallback, useEffect, useState } from "react";
 import { CreateExtensionWizard } from "@/extensions/ui/components/create-extension-wizard";
 import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
+import type { ExtensionRuntimeIssue } from "@/extensions/registry/extension-store-types";
 import { useUIExtensionStore } from "@/extensions/ui/stores/ui-extension-store";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import { uiExtensionHost } from "@/extensions/ui/services/ui-extension-host";
@@ -37,6 +39,7 @@ interface UnifiedExtension {
   publisher?: string;
   isMarketplace?: boolean;
   isBundled?: boolean;
+  runtimeIssues?: ExtensionRuntimeIssue[];
 }
 
 const FILTER_TABS = [
@@ -71,12 +74,14 @@ const ExtensionRow = ({
   onUpdate,
   isInstalling,
   hasUpdate,
+  hasRuntimeIssue,
 }: {
   extension: UnifiedExtension;
   onToggle: () => void;
   onUpdate?: () => void;
   isInstalling?: boolean;
   hasUpdate?: boolean;
+  hasRuntimeIssue?: boolean;
 }) => {
   return (
     <div className="flex items-center justify-between gap-4 border-b border-border px-1 py-3 transition-colors hover:bg-hover">
@@ -91,6 +96,14 @@ const ExtensionRow = ({
           )}
         </div>
         <p className="ui-font ui-text-sm text-text-lighter">{extension.description}</p>
+        {extension.runtimeIssues && extension.runtimeIssues.length > 0 && (
+          <div className="mt-1 rounded-lg border border-error/20 bg-error/8 px-2 py-1.5">
+            <div className="ui-font ui-text-sm flex items-start gap-1.5 text-error">
+              <AlertCircle className="mt-0.5 shrink-0" />
+              <span>{extension.runtimeIssues[0].message}</span>
+            </div>
+          </div>
+        )}
         <div className="ui-font ui-text-sm mt-1 flex items-center gap-2 text-text-lighter">
           {extension.publisher && <span>by {extension.publisher}</span>}
           {extension.publisher && extension.extensions && extension.extensions.length > 0 && (
@@ -118,9 +131,9 @@ const ExtensionRow = ({
         </div>
       ) : extension.isInstalled ? (
         <div className="flex shrink-0 items-center gap-2">
-          {hasUpdate && onUpdate && (
+          {(hasUpdate || hasRuntimeIssue) && onUpdate && (
             <Button onClick={onUpdate} variant="primary" size="xs" tooltip="Update available">
-              Update
+              {hasRuntimeIssue ? "Reinstall" : "Update"}
             </Button>
           )}
           <Button
@@ -180,6 +193,7 @@ export const ExtensionsSettings = () => {
           publisher: ext.manifest.publisher,
           isMarketplace: !isBundled,
           isBundled,
+          runtimeIssues: ext.runtimeIssues,
         });
       }
     }
@@ -228,6 +242,7 @@ export const ExtensionsSettings = () => {
           publisher: ext.manifest.publisher,
           isMarketplace: !isBundled,
           isBundled,
+          runtimeIssues: ext.runtimeIssues,
         });
       }
     }
@@ -442,6 +457,7 @@ export const ExtensionsSettings = () => {
               const extensionFromStore = availableExtensions.get(extension.id);
               const isInstalling = extensionFromStore?.isInstalling || false;
               const hasUpdate = extensionsWithUpdates.has(extension.id);
+              const hasRuntimeIssue = Boolean(extension.runtimeIssues?.length);
 
               return (
                 <ExtensionRow
@@ -451,6 +467,7 @@ export const ExtensionsSettings = () => {
                   onUpdate={() => handleUpdate(extension)}
                   isInstalling={isInstalling}
                   hasUpdate={hasUpdate}
+                  hasRuntimeIssue={hasRuntimeIssue}
                 />
               );
             })}

@@ -213,9 +213,7 @@ pub async fn lsp_apply_code_action(
 ) -> LspResult<LspApplyCodeActionResult> {
    let action = serde_json::from_value::<CodeActionOrCommand>(action_payload).map_err(|e| {
       log::error!("Invalid code action payload: {}", e);
-      LspError {
-         message: "Invalid code action payload".to_string(),
-      }
+      LspError::new("Invalid code action payload")
    })?;
 
    let (applied, reason) = lsp_manager
