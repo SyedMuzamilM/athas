@@ -7,7 +7,7 @@ export const DEFAULT_AI_AUTOCOMPLETE_MODEL_ID = "mistralai/devstral-small";
 
 export const defaultSettings: Settings = {
   // General
-  autoSave: true,
+  autoSave: false,
   sidebarPosition: "left",
   quickOpenPreview: true,
   // Editor
