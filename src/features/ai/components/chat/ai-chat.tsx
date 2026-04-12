@@ -4,6 +4,7 @@ import ProviderApiKeyModal from "@/features/ai/components/provider-api-key-modal
 import {
   appendChatAcpEvent,
   type ChatAcpEventInput,
+  completeThinkingAcpEvents,
   truncateDetail,
   updateToolCompletionAcpEvent,
 } from "@/features/ai/lib/acp-event-timeline";
@@ -436,6 +437,7 @@ details: The agent session started, but no content, tool output, or resource was
           });
           chatActions.setIsTyping(false);
           chatActions.setStreamingMessageId(null);
+          setAcpEvents((prev) => completeThinkingAcpEvents(prev));
           abortControllerRef.current = null;
           processQueuedMessages();
         },
@@ -599,11 +601,15 @@ details: ${errorDetails || mainError}
           }
           switch (event.type) {
             case "thought_chunk": {
-              appendAcpEvent({
-                kind: "thinking",
-                label: "Thinking",
-                state: "running",
-              });
+              if (event.isComplete) {
+                setAcpEvents((prev) => completeThinkingAcpEvents(prev));
+              } else {
+                appendAcpEvent({
+                  kind: "thinking",
+                  label: "Thinking",
+                  state: "running",
+                });
+              }
               break;
             }
             case "tool_start": {

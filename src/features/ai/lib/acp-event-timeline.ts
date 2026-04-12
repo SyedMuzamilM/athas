@@ -39,6 +39,19 @@ export const appendChatAcpEvent = (
   return [...previousEvents.slice(-(MAX_EVENTS - 1)), nextEvent];
 };
 
+export const completeThinkingAcpEvents = (previousEvents: ChatAcpEvent[]): ChatAcpEvent[] => {
+  const now = new Date();
+  let changed = false;
+  const updated = previousEvents.map((event) => {
+    if (event.kind === "thinking" && event.state === "running") {
+      changed = true;
+      return { ...event, state: "success" as const, timestamp: now };
+    }
+    return event;
+  });
+  return changed ? updated : previousEvents;
+};
+
 export const updateToolCompletionAcpEvent = (
   previousEvents: ChatAcpEvent[],
   activityId: string,
