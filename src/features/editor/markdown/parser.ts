@@ -70,6 +70,10 @@ export function parseMarkdown(content: string): string {
   let inBlockquote = false;
   let codeBlockContent = "";
   let codeBlockLanguage = "";
+  const isTaskListLine = (value: string) => /^\s*[-*+]\s\[([ xX])\]\s/.test(value);
+  const isUnorderedListLine = (value: string) => /^\s*[-*+]\s/.test(value);
+  const isOrderedListLine = (value: string) => /^\s*\d+\.\s/.test(value);
+  const isBlockquoteLine = (value: string) => /^>\s/.test(value);
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -96,19 +100,19 @@ export function parseMarkdown(content: string): string {
       continue;
     }
 
-    if (inUnorderedList && !line.match(/^\s*[-*+]\s/)) {
+    if (inUnorderedList && trimmedLine !== "" && !isUnorderedListLine(line)) {
       processedLines.push("</ul>");
       inUnorderedList = false;
     }
-    if (inTaskList && !line.match(/^\s*[-*+]\s\[([ xX])\]\s/)) {
+    if (inTaskList && trimmedLine !== "" && !isTaskListLine(line)) {
       processedLines.push("</ul>");
       inTaskList = false;
     }
-    if (inOrderedList && !line.match(/^\s*\d+\.\s/)) {
+    if (inOrderedList && trimmedLine !== "" && !isOrderedListLine(line)) {
       processedLines.push("</ol>");
       inOrderedList = false;
     }
-    if (inBlockquote && !line.match(/^>\s/)) {
+    if (inBlockquote && trimmedLine !== "" && !isBlockquoteLine(line)) {
       processedLines.push("</blockquote>");
       inBlockquote = false;
     }
@@ -133,13 +137,13 @@ export function parseMarkdown(content: string): string {
       processedLines.push(`<h1>${processInline(line.replace(/^#\s/, ""), footnotes)}</h1>`);
     } else if (line.match(/^(---+|___+|\*\*\*+)$/)) {
       processedLines.push("<hr />");
-    } else if (line.match(/^>\s/)) {
+    } else if (isBlockquoteLine(line)) {
       if (!inBlockquote) {
         processedLines.push("<blockquote>");
         inBlockquote = true;
       }
       processedLines.push(`<p>${processInline(line.replace(/^>\s/, ""), footnotes)}</p>`);
-    } else if (line.match(/^\s*[-*+]\s\[([ xX])\]\s/)) {
+    } else if (isTaskListLine(line)) {
       if (!inTaskList) {
         processedLines.push('<ul class="task-list">');
         inTaskList = true;
@@ -152,13 +156,13 @@ export function parseMarkdown(content: string): string {
           `<li class="task-list-item"><input type="checkbox" ${checked ? "checked" : ""} disabled /> ${processInline(taskContent, footnotes)}</li>`,
         );
       }
-    } else if (line.match(/^\s*[-*+]\s/)) {
+    } else if (isUnorderedListLine(line)) {
       if (!inUnorderedList) {
         processedLines.push("<ul>");
         inUnorderedList = true;
       }
       processedLines.push(`<li>${processInline(line.replace(/^\s*[-*+]\s/, ""), footnotes)}</li>`);
-    } else if (line.match(/^\s*\d+\.\s/)) {
+    } else if (isOrderedListLine(line)) {
       if (!inOrderedList) {
         processedLines.push("<ol>");
         inOrderedList = true;
