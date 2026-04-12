@@ -27,6 +27,7 @@ interface WebViewerToolbarProps {
   canCopyUrl: boolean;
   copied: boolean;
   devToolsTooltip: string;
+  hasUrlError: boolean;
   inputUrl: string;
   isLoading: boolean;
   isLocalhost: boolean;
@@ -57,6 +58,7 @@ export function WebViewerToolbar({
   canCopyUrl,
   copied,
   devToolsTooltip,
+  hasUrlError,
   inputUrl,
   isLoading,
   isLocalhost,
@@ -121,7 +123,11 @@ export function WebViewerToolbar({
             value={inputUrl}
             onChange={(e) => onInputUrlChange(e.target.value)}
             placeholder="Enter URL..."
-            className="h-7 w-full rounded-md border-border bg-primary-bg pr-20 pl-8 text-[13px] focus:border-accent focus:ring-accent/30"
+            className={`h-7 w-full rounded-md pr-20 pl-8 text-[13px] focus:ring-accent/30 ${
+              hasUrlError
+                ? "border-error/60 bg-error/5 focus:border-error"
+                : "border-border bg-primary-bg focus:border-accent"
+            }`}
           />
           <div className="absolute right-1.5 flex items-center gap-1">
             <Button

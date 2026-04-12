@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { RefreshCw } from "lucide-react";
+import { AlertCircle, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEmbeddedWebview } from "../hooks/use-embedded-webview";
@@ -40,6 +40,24 @@ interface EmbeddedWebviewLocationChangeEvent {
 
 type PendingNavigationAction = "push" | "back" | "forward" | "reload" | null;
 
+function getWebViewerErrorMessage(error: unknown) {
+  if (typeof error === "string" && error.trim()) {
+    return error;
+  }
+
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "message" in error &&
+    typeof error.message === "string" &&
+    error.message.trim()
+  ) {
+    return error.message;
+  }
+
+  return "Couldn't open this page.";
+}
+
 export function WebViewer({
   url: initialUrl,
   bufferId,
@@ -55,6 +73,8 @@ export function WebViewer({
   const [canGoForward, setCanGoForward] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [copied, setCopied] = useState(false);
+  const [urlError, setUrlError] = useState<string | null>(null);
+  const [pageError, setPageError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const urlInputRef = useRef<HTMLInputElement>(null);
   const historyRef = useRef<string[]>(isNewTab ? [] : [initialUrl]);
@@ -153,6 +173,8 @@ export function WebViewer({
           }
 
           pendingNavigationActionRef.current = null;
+          setUrlError(null);
+          setPageError(null);
           setIsLoading(false);
           setCurrentUrl(event.payload.url);
           setInputUrl(event.payload.url);
@@ -316,8 +338,13 @@ export function WebViewer({
       if (!webviewLabel) return;
 
       const normalizedUrl = normalizeWebViewerUrl(url);
-      if (!normalizedUrl) return;
+      if (!normalizedUrl) {
+        setUrlError("Enter a valid URL.");
+        return;
+      }
 
+      setUrlError(null);
+      setPageError(null);
       setIsLoading(true);
       setCurrentUrl(normalizedUrl);
       setInputUrl(normalizedUrl);
@@ -334,6 +361,7 @@ export function WebViewer({
         console.error("Failed to navigate:", error);
         pendingNavigationActionRef.current = null;
         setIsLoading(false);
+        setPageError(getWebViewerErrorMessage(error));
         return;
       }
     },
@@ -369,10 +397,15 @@ export function WebViewer({
       e.preventDefault();
 
       const normalizedUrl = normalizeWebViewerUrl(inputUrl);
-      if (!normalizedUrl) return;
+      if (!normalizedUrl) {
+        setUrlError("Enter a valid URL.");
+        return;
+      }
 
       // If no webview exists yet, set currentUrl to trigger webview creation
       if (!webviewLabel) {
+        setUrlError(null);
+        setPageError(null);
         setCurrentUrl(normalizedUrl);
         setInputUrl(normalizedUrl);
         setIsLoading(true);
@@ -459,6 +492,16 @@ export function WebViewer({
       urlInputRef.current.select();
     }
   }, []);
+
+  const handleInputUrlChange = useCallback(
+    (value: string) => {
+      setInputUrl(value);
+      if (urlError) {
+        setUrlError(null);
+      }
+    },
+    [urlError],
+  );
 
   useEffect(() => {
     if (!webviewLabel || !isActive || !isVisible) return;
@@ -628,6 +671,7 @@ export function WebViewer({
             ? "Open Developer Tools"
             : "Developer Tools are only available in development builds"
         }
+        hasUrlError={Boolean(urlError)}
         inputUrl={inputUrl}
         isLoading={isLoading}
         isLocalhost={security.isLocalhost}
@@ -639,7 +683,7 @@ export function WebViewer({
         onCopyUrl={handleCopyUrl}
         onGoBack={handleGoBack}
         onGoForward={handleGoForward}
-        onInputUrlChange={setInputUrl}
+        onInputUrlChange={handleInputUrlChange}
         onOpenDevTools={handleOpenDevTools}
         onOpenExternal={handleOpenExternal}
         onRefresh={handleRefresh}
@@ -650,7 +694,23 @@ export function WebViewer({
         onZoomOut={handleZoomOut}
       />
 
+      {(urlError || pageError) && (
+        <div className="flex h-8 shrink-0 items-center gap-2 border-border border-b bg-error/6 px-3 text-[11px] text-text-light">
+          <AlertCircle className="size-3.5 shrink-0 text-error" />
+          <span className="truncate">{urlError ?? pageError}</span>
+        </div>
+      )}
+
       <div ref={containerRef} className="relative flex-1 overflow-hidden">
+        {!currentUrl && !isLoading && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-primary-bg px-6 text-center">
+            <div className="ui-font text-sm text-text">Open a page</div>
+            <div className="max-w-[320px] text-[12px] text-text-lighter">
+              Enter a URL to load a website, local development server, or app-bound page.
+            </div>
+          </div>
+        )}
+
         {isLoading && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-primary-bg">
             <RefreshCw className="animate-spin text-text-lighter" />
