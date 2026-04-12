@@ -16,9 +16,18 @@ import { cn } from "@/utils/cn";
 interface AgentSelectorProps {
   variant?: "header" | "input";
   onOpenSettings?: () => void;
+  selectedAgentId?: AgentType;
+  onSelectAgent?: (agentId: AgentType) => void;
+  portalContainer?: Element | DocumentFragment | null;
 }
 
-export function AgentSelector({ variant = "header", onOpenSettings }: AgentSelectorProps) {
+export function AgentSelector({
+  variant = "header",
+  onOpenSettings,
+  selectedAgentId,
+  onSelectAgent,
+  portalContainer,
+}: AgentSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -34,7 +43,7 @@ export function AgentSelector({ variant = "header", onOpenSettings }: AgentSelec
   const triggerRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const currentAgentId = getCurrentAgentId();
+  const currentAgentId = selectedAgentId ?? getCurrentAgentId();
   const currentAgent = AGENT_OPTIONS.find((a) => a.id === currentAgentId);
   const agentConfigById = useMemo(
     () => new Map(availableAgents.map((agent) => [agent.id, agent])),
@@ -131,6 +140,12 @@ export function AgentSelector({ variant = "header", onOpenSettings }: AgentSelec
 
   const handleAgentChange = useCallback(
     async (agentId: AgentType) => {
+      if (onSelectAgent) {
+        setIsOpen(false);
+        onSelectAgent(agentId);
+        return;
+      }
+
       if (variant !== "header" && agentId === currentAgentId) {
         setIsOpen(false);
         return;
@@ -160,7 +175,14 @@ export function AgentSelector({ variant = "header", onOpenSettings }: AgentSelec
         changeCurrentChatAgent(agentId);
       }
     },
-    [variant, currentAgentId, setSelectedAgentId, changeCurrentChatAgent, createNewChat],
+    [
+      onSelectAgent,
+      variant,
+      currentAgentId,
+      setSelectedAgentId,
+      changeCurrentChatAgent,
+      createNewChat,
+    ],
   );
 
   const handleInstallAgent = useCallback(
@@ -258,6 +280,7 @@ export function AgentSelector({ variant = "header", onOpenSettings }: AgentSelec
         anchorRef={triggerRef}
         anchorAlign="end"
         onClose={() => setIsOpen(false)}
+        portalContainer={portalContainer}
         className="flex w-[min(360px,calc(100vw-16px))] max-w-[calc(100vw-16px)] flex-col overflow-hidden rounded-2xl p-0"
       >
         <div className="bg-secondary-bg px-2 py-2" onKeyDown={handleKeyDown}>

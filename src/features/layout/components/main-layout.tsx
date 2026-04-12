@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import AIChat from "@/features/ai/components/chat/ai-chat";
+import { AgentLauncher } from "@/features/ai/components/agent-launcher";
 import { useChatInitialization } from "@/features/ai/hooks/use-chat-initialization";
 import CommandPalette from "@/features/command-palette/components/command-palette";
 import IconThemeSelector from "@/features/command-palette/components/icon-theme-selector";
@@ -336,6 +337,7 @@ export function MainLayout() {
       <VimCommandBar />
       <VimSearchBar />
       <CommandPalette />
+      <AgentLauncher />
       <ProjectNameMenu />
 
       {/* Dialog components */}

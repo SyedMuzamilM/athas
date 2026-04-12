@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { RefreshCw, Sparkles, Terminal } from "lucide-react";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import type { Action } from "../models/action.types";
 
 interface AdvancedActionsParams {
@@ -43,6 +44,18 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
   } = params;
 
   const baseActions: Action[] = [
+    {
+      id: "ai-new-agent",
+      label: "AI: New Agent",
+      description: "Open the unified agent launcher",
+      icon: <Sparkles />,
+      category: "AI",
+      commandId: "workbench.agentLauncher",
+      action: () => {
+        useUIState.getState().setIsAgentLauncherVisible(true);
+        onClose();
+      },
+    },
     {
       id: "ai-quick-edit",
       label: "AI: Quick Edit Selection",

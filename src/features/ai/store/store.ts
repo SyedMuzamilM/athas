@@ -38,6 +38,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
         isSendAnimating: false,
         messageQueue: [],
         isProcessingQueue: false,
+        pendingAgentLaunchRequest: null,
         mode: "chat",
         outputStyle: "default",
 
@@ -135,6 +136,10 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           set((state) => {
             state.messageQueue = [];
             state.isProcessingQueue = false;
+          }),
+        setPendingAgentLaunchRequest: (request) =>
+          set((state) => {
+            state.pendingAgentLaunchRequest = request;
           }),
 
         // Input actions
@@ -237,6 +242,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             state.input = "";
             state.isTyping = false;
             state.streamingMessageId = null;
+            state.pendingAgentLaunchRequest = null;
           });
           // Save to SQLite
           saveChatToDb(newChat).catch((err) =>

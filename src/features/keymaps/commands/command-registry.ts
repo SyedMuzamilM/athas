@@ -357,6 +357,16 @@ const viewCommands: Command[] = [
     },
   },
   {
+    id: "workbench.agentLauncher",
+    title: "New Agent",
+    category: "AI",
+    keybinding: "cmd+shift+space",
+    execute: () => {
+      const state = useUIState.getState();
+      state.setIsAgentLauncherVisible(!state.isAgentLauncherVisible);
+    },
+  },
+  {
     id: "workbench.showFind",
     title: "Find",
     category: "View",

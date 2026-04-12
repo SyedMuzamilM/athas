@@ -640,14 +640,6 @@ details: ${errorDetails || mainError}
               acpCommandResultLabel = event.modeState.currentModeId
                 ? `Mode set to \`${event.modeState.currentModeId}\`.`
                 : "Session mode updated.";
-              if (event.modeState.currentModeId) {
-                appendAcpEvent({
-                  kind: "mode",
-                  label: "Mode changed",
-                  detail: event.modeState.currentModeId,
-                  state: "info",
-                });
-              }
               break;
             case "config_options_update":
               acpProducedStateOnlyUpdate = true;
@@ -655,12 +647,6 @@ details: ${errorDetails || mainError}
                 event.configOptions.length === 1
                   ? "Session option updated."
                   : "Session options updated.";
-              appendAcpEvent({
-                kind: "status",
-                label: "Session options updated",
-                detail: `${event.configOptions.length} option${event.configOptions.length === 1 ? "" : "s"} available`,
-                state: "info",
-              });
               break;
             case "session_info_update":
               acpProducedStateOnlyUpdate = true;
@@ -679,12 +665,6 @@ details: ${errorDetails || mainError}
             case "current_mode_update":
               acpProducedStateOnlyUpdate = true;
               acpCommandResultLabel = `Mode set to \`${event.currentModeId}\`.`;
-              appendAcpEvent({
-                kind: "mode",
-                label: "Mode changed",
-                detail: event.currentModeId,
-                state: "info",
-              });
               break;
             case "slash_commands_update":
               acpProducedStateOnlyUpdate = true;
@@ -793,6 +773,28 @@ details: ${errorDetails || mainError}
     },
     [sendMessage],
   );
+
+  useEffect(() => {
+    const pendingLaunch = chatState.pendingAgentLaunchRequest;
+    if (!pendingLaunch) return;
+    if (pendingLaunch.chatId !== chatState.currentChatId) return;
+    if (activeBuffer?.type !== "agent") return;
+    if (activeBuffer.sessionId !== pendingLaunch.chatId) return;
+    if (chatState.isTyping || chatState.streamingMessageId) return;
+
+    chatActions.setSelectedBufferIds(new Set(pendingLaunch.selectedBufferIds));
+    chatActions.setSelectedFilesPaths(new Set(pendingLaunch.selectedFilesPaths));
+    chatActions.setPendingAgentLaunchRequest(null);
+    void sendMessage(pendingLaunch.prompt);
+  }, [
+    chatActions,
+    chatState.currentChatId,
+    chatState.isTyping,
+    chatState.pendingAgentLaunchRequest,
+    chatState.streamingMessageId,
+    activeBuffer,
+    sendMessage,
+  ]);
 
   const currentPermission = permissionQueue[0];
   const handlePermission = async (approved: boolean) => {

@@ -211,6 +211,11 @@ export const defaultKeymaps: Keybinding[] = [
     source: "default",
   },
   {
+    key: "cmd+shift+space",
+    command: "workbench.agentLauncher",
+    source: "default",
+  },
+  {
     key: "cmd+k cmd+t",
     command: "workbench.showThemeSelector",
     source: "default",

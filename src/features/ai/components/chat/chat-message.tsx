@@ -106,13 +106,13 @@ export const ChatMessage = memo(function ChatMessage({
   if (message.role === "user") {
     return (
       <div className="w-full">
-        <div className="relative rounded-2xl border border-border bg-primary-bg/90 px-3 py-2.5">
+        <div className="relative rounded-2xl bg-secondary-bg/42 px-3 py-2.5">
           <div className="whitespace-pre-wrap break-words pr-6">{message.content}</div>
           <Button
             onClick={() => handleRestoreCheckpoint(message.id)}
             variant="ghost"
             size="icon-xs"
-            className="-translate-y-1/2 absolute top-1/2 right-1.5 rounded-full border border-border bg-secondary-bg/80 text-text-lighter opacity-40 hover:bg-hover hover:opacity-100"
+            className="-translate-y-1/2 absolute top-1/2 right-1.5 rounded-md text-text-lighter opacity-40 hover:bg-hover hover:text-text hover:opacity-100"
             tooltip="Restore to this point"
             tooltipSide="top"
             aria-label="Restore to this checkpoint"

@@ -1,7 +1,6 @@
 import { Mic, Slash, X } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { shouldIgnoreFile } from "@/features/quick-open/utils/file-filtering";
-import { controlFieldSizeVariants, controlFieldSurfaceVariants } from "@/ui/control-field";
 import { getPrimarySessionConfigOption } from "@/features/ai/lib/session-config-option-classifier";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { InlineDropdownPosition } from "@/features/ai/store/types";
@@ -856,10 +855,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
     >
       <div
         className={cn(
-          "overflow-hidden border bg-primary-bg/55 transition-[border-radius,border-color,box-shadow]",
-          hasAttachedComposerDropdown
-            ? "rounded-t-xl rounded-b-2xl border-border/70 shadow-[0_14px_32px_-26px_rgba(0,0,0,0.5)]"
-            : "rounded-lg border-border/60",
+          "overflow-hidden bg-secondary-bg/42 transition-[border-radius,background-color]",
+          hasAttachedComposerDropdown ? "rounded-t-xl rounded-b-2xl" : "rounded-lg",
         )}
       >
         {pastedImages.length > 0 && (
@@ -905,7 +902,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
             "max-h-[140px] min-h-[64px] w-full resize-none overflow-x-hidden overflow-y-auto bg-transparent",
             "ui-font px-2 py-1.5 text-inherit text-text placeholder:text-text-lighter",
             "focus:outline-none",
-            hasAttachedComposerDropdown && "border-border/40 border-t",
+            hasAttachedComposerDropdown && "border-none",
             !isInputEnabled ? "cursor-not-allowed opacity-50" : "cursor-text",
             "empty:before:pointer-events-none empty:before:text-text-lighter empty:before:content-[attr(data-placeholder)]",
           )}
@@ -1017,13 +1014,11 @@ const AIChatInputBar = memo(function AIChatInputBar({
                     showSlashCommands(getSlashDropdownPosition(), "");
                   }
                 }}
-                variant="secondary"
+                variant="ghost"
                 size="xs"
                 className={cn(
-                  controlFieldSurfaceVariants({ variant: "secondary" }),
-                  controlFieldSizeVariants({ size: "xs" }),
-                  "w-fit gap-0 px-1.5 text-text-lighter hover:text-text",
-                  slashCommandState.active && "border-border-strong bg-hover text-text",
+                  "w-fit rounded-md px-1.5 text-text-lighter hover:bg-hover hover:text-text",
+                  slashCommandState.active && "bg-hover text-text",
                 )}
                 tooltip="Show slash commands"
                 aria-label="Show slash commands"
@@ -1036,13 +1031,12 @@ const AIChatInputBar = memo(function AIChatInputBar({
               type="button"
               disabled={!isInputEnabled || !isSpeechRecognitionSupported}
               onClick={toggleVoiceInput}
-              variant="secondary"
+              variant="ghost"
               size="xs"
               className={cn(
-                controlFieldSurfaceVariants({ variant: "secondary" }),
-                controlFieldSizeVariants({ size: "xs" }),
-                "w-fit gap-1 px-1.5 text-text-lighter hover:text-text",
-                isListening && "border-blue-500/30 bg-blue-500/10 text-blue-400",
+                "w-fit rounded-md px-1.5 text-text-lighter hover:bg-hover hover:text-text",
+                isListening &&
+                  "bg-blue-500/10 text-blue-400 hover:bg-blue-500/14 hover:text-blue-300",
               )}
               tooltip={
                 isMacDevSpeechRecognitionBlocked
@@ -1066,11 +1060,11 @@ const AIChatInputBar = memo(function AIChatInputBar({
               variant="ghost"
               size="xs"
               className={cn(
-                "ui-font",
+                "ui-font rounded-md px-1.5 hover:bg-hover",
                 isSendDisabled
                   ? "cursor-not-allowed text-text-lighter opacity-50"
                   : (hasInputText || hasImages) && isInputEnabled
-                    ? "text-accent hover:text-accent/80"
+                    ? "text-accent hover:bg-accent/8 hover:text-accent/80"
                     : "text-text-lighter hover:text-text",
               )}
               tooltip={

@@ -183,8 +183,7 @@ export function ContextSelector({
           variant="ghost"
           size="icon-xs"
           className={cn(
-            "text-text-lighter text-xs transition-colors",
-            "hover:text-text focus:outline-none",
+            "rounded-md text-text-lighter text-xs transition-colors hover:bg-hover hover:text-text focus:outline-none",
           )}
           tooltip="Add context files"
           aria-label="Add context files"

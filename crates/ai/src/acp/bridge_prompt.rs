@@ -5,6 +5,8 @@ use anyhow::{Context, Result, bail};
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter};
 
+const ACP_PROMPT_TIMEOUT_SECONDS: u64 = 90;
+
 pub(super) async fn run_prompt(
    connection: Arc<acp::ClientSideConnection>,
    session_id: acp::SessionId,
@@ -48,7 +50,7 @@ async fn send_prompt_with_auth_retry(
 
       let auth_request = acp::AuthenticateRequest::new(auth_method_id);
       match tokio::time::timeout(
-         std::time::Duration::from_secs(30),
+         std::time::Duration::from_secs(ACP_PROMPT_TIMEOUT_SECONDS),
          connection.authenticate(auth_request),
       )
       .await
@@ -58,7 +60,7 @@ async fn send_prompt_with_auth_retry(
             prompt_result = send_prompt(connection.clone(), prompt_request).await;
          }
          Ok(Err(err)) => bail!("Authentication required: {}", err),
-         Err(_) => bail!("Authentication required but timed out"),
+         Err(_) => bail!("Authentication required but the ACP adapter did not respond in time"),
       }
    }
 
@@ -68,7 +70,7 @@ async fn send_prompt_with_auth_retry(
          bail!("Authentication required before sending prompt")
       }
       Ok(Err(err)) => Err(err).context("Failed to send prompt"),
-      Err(_) => bail!("Timed out while sending prompt"),
+      Err(_) => bail!("The ACP adapter did not acknowledge the prompt in time"),
    }
 }
 
@@ -77,7 +79,7 @@ async fn send_prompt(
    prompt_request: acp::PromptRequest,
 ) -> Result<Result<acp::PromptResponse, acp::Error>, tokio::time::error::Elapsed> {
    tokio::time::timeout(
-      std::time::Duration::from_secs(30),
+      std::time::Duration::from_secs(ACP_PROMPT_TIMEOUT_SECONDS),
       connection.prompt(prompt_request),
    )
    .await

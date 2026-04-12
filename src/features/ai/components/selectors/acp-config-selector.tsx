@@ -32,10 +32,13 @@ export function AcpConfigSelector({
       }))}
       onChange={onChange}
       size="xs"
-      variant="secondary"
+      variant="ghost"
       open={open}
       onOpenChange={onOpenChange}
-      className={cn("w-fit min-w-[132px] max-w-[220px]", className)}
+      className={cn(
+        "w-fit min-w-0 max-w-[220px] rounded-md px-1.5 text-text-lighter hover:bg-hover hover:text-text data-[state=open]:bg-hover data-[state=open]:text-text",
+        className,
+      )}
       menuClassName={menuClassName}
       aria-label={option.name}
       title={option.description || option.name}

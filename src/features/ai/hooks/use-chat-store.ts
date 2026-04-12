@@ -11,6 +11,7 @@ export function useChatState() {
     apiKeyModalState: useAIChatStore((state) => state.apiKeyModalState),
     isTyping: useAIChatStore((state) => state.isTyping),
     streamingMessageId: useAIChatStore((state) => state.streamingMessageId),
+    pendingAgentLaunchRequest: useAIChatStore((state) => state.pendingAgentLaunchRequest),
     mode: useAIChatStore((state) => state.mode),
     outputStyle: useAIChatStore((state) => state.outputStyle),
   };
@@ -24,6 +25,9 @@ export function useChatActions() {
     setInput: useAIChatStore((state) => state.setInput),
     setIsTyping: useAIChatStore((state) => state.setIsTyping),
     setStreamingMessageId: useAIChatStore((state) => state.setStreamingMessageId),
+    setSelectedBufferIds: useAIChatStore((state) => state.setSelectedBufferIds),
+    setSelectedFilesPaths: useAIChatStore((state) => state.setSelectedFilesPaths),
+    setPendingAgentLaunchRequest: useAIChatStore((state) => state.setPendingAgentLaunchRequest),
     createNewChat: useAIChatStore((state) => state.createNewChat),
     ensureChatForAgent: useAIChatStore((state) => state.ensureChatForAgent),
     deleteChat: useAIChatStore((state) => state.deleteChat),

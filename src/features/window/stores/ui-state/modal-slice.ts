@@ -4,6 +4,7 @@ import type { SettingsTab } from "./types";
 export interface ModalState {
   isQuickOpenVisible: boolean;
   isCommandPaletteVisible: boolean;
+  isAgentLauncherVisible: boolean;
   isGlobalSearchVisible: boolean;
   isSettingsDialogVisible: boolean;
   isThemeSelectorVisible: boolean;
@@ -17,6 +18,7 @@ export interface ModalState {
 export interface ModalActions {
   setIsQuickOpenVisible: (v: boolean) => void;
   setIsCommandPaletteVisible: (v: boolean) => void;
+  setIsAgentLauncherVisible: (v: boolean) => void;
   setIsGlobalSearchVisible: (v: boolean) => void;
   setIsSettingsDialogVisible: (v: boolean) => void;
   setIsThemeSelectorVisible: (v: boolean) => void;
@@ -36,6 +38,7 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
   // State
   isQuickOpenVisible: false,
   isCommandPaletteVisible: false,
+  isAgentLauncherVisible: false,
   isGlobalSearchVisible: false,
   isSettingsDialogVisible: false,
   isThemeSelectorVisible: false,
@@ -51,6 +54,7 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
     return (
       state.isQuickOpenVisible ||
       state.isCommandPaletteVisible ||
+      state.isAgentLauncherVisible ||
       state.isGlobalSearchVisible ||
       state.isThemeSelectorVisible ||
       state.isIconThemeSelectorVisible ||
@@ -74,6 +78,10 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
     }
     if (state.isCommandPaletteVisible) {
       set({ isCommandPaletteVisible: false });
+      return true;
+    }
+    if (state.isAgentLauncherVisible) {
+      set({ isAgentLauncherVisible: false });
       return true;
     }
     if (state.isGlobalSearchVisible) {
@@ -108,6 +116,7 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
       set({
         isQuickOpenVisible: true,
         isCommandPaletteVisible: false,
+        isAgentLauncherVisible: false,
         isGlobalSearchVisible: false,
         isThemeSelectorVisible: false,
         isIconThemeSelectorVisible: false,
@@ -126,6 +135,7 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
       set({
         isCommandPaletteVisible: true,
         isQuickOpenVisible: false,
+        isAgentLauncherVisible: false,
         isGlobalSearchVisible: false,
         isThemeSelectorVisible: false,
         isIconThemeSelectorVisible: false,
@@ -139,12 +149,32 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
     }
   },
 
+  setIsAgentLauncherVisible: (v: boolean) => {
+    if (v) {
+      set({
+        isAgentLauncherVisible: true,
+        isQuickOpenVisible: false,
+        isCommandPaletteVisible: false,
+        isGlobalSearchVisible: false,
+        isThemeSelectorVisible: false,
+        isIconThemeSelectorVisible: false,
+        isSettingsDialogVisible: false,
+        isBranchManagerVisible: false,
+        isProjectPickerVisible: false,
+        isDatabaseConnectionVisible: false,
+      });
+    } else {
+      set({ isAgentLauncherVisible: v });
+    }
+  },
+
   setIsGlobalSearchVisible: (v: boolean) => {
     if (v) {
       set({
         isGlobalSearchVisible: true,
         isQuickOpenVisible: false,
         isCommandPaletteVisible: false,
+        isAgentLauncherVisible: false,
         isThemeSelectorVisible: false,
         isIconThemeSelectorVisible: false,
         isSettingsDialogVisible: false,
@@ -163,6 +193,7 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
         isSettingsDialogVisible: true,
         isQuickOpenVisible: false,
         isCommandPaletteVisible: false,
+        isAgentLauncherVisible: false,
         isGlobalSearchVisible: false,
         isThemeSelectorVisible: false,
         isIconThemeSelectorVisible: false,
@@ -181,6 +212,7 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
         isThemeSelectorVisible: true,
         isQuickOpenVisible: false,
         isCommandPaletteVisible: false,
+        isAgentLauncherVisible: false,
         isGlobalSearchVisible: false,
         isIconThemeSelectorVisible: false,
         isSettingsDialogVisible: false,
@@ -199,6 +231,7 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
         isIconThemeSelectorVisible: true,
         isQuickOpenVisible: false,
         isCommandPaletteVisible: false,
+        isAgentLauncherVisible: false,
         isGlobalSearchVisible: false,
         isThemeSelectorVisible: false,
         isSettingsDialogVisible: false,
@@ -217,6 +250,7 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
         isBranchManagerVisible: true,
         isQuickOpenVisible: false,
         isCommandPaletteVisible: false,
+        isAgentLauncherVisible: false,
         isGlobalSearchVisible: false,
         isThemeSelectorVisible: false,
         isIconThemeSelectorVisible: false,

@@ -20,6 +20,14 @@ export interface QueuedMessage {
   timestamp: Date;
 }
 
+export interface PendingAgentLaunchRequest {
+  chatId: string;
+  agentId: AgentType;
+  prompt: string;
+  selectedBufferIds: string[];
+  selectedFilesPaths: string[];
+}
+
 export interface PastedImage {
   id: string;
   dataUrl: string;
@@ -49,6 +57,7 @@ export interface AIChatState {
   isSendAnimating: boolean;
   messageQueue: QueuedMessage[];
   isProcessingQueue: boolean;
+  pendingAgentLaunchRequest: PendingAgentLaunchRequest | null;
   mode: ChatMode;
   outputStyle: OutputStyle;
 
@@ -103,6 +112,7 @@ export interface AIChatActions {
   addMessageToQueue: (message: string) => void;
   processNextMessage: () => QueuedMessage | null;
   clearMessageQueue: () => void;
+  setPendingAgentLaunchRequest: (request: PendingAgentLaunchRequest | null) => void;
 
   // Input actions
   setInput: (input: string) => void;

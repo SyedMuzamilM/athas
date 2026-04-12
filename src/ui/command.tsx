@@ -12,6 +12,7 @@ interface CommandProps {
   children: React.ReactNode;
   className?: string;
   onClose?: () => void;
+  placement?: "top" | "bottom";
 }
 
 const commandContentVariants = cva(
@@ -33,13 +34,19 @@ const commandItemVariants = cva(
   },
 );
 
-const Command = ({ isVisible, children, className, onClose }: CommandProps) => {
+const Command = ({ isVisible, children, className, onClose, placement = "top" }: CommandProps) => {
+  const containerClassName =
+    placement === "bottom"
+      ? "fixed inset-0 z-50 flex items-end justify-center px-4 pb-12"
+      : "fixed inset-0 z-50 flex items-start justify-center pt-16";
+  const motionY = placement === "bottom" ? 8 : -8;
+
   return (
     <AnimatePresence>
       {isVisible && (
         <DialogPrimitive.Root open={isVisible} onOpenChange={(open) => !open && onClose?.()}>
           <DialogPrimitive.Portal>
-            <div className="fixed inset-0 z-50 flex items-start justify-center pt-16">
+            <div className={containerClassName}>
               <DialogPrimitive.Overlay asChild>
                 <motion.button
                   type="button"
@@ -54,9 +61,9 @@ const Command = ({ isVisible, children, className, onClose }: CommandProps) => {
               </DialogPrimitive.Overlay>
               <DialogPrimitive.Content asChild aria-label="Command palette">
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.95, y: -8 }}
+                  initial={{ opacity: 0, scale: 0.95, y: motionY }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: -8 }}
+                  exit={{ opacity: 0, scale: 0.95, y: motionY }}
                   transition={{ duration: 0.15, ease: "easeOut" }}
                   className={cn(commandContentVariants(), className)}
                 >

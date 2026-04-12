@@ -25,7 +25,7 @@ export function AcpInlineEvent({ event }: AcpInlineEventProps) {
         <Icon
           className={cn(
             "shrink-0",
-            event.state === "running" && "animate-spin text-text-lighter/70",
+            event.state === "running" && "text-text-lighter/70",
             event.state === "success" && "text-green-400/75",
             event.state === "error" && "text-red-400/80",
             (!event.state || event.state === "info") && "text-text-lighter/70",

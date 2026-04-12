@@ -237,6 +237,7 @@ interface DropdownBaseProps {
   className?: string;
   menuClassName?: string;
   style?: CSSProperties;
+  portalContainer?: Element | DocumentFragment | null;
 }
 
 interface AnchorPositioning {
@@ -313,7 +314,16 @@ function getViewportBounds() {
 }
 
 export function Dropdown(props: DropdownProps) {
-  const { isOpen, onClose, className, menuClassName, style, searchable, searchPlaceholder } = props;
+  const {
+    isOpen,
+    onClose,
+    className,
+    menuClassName,
+    style,
+    searchable,
+    searchPlaceholder,
+    portalContainer,
+  } = props;
 
   const menuRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -608,6 +618,7 @@ export function Dropdown(props: DropdownProps) {
     <MenuPopover
       isOpen={isOpen}
       menuRef={menuRef}
+      portalContainer={portalContainer}
       className={className}
       style={{ transformOrigin, ...style }}
       initial={{ opacity: 0, scale: 0.95, y: yDir }}
