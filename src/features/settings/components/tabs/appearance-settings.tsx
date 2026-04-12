@@ -151,6 +151,10 @@ export const AppearanceSettings = () => {
           canReset={settings.theme !== getDefaultSetting("theme")}
         >
           <div className="flex items-center gap-2">
+            <Button onClick={handleUploadTheme} variant="secondary" size="xs" className="gap-1">
+              <Upload />
+              Upload
+            </Button>
             <Select
               value={settings.theme}
               options={normalizedThemeOptions}
@@ -161,10 +165,6 @@ export const AppearanceSettings = () => {
               searchable
               disabled={settings.syncSystemTheme}
             />
-            <Button onClick={handleUploadTheme} variant="secondary" size="xs" className="gap-1">
-              <Upload />
-              Upload
-            </Button>
           </div>
         </SettingRow>
 
@@ -181,39 +181,43 @@ export const AppearanceSettings = () => {
           />
         </SettingRow>
 
-        <SettingRow
-          label="Preferred Light Theme"
-          description="Used when Sync With OS is enabled and the system appearance is light"
-          onReset={() => updateSetting("autoThemeLight", getDefaultSetting("autoThemeLight"))}
-          canReset={settings.autoThemeLight !== getDefaultSetting("autoThemeLight")}
-        >
-          <Select
-            value={settings.autoThemeLight}
-            options={lightThemeOptions}
-            onChange={(value) => updateSetting("autoThemeLight", value)}
-            className={SETTINGS_CONTROL_WIDTHS.wide}
-            size="xs"
-            variant="secondary"
-            searchable
-          />
-        </SettingRow>
+        {settings.syncSystemTheme ? (
+          <>
+            <SettingRow
+              label="Preferred Light Theme"
+              description="Used when Sync With OS is enabled and the system appearance is light"
+              onReset={() => updateSetting("autoThemeLight", getDefaultSetting("autoThemeLight"))}
+              canReset={settings.autoThemeLight !== getDefaultSetting("autoThemeLight")}
+            >
+              <Select
+                value={settings.autoThemeLight}
+                options={lightThemeOptions}
+                onChange={(value) => updateSetting("autoThemeLight", value)}
+                className={SETTINGS_CONTROL_WIDTHS.wide}
+                size="xs"
+                variant="secondary"
+                searchable
+              />
+            </SettingRow>
 
-        <SettingRow
-          label="Preferred Dark Theme"
-          description="Used when Sync With OS is enabled and the system appearance is dark"
-          onReset={() => updateSetting("autoThemeDark", getDefaultSetting("autoThemeDark"))}
-          canReset={settings.autoThemeDark !== getDefaultSetting("autoThemeDark")}
-        >
-          <Select
-            value={settings.autoThemeDark}
-            options={darkThemeOptions}
-            onChange={(value) => updateSetting("autoThemeDark", value)}
-            className={SETTINGS_CONTROL_WIDTHS.wide}
-            size="xs"
-            variant="secondary"
-            searchable
-          />
-        </SettingRow>
+            <SettingRow
+              label="Preferred Dark Theme"
+              description="Used when Sync With OS is enabled and the system appearance is dark"
+              onReset={() => updateSetting("autoThemeDark", getDefaultSetting("autoThemeDark"))}
+              canReset={settings.autoThemeDark !== getDefaultSetting("autoThemeDark")}
+            >
+              <Select
+                value={settings.autoThemeDark}
+                options={darkThemeOptions}
+                onChange={(value) => updateSetting("autoThemeDark", value)}
+                className={SETTINGS_CONTROL_WIDTHS.wide}
+                size="xs"
+                variant="secondary"
+                searchable
+              />
+            </SettingRow>
+          </>
+        ) : null}
 
         <SettingRow
           label="Icon Theme"
