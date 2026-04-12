@@ -2,11 +2,22 @@ use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicU32, Ordering};
 #[cfg(target_os = "macos")]
 use tauri::TitleBarStyle;
-use tauri::{AppHandle, Manager, WebviewBuilder, WebviewUrl, WebviewWindow, command};
+use tauri::{
+   AppHandle, Emitter, Manager, WebviewBuilder, WebviewUrl, WebviewWindow, command,
+   webview::PageLoadEvent,
+};
 
 // Counter for generating unique web viewer labels
 static WEB_VIEWER_COUNTER: AtomicU32 = AtomicU32::new(0);
 static APP_WINDOW_COUNTER: AtomicU32 = AtomicU32::new(0);
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct EmbeddedWebviewPageLoadEvent {
+   webview_label: String,
+   url: String,
+   event: String,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -229,6 +240,20 @@ pub async fn create_embedded_webview(
 
    // Inject shortcut interceptor script
    webview_builder = webview_builder.initialization_script(SHORTCUT_INTERCEPTOR_SCRIPT);
+   let app_handle = app.clone();
+   let event_webview_label = webview_label.clone();
+   webview_builder = webview_builder.on_page_load(move |_webview, payload| {
+      let event = EmbeddedWebviewPageLoadEvent {
+         webview_label: event_webview_label.clone(),
+         url: payload.url().to_string(),
+         event: match payload.event() {
+            PageLoadEvent::Started => "started".to_string(),
+            PageLoadEvent::Finished => "finished".to_string(),
+         },
+      };
+
+      let _ = app_handle.emit("embedded-webview-page-load", event);
+   });
 
    // Create embedded webview within the main window
    let webview = main_window

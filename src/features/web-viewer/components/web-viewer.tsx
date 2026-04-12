@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
@@ -12,6 +13,12 @@ export interface WebViewerProps {
   paneId?: string;
   isActive?: boolean;
   isVisible?: boolean;
+}
+
+interface EmbeddedWebviewPageLoadEvent {
+  webviewLabel: string;
+  url: string;
+  event: "started" | "finished";
 }
 
 export function WebViewer({
@@ -28,6 +35,7 @@ export function WebViewer({
   const [canGoForward, setCanGoForward] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [copied, setCopied] = useState(false);
+  const [pageLoadVersion, setPageLoadVersion] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const urlInputRef = useRef<HTMLInputElement>(null);
   const historyRef = useRef<string[]>(isNewTab ? [] : [initialUrl]);
@@ -85,6 +93,43 @@ export function WebViewer({
     setInputUrl(initialUrl);
     replaceCurrentHistoryEntry(initialUrl);
   }, [currentUrl, initialUrl, isNewTab, replaceCurrentHistoryEntry]);
+
+  useEffect(() => {
+    if (!webviewLabel) return;
+
+    let disposed = false;
+    let unlisten: (() => void) | undefined;
+
+    const setupListener = async () => {
+      unlisten = await listen<EmbeddedWebviewPageLoadEvent>(
+        "embedded-webview-page-load",
+        (event) => {
+          if (disposed) return;
+          if (event.payload.webviewLabel !== webviewLabel) return;
+
+          if (event.payload.event === "started") {
+            setIsLoading(true);
+            return;
+          }
+
+          setIsLoading(false);
+          setCurrentUrl(event.payload.url);
+          setInputUrl(event.payload.url);
+          replaceCurrentHistoryEntry(event.payload.url);
+          setPageLoadVersion((value) => value + 1);
+        },
+      );
+    };
+
+    void setupListener();
+
+    return () => {
+      disposed = true;
+      if (unlisten) {
+        unlisten();
+      }
+    };
+  }, [replaceCurrentHistoryEntry, webviewLabel]);
 
   // Set initial buffer title from hostname, then poll for real page metadata
   useEffect(() => {
@@ -184,7 +229,7 @@ export function WebViewer({
       }
       clearTimeout(failSafeTimer);
     };
-  }, [webviewLabel, bufferId, currentUrl, isActive, isVisible, buffers, updateBuffer]);
+  }, [webviewLabel, bufferId, isActive, isVisible, buffers, pageLoadVersion, updateBuffer]);
 
   // Auto-focus URL input for new tabs
   useEffect(() => {
