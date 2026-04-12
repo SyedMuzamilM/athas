@@ -438,30 +438,75 @@ pub async fn open_webview_devtools(
 }
 
 fn normalize_webview_url(url: &str) -> Result<String, String> {
-   let trimmed = url.trim();
-   if trimmed.is_empty() {
+   let sanitized = url
+      .chars()
+      .filter(|ch| !ch.is_control())
+      .collect::<String>()
+      .trim()
+      .to_string();
+
+   if sanitized.is_empty() || sanitized.chars().any(char::is_whitespace) {
       return Err("URL cannot be empty".to_string());
    }
 
-   if trimmed == "about:blank" {
-      return Ok(trimmed.to_string());
+   if sanitized == "about:blank" {
+      return Ok(sanitized);
    }
 
-   let candidate = if trimmed.starts_with("http://") || trimmed.starts_with("https://") {
-      trimmed.to_string()
+   let normalized_input = if sanitized.starts_with("//") {
+      format!("https:{sanitized}")
+   } else if sanitized.starts_with(':') {
+      format!("http://localhost{sanitized}")
    } else {
-      let normalized = trimmed.to_lowercase();
-      if normalized.starts_with("localhost") || normalized.starts_with("127.0.0.1") {
-         format!("http://{trimmed}")
-      } else {
-         format!("https://{trimmed}")
-      }
+      sanitized
+   };
+
+   let candidate = if has_supported_protocol(&normalized_input) {
+      normalized_input
+   } else {
+      format!(
+         "{}{}",
+         infer_webview_protocol(&normalized_input),
+         normalized_input
+      )
    };
 
    let parsed = url::Url::parse(&candidate).map_err(|e| format!("Invalid URL: {e}"))?;
    match parsed.scheme() {
-      "http" | "https" => Ok(candidate),
-      _ => Err("Only http and https URLs are allowed".to_string()),
+      "http" | "https" => Ok(parsed.to_string()),
+      "about" => Ok(parsed.to_string()),
+      _ => Err("Only http, https, and about URLs are allowed".to_string()),
+   }
+}
+
+fn has_supported_protocol(value: &str) -> bool {
+   let Some(protocol_end) = value.find(':') else {
+      return false;
+   };
+
+   let scheme = &value[..protocol_end];
+   !scheme.is_empty()
+      && scheme
+         .chars()
+         .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '+' | '-' | '.'))
+}
+
+fn infer_webview_protocol(value: &str) -> &'static str {
+   let normalized = value.to_lowercase();
+
+   if normalized.starts_with("localhost")
+      || normalized.starts_with("127.")
+      || normalized.starts_with("10.")
+      || normalized.starts_with("192.168.")
+      || normalized.starts_with("172.")
+      || normalized.starts_with("[::1]")
+      || normalized.starts_with("::1")
+      || normalized.starts_with("0.0.0.0")
+      || normalized.starts_with(':')
+   {
+      "http://"
+   } else {
+      "https://"
    }
 }
 
