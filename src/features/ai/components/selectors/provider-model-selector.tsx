@@ -108,7 +108,7 @@ export function ProviderModelSelector({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const apiKeyInputRef = useRef<HTMLInputElement>(null);
-  const portalContainer = triggerRef.current?.closest("[data-dialog-content]") ?? document.body;
+  const portalContainer = document.body;
 
   const providers = getAvailableProviders();
   const currentProvider = getProviderById(providerId);
@@ -479,7 +479,7 @@ export function ProviderModelSelector({
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: -4, scale: 0.98 }}
         transition={{ duration: 0.15, ease: "easeOut" }}
-        className="z-[10030] flex max-w-[min(420px,calc(100vw-16px))] flex-col overflow-hidden rounded-2xl bg-primary-bg/95 p-0 shadow-xl"
+        className="pointer-events-auto z-[10050] flex max-w-[min(420px,calc(100vw-16px))] flex-col overflow-hidden rounded-2xl bg-primary-bg/95 p-0 shadow-xl"
         style={
           position
             ? {
@@ -491,43 +491,41 @@ export function ProviderModelSelector({
             : undefined
         }
       >
-        <div className="border-border/60 border-b px-1.5 py-1.5">
-          <div className="flex items-center gap-1.5 rounded-lg bg-secondary-bg/70 pr-1.5">
-            <Input
-              ref={inputRef}
-              type="text"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Search providers and models..."
-              variant="ghost"
-              leftIcon={Search}
-              className="min-w-0 flex-1 py-2"
-            />
-            {supportsDynamicModels && (
-              <Button
-                type="button"
-                onClick={() => void fetchDynamicModels()}
-                disabled={isLoadingModels}
-                variant="ghost"
-                size="icon-sm"
-                className="rounded-md text-text-lighter"
-                aria-label="Refresh models"
-              >
-                <RefreshCw className={cn(isLoadingModels && "animate-spin")} />
-              </Button>
-            )}
+        <div className="flex items-center gap-1 border-border/60 border-b px-1.5 pb-1.5 pt-0.5">
+          <Input
+            ref={inputRef}
+            type="text"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Search providers and models..."
+            variant="ghost"
+            leftIcon={Search}
+            className="min-w-0 flex-1"
+          />
+          {supportsDynamicModels && (
             <Button
               type="button"
-              onClick={() => setIsOpen(false)}
+              onClick={() => void fetchDynamicModels()}
+              disabled={isLoadingModels}
               variant="ghost"
               size="icon-sm"
               className="rounded-md text-text-lighter"
-              aria-label="Close model selector"
+              aria-label="Refresh models"
             >
-              <X />
+              <RefreshCw className={cn(isLoadingModels && "animate-spin")} />
             </Button>
-          </div>
+          )}
+          <Button
+            type="button"
+            onClick={() => setIsOpen(false)}
+            variant="ghost"
+            size="icon-sm"
+            className="rounded-md text-text-lighter"
+            aria-label="Close model selector"
+          >
+            <X />
+          </Button>
         </div>
 
         <div
