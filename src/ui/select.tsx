@@ -66,7 +66,7 @@ const selectItemVariants = cva(
 );
 
 const selectSearchInputVariants = cva(
-  "ui-font ui-text-sm w-full rounded-lg border border-border bg-secondary-bg py-2 pr-3 pl-8 text-text placeholder-text-lighter outline-none focus:border-border-strong focus:ring-1 focus:ring-border-strong/35",
+  "ui-font ui-text-sm w-full border-none bg-transparent py-1.5 pr-3 pl-7 text-text placeholder-text-lighter outline-none",
 );
 
 const iconSizes = {
@@ -108,9 +108,12 @@ function SelectSearchField({
   onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
 }) {
   return (
-    <div className="border-border/60 border-b px-1.5 py-1.5">
+    <div className="border-border/60 border-b px-1.5 pb-1.5 pt-0.5">
       <div className="relative">
-        <Search className="-translate-y-1/2 absolute top-1/2 left-2 text-text-lighter" />
+        <Search
+          className="-translate-y-1/2 absolute top-1/2 left-1.5 text-text-lighter"
+          size={12}
+        />
         <input
           ref={inputRef}
           type="text"
@@ -118,8 +121,13 @@ function SelectSearchField({
           onChange={(event) => onChange(event.target.value)}
           placeholder="Search..."
           className={selectSearchInputVariants()}
-          onKeyDown={onKeyDown}
+          onKeyDown={(event) => {
+            event.stopPropagation();
+            onKeyDown?.(event);
+          }}
+          onKeyDownCapture={(event) => event.stopPropagation()}
           onClick={(event) => event.stopPropagation()}
+          onPointerDown={(event) => event.stopPropagation()}
         />
       </div>
     </div>
@@ -172,7 +180,7 @@ export default function Select({
     if (!open) {
       setSearchQuery("");
     }
-  }, [open, searchable]);
+  }, [open, searchable, searchQuery]);
 
   const selectedOption = options.find((option) => option.value === value);
   const filteredOptions = searchable ? filterSelectOptions(options, searchQuery) : options;

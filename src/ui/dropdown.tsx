@@ -617,7 +617,7 @@ export function Dropdown(props: DropdownProps) {
     >
       <div role="menu" className={menuClassName} onKeyDown={handleKeyDown}>
         {searchable && (
-          <div className="px-1 pb-1">
+          <div className="border-border/60 border-b px-1.5 pb-1.5 pt-0.5">
             <Input
               ref={searchRef}
               type="text"
