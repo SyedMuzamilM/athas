@@ -1,15 +1,6 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import {
-  Edit,
-  Folder,
-  FolderOpen,
-  Plus,
-  Server,
-  SquareArrowOutUpRight,
-  Trash2,
-  X,
-} from "lucide-react";
+import { Edit, Folder, Plus, Server, SquareArrowOutUpRight, Trash2, X } from "lucide-react";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
 import { memo, useCallback, useEffect, useState } from "react";
 import { useRecentFoldersStore } from "@/features/file-system/controllers/recent-folders-store";
@@ -189,8 +180,8 @@ const ProjectPickerDialog = memo(({ isOpen, onClose }: ProjectPickerDialogProps)
     <>
       <Dialog
         title="Open Project"
-        icon={FolderOpen}
         onClose={onClose}
+        headerBorder={false}
         size="lg"
         classNames={{
           modal: "max-w-[560px] rounded-xl",
