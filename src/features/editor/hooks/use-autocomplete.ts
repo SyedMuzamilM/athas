@@ -24,7 +24,7 @@ const COMPLETION_OVERLAP_SCAN_LIMIT = 256;
 
 const WORD_LIKE_TRIGGER_REGEX = /[\w\]})>"'`.]/;
 const CONTEXT_FOLLOWUP_TRIGGER_REGEX = /[\w\]})>"'`.{;=:[\],(]/;
-const DEBUG_AUTOCOMPLETE = import.meta.env.DEV;
+const DEBUG_AUTOCOMPLETE = false;
 
 function debugLog(message: string, payload?: Record<string, unknown>) {
   if (!DEBUG_AUTOCOMPLETE) return;

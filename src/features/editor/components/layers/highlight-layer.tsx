@@ -60,7 +60,7 @@ const Line = memo<LineProps>(
         if (tokenStartInLine > lastIndex) {
           const text = lineContent.substring(lastIndex, Math.max(lastIndex, tokenStartInLine));
           result.push(
-            <span key={`${lineIndex}-${spanKey++}`} className={lastTokenClass}>
+            <span key={`${lineIndex}-${spanKey++}`} className={lastTokenClass ?? "token-text"}>
               {text}
             </span>,
           );
@@ -85,7 +85,7 @@ const Line = memo<LineProps>(
       if (lastIndex < lineContent.length) {
         const text = lineContent.substring(lastIndex);
         result.push(
-          <span key={`${lineIndex}-${spanKey++}`} className={lastTokenClass}>
+          <span key={`${lineIndex}-${spanKey++}`} className={lastTokenClass ?? "token-text"}>
             {text}
           </span>,
         );
@@ -118,7 +118,7 @@ const Line = memo<LineProps>(
 
     if (foldedCount) {
       return (
-        <div className="highlight-layer-line folded-preview-line">
+        <div className="highlight-layer-line folded-preview-line token-text">
           {lineContent || `${foldedCount} lines hidden`}
         </div>
       );
@@ -126,7 +126,7 @@ const Line = memo<LineProps>(
 
     return (
       <div className="highlight-layer-line">
-        {spans.length > 0 ? spans : lineContent || "\u00A0"}
+        {spans.length > 0 ? spans : <span className="token-text">{lineContent || "\u00A0"}</span>}
       </div>
     );
   },
@@ -304,18 +304,9 @@ export const HighlightLayer = memo(HighlightLayerComponent, (prev, next) => {
     );
   }
 
-  const tokensUnchanged = prev.tokens === next.tokens;
-
-  // If only content changed but tokens haven't updated yet, skip the intermediate render.
-  // The tokenizer will produce new tokens shortly, triggering a proper re-render then.
-  // This prevents the flash of unhighlighted text between keystroke and tokenization.
-  if (prev.content !== next.content && tokensUnchanged) {
-    return true;
-  }
-
   const shouldSkipRender =
     prev.content === next.content &&
-    tokensUnchanged &&
+    prev.tokens === next.tokens &&
     prev.foldMarkers === next.foldMarkers &&
     prev.fontSize === next.fontSize &&
     prev.fontFamily === next.fontFamily &&

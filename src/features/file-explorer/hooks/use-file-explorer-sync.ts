@@ -24,7 +24,14 @@ export function useFileExplorerSync({
   const explorerTargetPath = useMemo(() => getExplorerTargetPath(activeBuffer), [activeBuffer]);
 
   useEffect(() => {
-    if (!explorerTargetPath || explorerTargetPath === activePath) return;
+    if (!explorerTargetPath) {
+      if (activePath) {
+        updateActivePath?.("");
+      }
+      return;
+    }
+
+    if (explorerTargetPath === activePath) return;
     updateActivePath?.(explorerTargetPath);
   }, [activePath, explorerTargetPath, updateActivePath]);
 
