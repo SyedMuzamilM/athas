@@ -123,7 +123,13 @@ const ExtensionRow = ({
               Update
             </Button>
           )}
-          <Button onClick={onToggle} variant="danger" size="xs" tooltip="Uninstall">
+          <Button
+            onClick={onToggle}
+            variant="danger"
+            size="xs"
+            className="border-error/35 bg-error/10 text-error hover:border-error/45 hover:bg-error/15 hover:text-error"
+            tooltip="Uninstall"
+          >
             Uninstall
           </Button>
         </div>
@@ -132,7 +138,7 @@ const ExtensionRow = ({
           onClick={onToggle}
           variant="secondary"
           size="xs"
-          className="shrink-0"
+          className="shrink-0 border-border/80 bg-primary-bg/70 text-text hover:border-border hover:bg-hover"
           tooltip="Install"
         >
           Install
