@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
+import { hasOverlayCoveringWebview } from "../utils/web-viewer-overlay";
 
 interface UseEmbeddedWebviewOptions {
   bufferId: string;
@@ -255,35 +256,8 @@ export function useEmbeddedWebview({
   useEffect(() => {
     if (!webviewLabel) return;
 
-    let debounceTimer: NodeJS.Timeout | null = null;
+    let animationFrameId: number | null = null;
     let lastOverlayState = false;
-
-    const checkForOverlay = () => {
-      // Only hide the webview for overlays that actually cover it.
-      // Full-screen dialogs always overlap:
-      const hasDialog = document.querySelector('[role="dialog"][data-state="open"]');
-      if (hasDialog) return true;
-
-      // For menus and context menus, check if they visually overlap the webview container
-      const container = containerRef.current;
-      if (!container) return false;
-      const containerRect = container.getBoundingClientRect();
-
-      const overlays = document.querySelectorAll(
-        '[role="menu"], .context-menu:not([style*="display: none"])',
-      );
-      for (const overlay of overlays) {
-        const overlayRect = overlay.getBoundingClientRect();
-        const overlaps =
-          overlayRect.right > containerRect.left &&
-          overlayRect.left < containerRect.right &&
-          overlayRect.bottom > containerRect.top &&
-          overlayRect.top < containerRect.bottom;
-        if (overlaps) return true;
-      }
-
-      return false;
-    };
 
     const updateVisibility = (shouldHide: boolean) => {
       if (shouldHide !== lastOverlayState) {
@@ -294,13 +268,11 @@ export function useEmbeddedWebview({
     };
 
     const handleOverlayChange = () => {
-      if (debounceTimer) {
-        clearTimeout(debounceTimer);
-      }
-
-      debounceTimer = setTimeout(() => {
-        updateVisibility(checkForOverlay());
-      }, 50);
+      if (animationFrameId !== null) return;
+      animationFrameId = window.requestAnimationFrame(() => {
+        animationFrameId = null;
+        updateVisibility(hasOverlayCoveringWebview(containerRef.current));
+      });
     };
 
     const handleContextMenu = () => {
@@ -311,7 +283,9 @@ export function useEmbeddedWebview({
         lastOverlayState = true;
       }
       // Sonra tekrar kontrol et (menu kapanmış olabilir)
-      setTimeout(() => updateVisibility(checkForOverlay()), 100);
+      window.setTimeout(() => {
+        updateVisibility(hasOverlayCoveringWebview(containerRef.current));
+      }, 100);
     };
 
     // Listen for DOM mutations to detect overlays
@@ -319,8 +293,6 @@ export function useEmbeddedWebview({
     observer.observe(document.body, {
       childList: true,
       subtree: true,
-      attributes: true,
-      attributeFilter: ["role", "data-state"],
     });
 
     // Listen for context menu events
@@ -330,8 +302,8 @@ export function useEmbeddedWebview({
     document.addEventListener("click", handleOverlayChange);
 
     return () => {
-      if (debounceTimer) {
-        clearTimeout(debounceTimer);
+      if (animationFrameId !== null) {
+        window.cancelAnimationFrame(animationFrameId);
       }
       observer.disconnect();
       document.removeEventListener("contextmenu", handleContextMenu);
