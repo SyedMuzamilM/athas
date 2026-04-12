@@ -37,7 +37,7 @@ export function WebViewer({
   const buffers = useBufferStore.use.buffers();
   const webviewLabel = useEmbeddedWebview({
     bufferId,
-    currentUrl,
+    initialUrl: currentUrl,
     containerRef,
     isActive,
     isVisible,

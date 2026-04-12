@@ -3,7 +3,7 @@ import { useEffect, useState, type RefObject } from "react";
 
 interface UseEmbeddedWebviewOptions {
   bufferId: string;
-  currentUrl: string;
+  initialUrl: string;
   containerRef: RefObject<HTMLDivElement | null>;
   isActive: boolean;
   isVisible: boolean;
@@ -12,7 +12,7 @@ interface UseEmbeddedWebviewOptions {
 
 export function useEmbeddedWebview({
   bufferId,
-  currentUrl,
+  initialUrl,
   containerRef,
   isActive,
   isVisible,
@@ -21,7 +21,7 @@ export function useEmbeddedWebview({
   const [webviewLabel, setWebviewLabel] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!currentUrl) return;
+    if (webviewLabel || !initialUrl) return;
 
     let mounted = true;
     let createdLabel: string | null = null;
@@ -40,7 +40,7 @@ export function useEmbeddedWebview({
 
       try {
         const label = await invoke<string>("create_embedded_webview", {
-          url: currentUrl,
+          url: initialUrl,
           x: clampedX,
           y: clampedY,
           width: clampedWidth,
@@ -69,7 +69,7 @@ export function useEmbeddedWebview({
         void invoke("close_embedded_webview", { webviewLabel: createdLabel }).catch(console.error);
       }
     };
-  }, [bufferId, containerRef, currentUrl, onLoadStateChange]);
+  }, [bufferId, containerRef, initialUrl, onLoadStateChange]);
 
   useEffect(() => {
     if (!webviewLabel || !containerRef.current || !isVisible) return;
