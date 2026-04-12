@@ -80,10 +80,11 @@ export function WebViewer({
   const historyRef = useRef<string[]>(isNewTab ? [] : [initialUrl]);
   const historyIndexRef = useRef(isNewTab ? -1 : 0);
   const pendingNavigationActionRef = useRef<PendingNavigationAction>(null);
+  const previousUrlPropRef = useRef(initialUrl);
 
   const { updateBuffer } = useBufferStore.use.actions();
   const buffers = useBufferStore.use.buffers();
-  const webviewLabel = useEmbeddedWebview({
+  const { error: webviewError, webviewLabel } = useEmbeddedWebview({
     bufferId,
     initialUrl: currentUrl,
     containerRef,
@@ -146,13 +147,31 @@ export function WebViewer({
   }, [syncHistoryState]);
 
   useEffect(() => {
-    if (isNewTab) return;
-    if (!initialUrl || initialUrl === currentUrl) return;
+    if (previousUrlPropRef.current === initialUrl) return;
+    previousUrlPropRef.current = initialUrl;
+
+    if (initialUrl === "https://" || initialUrl === "http://" || !initialUrl) {
+      setCurrentUrl("");
+      setInputUrl("");
+      setUrlError(null);
+      setPageError(null);
+      historyRef.current = [];
+      historyIndexRef.current = -1;
+      syncHistoryState();
+      return;
+    }
 
     setCurrentUrl(initialUrl);
     setInputUrl(initialUrl);
+    setUrlError(null);
+    setPageError(null);
     replaceCurrentHistoryEntry(initialUrl);
-  }, [currentUrl, initialUrl, isNewTab, replaceCurrentHistoryEntry]);
+  }, [initialUrl, replaceCurrentHistoryEntry, syncHistoryState]);
+
+  useEffect(() => {
+    if (!webviewError) return;
+    setPageError(webviewError);
+  }, [webviewError]);
 
   useEffect(() => {
     if (!webviewLabel) return;

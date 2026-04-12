@@ -10,6 +10,11 @@ interface UseEmbeddedWebviewOptions {
   onLoadStateChange: (isLoading: boolean) => void;
 }
 
+interface UseEmbeddedWebviewResult {
+  error: string | null;
+  webviewLabel: string | null;
+}
+
 export function useEmbeddedWebview({
   bufferId,
   initialUrl,
@@ -17,7 +22,8 @@ export function useEmbeddedWebview({
   isActive,
   isVisible,
   onLoadStateChange,
-}: UseEmbeddedWebviewOptions) {
+}: UseEmbeddedWebviewOptions): UseEmbeddedWebviewResult {
+  const [error, setError] = useState<string | null>(null);
   const [webviewLabel, setWebviewLabel] = useState<string | null>(null);
   const lastBoundsRef = useRef<string | null>(null);
   const lastVisibilityRef = useRef<boolean | null>(null);
@@ -106,9 +112,11 @@ export function useEmbeddedWebview({
         lastBoundsRef.current = null;
         lastVisibilityRef.current = null;
         overlayHiddenRef.current = false;
+        setError(null);
         setWebviewLabel(label);
       } catch (error) {
         console.error("Failed to create embedded webview:", error);
+        setError(error instanceof Error ? error.message : "Couldn't create webview.");
         onLoadStateChange(false);
       }
     };
@@ -331,5 +339,5 @@ export function useEmbeddedWebview({
     };
   }, [isActive, isVisible, syncWebviewVisibility, webviewLabel]);
 
-  return webviewLabel;
+  return { error, webviewLabel };
 }
