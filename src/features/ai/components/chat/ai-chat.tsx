@@ -171,11 +171,13 @@ const AIChat = memo(function AIChat({
   }, []);
 
   const buildContext = async (agentId: string): Promise<ContextInfo> => {
-    const selectedBuffers = buffers.filter((buffer) => chatState.selectedBufferIds.has(buffer.id));
+    const selectedBuffers = buffers.filter(
+      (buffer) => buffer.type !== "agent" && chatState.selectedBufferIds.has(buffer.id),
+    );
 
     // Build active buffer context, including web viewer content if applicable
     let activeBufferContext: (typeof activeBuffer & { webViewerContent?: string }) | undefined =
-      activeBuffer || undefined;
+      activeBuffer && activeBuffer.type !== "agent" ? activeBuffer : undefined;
     if (activeBuffer?.type === "webViewer" && activeBuffer.url) {
       // Fetch web page content for context
       const { fetchWebPageContent } = await import("@/features/ai/services/web-content-service");

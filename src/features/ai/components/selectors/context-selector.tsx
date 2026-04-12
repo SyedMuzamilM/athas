@@ -44,6 +44,10 @@ export function ContextSelector({
 
   const { rootFolderPath } = useProjectStore();
   const { getAllProjectFiles } = useFileSystemStore();
+  const selectableBuffers = useMemo(
+    () => buffers.filter((buffer) => buffer.type !== "agent"),
+    [buffers],
+  );
 
   // Pre-filtered file list (excludes directories + ignored files). Refreshed on each open.
   const [fileItems, setFileItems] = useState<Array<{ name: string; path: string }>>([]);
@@ -63,10 +67,13 @@ export function ContextSelector({
   }, [isOpen, getAllProjectFiles]);
 
   // Open buffer paths as Set for O(1) lookup
-  const openBufferPathSet = useMemo(() => new Set(buffers.map((b) => b.path)), [buffers]);
+  const openBufferPathSet = useMemo(
+    () => new Set(selectableBuffers.map((buffer) => buffer.path)),
+    [selectableBuffers],
+  );
 
   const allItems = useMemo(() => {
-    const bufferItems = buffers.map((buffer) => ({
+    const bufferItems = selectableBuffers.map((buffer) => ({
       type: "buffer" as const,
       id: buffer.id,
       name: buffer.name,
@@ -133,7 +140,7 @@ export function ContextSelector({
     return scored.slice(0, MAX_RESULTS).map(({ item }) => item);
   }, [
     fileItems,
-    buffers,
+    selectableBuffers,
     debouncedSearch,
     selectedBufferIds,
     selectedFilesPaths,
@@ -141,7 +148,7 @@ export function ContextSelector({
   ]);
 
   const selectedItems = useMemo(() => {
-    const bufferSelections = buffers
+    const bufferSelections = selectableBuffers
       .filter((buffer) => selectedBufferIds.has(buffer.id))
       .map((buffer) => ({
         type: "buffer" as const,
@@ -159,7 +166,7 @@ export function ContextSelector({
     }));
 
     return [...bufferSelections, ...fileSelections];
-  }, [buffers, selectedBufferIds, selectedFilesPaths]);
+  }, [selectableBuffers, selectedBufferIds, selectedFilesPaths]);
 
   useEffect(() => {
     if (isOpen) {
