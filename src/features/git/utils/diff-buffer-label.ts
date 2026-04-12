@@ -34,6 +34,11 @@ function deriveDiffLabelFromPath(path: string): string | null {
     return "Uncommitted Changes";
   }
 
+  const prMatch = path.match(/^diff:\/\/pr-(\d+)\/changes$/);
+  if (prMatch) {
+    return `PR #${prMatch[1]} Changes`;
+  }
+
   return null;
 }
 
