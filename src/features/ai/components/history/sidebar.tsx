@@ -3,7 +3,13 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } f
 import { getRelativeTime } from "@/features/ai/lib/formatting";
 import type { Chat } from "@/features/ai/types/ai-chat";
 import { Button } from "@/ui/button";
-import Command, { CommandEmpty, CommandHeader, CommandInput, CommandList } from "@/ui/command";
+import Command, {
+  CommandEmpty,
+  CommandHeader,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/ui/command";
 import { cn } from "@/utils/cn";
 import { ProviderIcon } from "../icons/provider-icons";
 
@@ -97,11 +103,7 @@ export default function ChatHistoryDropdown({
   }, [filteredChats.length, selectedIndex]);
 
   return (
-    <Command
-      isVisible={isOpen}
-      onClose={handleClose}
-      className="max-h-[72vh] w-[min(680px,calc(100vw-32px))]"
-    >
+    <Command isVisible={isOpen} onClose={handleClose}>
       <CommandHeader onClose={handleClose}>
         <Search className="shrink-0 text-text-lighter" size={14} />
         <CommandInput
@@ -121,24 +123,24 @@ export default function ChatHistoryDropdown({
           filteredChats.map((chat, index) => {
             const isCurrent = chat.id === currentChatId;
             const isSelected = index === selectedIndex;
+            const providerLabel = (chat.agentId || "custom").replace(/-/g, " ");
 
             return (
-              <div
+              <CommandItem
                 key={chat.id}
                 onClick={() => {
                   onSwitchToChat(chat.id);
                   handleClose();
                 }}
                 onMouseEnter={() => setSelectedIndex(index)}
+                isSelected={isSelected}
                 className={cn(
-                  "group mb-1 flex cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 transition-colors last:mb-0",
-                  isSelected ? "bg-selected text-text" : "hover:bg-hover",
+                  "group mb-1 px-3 py-1.5 last:mb-0",
+                  isCurrent && !isSelected && "bg-accent/10 text-text",
                 )}
-                role="button"
-                tabIndex={-1}
                 aria-current={isCurrent}
               >
-                <div className="flex size-5 shrink-0 items-center justify-center rounded-md text-text-lighter">
+                <div className="flex size-4 shrink-0 items-center justify-center text-text-lighter">
                   {isCurrent ? (
                     <Check className="text-accent" size={14} />
                   ) : (
@@ -151,27 +153,20 @@ export default function ChatHistoryDropdown({
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className={cn("truncate ui-font ui-text-sm", isCurrent && "text-accent")}>
-                      {chat.title}
-                    </span>
-                    <span className="shrink-0 text-[10px] text-text-lighter">
-                      {getRelativeTime(chat.lastMessageAt)}
-                    </span>
-                  </div>
-
-                  <div className="mt-0.5 flex items-center gap-2 text-[11px] text-text-lighter">
-                    <span className="truncate">
-                      {(chat.agentId || "custom").replace(/-/g, " ")}
-                    </span>
-                    {isCurrent ? <span className="text-accent/80">Current chat</span> : null}
+                  <div className="truncate text-xs">
+                    <span className={cn(isCurrent && "text-accent")}>{chat.title}</span>
                   </div>
                 </div>
+
+                <span className="shrink-0 text-[10px] text-text-lighter">{providerLabel}</span>
+                <span className="shrink-0 text-[10px] text-text-lighter">
+                  {getRelativeTime(chat.lastMessageAt)}
+                </span>
 
                 <Button
                   type="button"
                   variant="ghost"
-                  size="icon-sm"
+                  size="icon-xs"
                   onClick={(event) => {
                     event.stopPropagation();
                     onDeleteChat(chat.id, event);
@@ -182,7 +177,7 @@ export default function ChatHistoryDropdown({
                 >
                   <Trash2 size={13} />
                 </Button>
-              </div>
+              </CommandItem>
             );
           })
         )}
