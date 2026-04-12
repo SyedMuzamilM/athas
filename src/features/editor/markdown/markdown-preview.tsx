@@ -133,6 +133,17 @@ export function MarkdownPreview() {
     [sourceBuffer, handleFileSelect, resolvePath],
   );
 
+  const handleWheelCapture = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const canScroll = container.scrollHeight > container.clientHeight;
+    if (!canScroll || event.deltaY === 0) return;
+
+    container.scrollTop += event.deltaY;
+    event.preventDefault();
+  }, []);
+
   return (
     <div
       ref={containerRef}
@@ -142,6 +153,7 @@ export function MarkdownPreview() {
         fontFamily: `${uiFontFamily}, sans-serif`,
       }}
       onClick={handleLinkClick}
+      onWheelCapture={handleWheelCapture}
     >
       <div
         className="markdown-content w-full max-w-3xl"
