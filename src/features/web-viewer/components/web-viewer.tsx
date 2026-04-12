@@ -21,6 +21,17 @@ interface EmbeddedWebviewPageLoadEvent {
   event: "started" | "finished";
 }
 
+interface EmbeddedWebviewMetadataEvent {
+  webviewLabel: string;
+  title: string;
+  favicon: string | null;
+}
+
+interface EmbeddedWebviewShortcutEvent {
+  webviewLabel: string;
+  shortcut: string;
+}
+
 export function WebViewer({
   url: initialUrl,
   bufferId,
@@ -35,7 +46,6 @@ export function WebViewer({
   const [canGoForward, setCanGoForward] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [copied, setCopied] = useState(false);
-  const [pageLoadVersion, setPageLoadVersion] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const urlInputRef = useRef<HTMLInputElement>(null);
   const historyRef = useRef<string[]>(isNewTab ? [] : [initialUrl]);
@@ -116,7 +126,6 @@ export function WebViewer({
           setCurrentUrl(event.payload.url);
           setInputUrl(event.payload.url);
           replaceCurrentHistoryEntry(event.payload.url);
-          setPageLoadVersion((value) => value + 1);
         },
       );
     };
@@ -159,77 +168,46 @@ export function WebViewer({
     }
   }, [currentUrl, bufferId, buffers, updateBuffer]);
 
-  // Poll page metadata (title, favicon) from the embedded webview
   useEffect(() => {
-    if (!webviewLabel || !bufferId || !isActive || !isVisible) return;
+    if (!webviewLabel || !bufferId) return;
 
-    let cancelled = false;
-    let attempts = 0;
-    const maxAttempts = 6;
-    const pollDelays = [350, 900, 1800, 3200, 5000, 7500];
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let disposed = false;
+    let unlisten: (() => void) | undefined;
 
-    const pollMetadata = async () => {
-      if (cancelled || attempts >= maxAttempts) return;
-      const currentAttempt = attempts;
-      attempts++;
+    const setupListener = async () => {
+      unlisten = await listen<EmbeddedWebviewMetadataEvent>(
+        "embedded-webview-metadata",
+        (event) => {
+          if (disposed) return;
+          if (event.payload.webviewLabel !== webviewLabel) return;
 
-      try {
-        const meta = await invoke<{ title: string; favicon: string | null } | null>(
-          "poll_webview_metadata",
-          { webviewLabel },
-        );
-        if (cancelled) return;
-        if (!meta) {
-          if (currentAttempt === maxAttempts - 1) {
-            setIsLoading(false);
+          const buffer = useBufferStore.getState().buffers.find((b) => b.id === bufferId);
+          if (!buffer || buffer.type !== "webViewer") return;
+
+          let displayTitle = event.payload.title;
+          if (displayTitle.length > 30) {
+            displayTitle = `${displayTitle.substring(0, 27)}...`;
           }
-          return;
-        }
 
-        const buffer = buffers.find((b) => b.id === bufferId);
-        if (!buffer || buffer.type !== "webViewer") return;
-
-        let displayTitle = meta.title;
-        if (displayTitle.length > 30) {
-          displayTitle = `${displayTitle.substring(0, 27)}...`;
-        }
-
-        updateBuffer({
-          ...buffer,
-          name: displayTitle,
-          title: meta.title,
-          ...(meta.favicon ? { favicon: meta.favicon } : {}),
-        });
-        setIsLoading(false);
-      } catch {
-        if (currentAttempt === maxAttempts - 1) {
-          setIsLoading(false);
-        }
-      } finally {
-        const nextDelay = pollDelays[currentAttempt + 1];
-        if (!cancelled && nextDelay) {
-          timeoutId = setTimeout(pollMetadata, nextDelay);
-        }
-      }
+          updateBuffer({
+            ...buffer,
+            name: displayTitle,
+            title: event.payload.title,
+            ...(event.payload.favicon ? { favicon: event.payload.favicon } : {}),
+          });
+        },
+      );
     };
 
-    setIsLoading(true);
-    timeoutId = setTimeout(pollMetadata, pollDelays[0]);
-    const failSafeTimer = setTimeout(() => {
-      if (!cancelled) {
-        setIsLoading(false);
-      }
-    }, 10000);
+    void setupListener();
 
     return () => {
-      cancelled = true;
-      if (timeoutId) {
-        clearTimeout(timeoutId);
+      disposed = true;
+      if (unlisten) {
+        unlisten();
       }
-      clearTimeout(failSafeTimer);
     };
-  }, [webviewLabel, bufferId, isActive, isVisible, buffers, pageLoadVersion, updateBuffer]);
+  }, [bufferId, updateBuffer, webviewLabel]);
 
   // Auto-focus URL input for new tabs
   useEffect(() => {
@@ -384,6 +362,84 @@ export function WebViewer({
     }
   }, []);
 
+  useEffect(() => {
+    if (!webviewLabel || !isActive || !isVisible) return;
+
+    let disposed = false;
+    let unlisten: (() => void) | undefined;
+
+    const setupListener = async () => {
+      unlisten = await listen<EmbeddedWebviewShortcutEvent>(
+        "embedded-webview-shortcut",
+        (event) => {
+          if (disposed) return;
+          if (event.payload.webviewLabel !== webviewLabel) return;
+
+          const shortcut = event.payload.shortcut;
+          if (shortcut.startsWith("global:")) {
+            window.dispatchEvent(
+              new CustomEvent("global-shortcut", { detail: shortcut.replace("global:", "") }),
+            );
+            return;
+          }
+
+          switch (shortcut) {
+            case "focus-url":
+              handleFocusUrlBar();
+              break;
+            case "refresh":
+              if (isLoading) {
+                handleStopLoading();
+              } else {
+                handleRefresh();
+              }
+              break;
+            case "go-back":
+              handleGoBack();
+              break;
+            case "go-forward":
+              handleGoForward();
+              break;
+            case "zoom-in":
+              void handleZoomIn();
+              break;
+            case "zoom-out":
+              void handleZoomOut();
+              break;
+            case "zoom-reset":
+              void handleResetZoom();
+              break;
+            case "escape":
+              handleFocusUrlBar();
+              break;
+          }
+        },
+      );
+    };
+
+    void setupListener();
+
+    return () => {
+      disposed = true;
+      if (unlisten) {
+        unlisten();
+      }
+    };
+  }, [
+    handleFocusUrlBar,
+    handleGoBack,
+    handleGoForward,
+    handleRefresh,
+    handleResetZoom,
+    handleStopLoading,
+    handleZoomIn,
+    handleZoomOut,
+    isActive,
+    isLoading,
+    isVisible,
+    webviewLabel,
+  ]);
+
   // Keyboard shortcuts for the web viewer (when main app has focus)
   useEffect(() => {
     if (!isActive || !isVisible) return;
@@ -459,78 +515,6 @@ export function WebViewer({
     window.addEventListener("webviewer-zoom", handleZoomEvent);
     return () => window.removeEventListener("webviewer-zoom", handleZoomEvent);
   }, [handleZoomIn, handleZoomOut, handleResetZoom, isActive, isVisible]);
-
-  // Poll for shortcuts from the embedded webview
-  useEffect(() => {
-    if (!webviewLabel || !isActive || !isVisible) return;
-
-    const pollShortcuts = async () => {
-      try {
-        const shortcut = await invoke<string | null>("poll_webview_shortcut", {
-          webviewLabel,
-        });
-
-        if (shortcut) {
-          // Handle global shortcuts by dispatching custom events
-          if (shortcut.startsWith("global:")) {
-            const globalShortcut = shortcut.replace("global:", "");
-            window.dispatchEvent(new CustomEvent("global-shortcut", { detail: globalShortcut }));
-            return;
-          }
-
-          // Handle web-viewer specific shortcuts
-          switch (shortcut) {
-            case "focus-url":
-              handleFocusUrlBar();
-              break;
-            case "refresh":
-              if (isLoading) {
-                handleStopLoading();
-              } else {
-                handleRefresh();
-              }
-              break;
-            case "go-back":
-              handleGoBack();
-              break;
-            case "go-forward":
-              handleGoForward();
-              break;
-            case "zoom-in":
-              handleZoomIn();
-              break;
-            case "zoom-out":
-              handleZoomOut();
-              break;
-            case "zoom-reset":
-              handleResetZoom();
-              break;
-            case "escape":
-              handleFocusUrlBar();
-              break;
-          }
-        }
-      } catch {
-        // Webview might not be ready or was closed
-      }
-    };
-
-    const interval = setInterval(pollShortcuts, 200);
-    return () => clearInterval(interval);
-  }, [
-    isActive,
-    isVisible,
-    webviewLabel,
-    handleFocusUrlBar,
-    handleRefresh,
-    handleStopLoading,
-    handleGoBack,
-    handleGoForward,
-    handleZoomIn,
-    handleZoomOut,
-    handleResetZoom,
-    isLoading,
-  ]);
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-primary-bg">
