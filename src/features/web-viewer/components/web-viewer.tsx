@@ -84,6 +84,9 @@ export function WebViewer({
 
   const { updateBuffer } = useBufferStore.use.actions();
   const buffers = useBufferStore.use.buffers();
+  const webViewerBuffer = buffers.find(
+    (buffer) => buffer.id === bufferId && buffer.type === "webViewer",
+  );
   const { error: webviewError, webviewLabel } = useEmbeddedWebview({
     bufferId,
     initialUrl: currentUrl,
@@ -93,6 +96,13 @@ export function WebViewer({
     onLoadStateChange: setIsLoading,
   });
   const security = getWebViewerSecurity(currentUrl);
+
+  useEffect(() => {
+    if (webViewerBuffer?.type !== "webViewer") return;
+    if (typeof webViewerBuffer.zoomLevel !== "number") return;
+    if (webViewerBuffer.zoomLevel === zoomLevel) return;
+    setZoomLevel(webViewerBuffer.zoomLevel);
+  }, [webViewerBuffer, zoomLevel]);
 
   const syncHistoryState = useCallback(() => {
     setCanGoBack(historyIndexRef.current > 0);
@@ -463,33 +473,42 @@ export function WebViewer({
     if (!webviewLabel) return;
     const newZoom = Math.min(zoomLevel + 0.1, 3);
     setZoomLevel(newZoom);
+    if (webViewerBuffer?.type === "webViewer") {
+      updateBuffer({ ...webViewerBuffer, zoomLevel: newZoom });
+    }
     try {
       await invoke("set_webview_zoom", { webviewLabel, zoomLevel: newZoom });
     } catch (error) {
       console.error("Failed to zoom in:", error);
     }
-  }, [webviewLabel, zoomLevel]);
+  }, [updateBuffer, webViewerBuffer, webviewLabel, zoomLevel]);
 
   const handleZoomOut = useCallback(async () => {
     if (!webviewLabel) return;
     const newZoom = Math.max(zoomLevel - 0.1, 0.25);
     setZoomLevel(newZoom);
+    if (webViewerBuffer?.type === "webViewer") {
+      updateBuffer({ ...webViewerBuffer, zoomLevel: newZoom });
+    }
     try {
       await invoke("set_webview_zoom", { webviewLabel, zoomLevel: newZoom });
     } catch (error) {
       console.error("Failed to zoom out:", error);
     }
-  }, [webviewLabel, zoomLevel]);
+  }, [updateBuffer, webViewerBuffer, webviewLabel, zoomLevel]);
 
   const handleResetZoom = useCallback(async () => {
     if (!webviewLabel) return;
     setZoomLevel(1);
+    if (webViewerBuffer?.type === "webViewer") {
+      updateBuffer({ ...webViewerBuffer, zoomLevel: 1 });
+    }
     try {
       await invoke("set_webview_zoom", { webviewLabel, zoomLevel: 1 });
     } catch (error) {
       console.error("Failed to reset zoom:", error);
     }
-  }, [webviewLabel]);
+  }, [updateBuffer, webViewerBuffer, webviewLabel]);
 
   const handleCopyUrl = useCallback(async () => {
     try {

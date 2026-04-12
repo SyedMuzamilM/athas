@@ -25,7 +25,16 @@ interface TerminalBufferSession {
   remoteConnectionId?: string;
 }
 
-export type BufferSession = EditorBufferSession | TerminalBufferSession;
+interface WebViewerBufferSession {
+  type: "webViewer";
+  path: string;
+  name: string;
+  isPinned: boolean;
+  url: string;
+  zoomLevel?: number;
+}
+
+export type BufferSession = EditorBufferSession | TerminalBufferSession | WebViewerBufferSession;
 
 interface ProjectSession {
   projectPath: string;

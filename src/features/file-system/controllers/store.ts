@@ -156,6 +156,17 @@ const serializeWorkspaceBuffer = (buffer: PaneContent): BufferSession | null => 
     };
   }
 
+  if (buffer.type === "webViewer") {
+    return {
+      type: "webViewer",
+      path: buffer.path,
+      name: buffer.name,
+      isPinned: buffer.isPinned,
+      url: buffer.url,
+      zoomLevel: buffer.zoomLevel,
+    };
+  }
+
   return null;
 };
 
@@ -389,6 +400,20 @@ export const useFileSystemStore = createSelectors(
                 remoteConnectionId: buffer.remoteConnectionId,
                 sessionId: buffer.sessionId,
                 path: buffer.path,
+              });
+
+              if (buffer.isPinned) {
+                bufferActions.handleTabPin(restoredBufferId);
+              }
+
+              continue;
+            }
+
+            if (buffer.type === "webViewer") {
+              const restoredBufferId = bufferActions.openContent({
+                type: "webViewer",
+                url: buffer.url ?? "about:blank",
+                zoomLevel: buffer.zoomLevel,
               });
 
               if (buffer.isPinned) {
@@ -2012,25 +2037,36 @@ export const useFileSystemStore = createSelectors(
 
                 const activeSessionBuffer = restorePlan.initialBuffer;
                 if (activeSessionBuffer) {
-                  const restoreActiveStartedAt = performance.now();
-                  logWorkspaceOpenStep(
-                    "start",
-                    "switchToProject:restoreActiveBuffer",
-                    activeSessionBuffer.path,
-                  );
-                  await get().handleFileSelect(activeSessionBuffer.path, false);
-                  logWorkspaceOpenStep(
-                    "end",
-                    "switchToProject:restoreActiveBuffer",
-                    activeSessionBuffer.path,
-                    restoreActiveStartedAt,
-                  );
-                  if (activeSessionBuffer.isPinned) {
-                    const openedBuffer = useBufferStore
-                      .getState()
-                      .buffers.find((buffer) => buffer.path === activeSessionBuffer.path);
-                    if (openedBuffer && !openedBuffer.isPinned) {
-                      bufferActions.handleTabPin(openedBuffer.id);
+                  if (activeSessionBuffer.type === "webViewer") {
+                    const restoredBufferId = bufferActions.openContent({
+                      type: "webViewer",
+                      url: activeSessionBuffer.url ?? "about:blank",
+                      zoomLevel: activeSessionBuffer.zoomLevel,
+                    });
+                    if (activeSessionBuffer.isPinned) {
+                      bufferActions.handleTabPin(restoredBufferId);
+                    }
+                  } else {
+                    const restoreActiveStartedAt = performance.now();
+                    logWorkspaceOpenStep(
+                      "start",
+                      "switchToProject:restoreActiveBuffer",
+                      activeSessionBuffer.path,
+                    );
+                    await get().handleFileSelect(activeSessionBuffer.path, false);
+                    logWorkspaceOpenStep(
+                      "end",
+                      "switchToProject:restoreActiveBuffer",
+                      activeSessionBuffer.path,
+                      restoreActiveStartedAt,
+                    );
+                    if (activeSessionBuffer.isPinned) {
+                      const openedBuffer = useBufferStore
+                        .getState()
+                        .buffers.find((buffer) => buffer.path === activeSessionBuffer.path);
+                      if (openedBuffer && !openedBuffer.isPinned) {
+                        bufferActions.handleTabPin(openedBuffer.id);
+                      }
                     }
                   }
                 }
