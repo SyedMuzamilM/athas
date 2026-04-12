@@ -61,6 +61,14 @@ export function OllamaIcon({ size, className, ...props }: IconProps) {
   );
 }
 
+export function MistralIcon({ size, className, ...props }: IconProps) {
+  return (
+    <svg aria-hidden="true" {...defaultProps(size, className)} {...props}>
+      <path d="M3 3h4.5v4.5H3zm13.5 0H21v4.5h-4.5zM3 7.5h4.5V12H3zm4.5 0H12V12H7.5zm4.5 0h4.5V12H12zm4.5 0H21V12h-4.5zM7.5 12H12v4.5H7.5zM3 12h4.5v4.5H3zm13.5 0H21v4.5h-4.5zM3 16.5h4.5V21H3zm13.5 0H21V21h-4.5z" />
+    </svg>
+  );
+}
+
 export function OpenRouterIcon({ size, className, ...props }: IconProps) {
   return (
     <svg aria-hidden="true" {...defaultProps(size, className)} {...props}>
@@ -133,12 +141,15 @@ export function ProviderIcon({
       return <XAIIcon {...props} />;
     case "deepseek":
       return <DeepSeekIcon {...props} />;
+    case "mistral":
+      return <MistralIcon {...props} />;
     case "ollama":
       return <OllamaIcon {...props} />;
     case "openrouter":
       return <OpenRouterIcon {...props} />;
     case "kimi-cli":
       return <MoonshotIcon {...props} />;
+    case "qwen":
     case "qwen-code":
       return <QwenIcon {...props} />;
     case "opencode":
