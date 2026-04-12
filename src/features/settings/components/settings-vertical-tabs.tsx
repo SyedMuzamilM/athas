@@ -78,6 +78,7 @@ export const SettingsVerticalTabs = ({ activeTab, onTabChange }: SettingsVertica
   const searchResults = useSettingsStore((state) => state.search.results);
   const subscription = useAuthStore((state) => state.subscription);
   const hasEnterpriseAccess = Boolean(subscription?.enterprise?.has_access);
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const [expandedGroups, setExpandedGroups] = React.useState<string[]>(() => {
     const activeGroupId = getGroupIdForTab(activeTab);
     return defaultExpandedGroups.includes(activeGroupId)
@@ -135,9 +136,24 @@ export const SettingsVerticalTabs = ({ activeTab, onTabChange }: SettingsVertica
     );
   };
 
+  const handleSidebarWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const canScroll = container.scrollHeight > container.clientHeight;
+    if (!canScroll || event.deltaY === 0) return;
+
+    container.scrollTop += event.deltaY;
+    event.preventDefault();
+  };
+
   return (
     <div className="flex h-full flex-col">
-      <div className="flex-1 space-y-1 overflow-y-auto p-2">
+      <div
+        ref={scrollContainerRef}
+        className="flex-1 space-y-1 overflow-y-auto p-2"
+        onWheelCapture={handleSidebarWheel}
+      >
         {visibleGroups.length > 0 ? (
           visibleGroups.map((group) => {
             const Icon = group.icon;
