@@ -54,7 +54,6 @@ export function useEmbeddedWebview({
 
         createdLabel = label;
         setWebviewLabel(label);
-        onLoadStateChange(false);
       } catch (error) {
         console.error("Failed to create embedded webview:", error);
         onLoadStateChange(false);

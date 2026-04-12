@@ -45,6 +45,47 @@ export function WebViewer({
   });
   const security = getWebViewerSecurity(currentUrl);
 
+  const syncHistoryState = useCallback(() => {
+    setCanGoBack(historyIndexRef.current > 0);
+    setCanGoForward(historyIndexRef.current < historyRef.current.length - 1);
+  }, []);
+
+  const pushHistoryEntry = useCallback(
+    (url: string) => {
+      historyRef.current = historyRef.current.slice(0, historyIndexRef.current + 1);
+      historyRef.current.push(url);
+      historyIndexRef.current = historyRef.current.length - 1;
+      syncHistoryState();
+    },
+    [syncHistoryState],
+  );
+
+  const replaceCurrentHistoryEntry = useCallback(
+    (url: string) => {
+      if (historyIndexRef.current < 0) {
+        historyRef.current = [url];
+        historyIndexRef.current = 0;
+      } else {
+        historyRef.current[historyIndexRef.current] = url;
+      }
+      syncHistoryState();
+    },
+    [syncHistoryState],
+  );
+
+  useEffect(() => {
+    syncHistoryState();
+  }, [syncHistoryState]);
+
+  useEffect(() => {
+    if (isNewTab) return;
+    if (!initialUrl || initialUrl === currentUrl) return;
+
+    setCurrentUrl(initialUrl);
+    setInputUrl(initialUrl);
+    replaceCurrentHistoryEntry(initialUrl);
+  }, [currentUrl, initialUrl, isNewTab, replaceCurrentHistoryEntry]);
+
   // Set initial buffer title from hostname, then poll for real page metadata
   useEffect(() => {
     if (!currentUrl || !bufferId) return;
@@ -79,10 +120,13 @@ export function WebViewer({
 
     let cancelled = false;
     let attempts = 0;
-    const maxAttempts = 15;
+    const maxAttempts = 6;
+    const pollDelays = [350, 900, 1800, 3200, 5000, 7500];
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
     const pollMetadata = async () => {
       if (cancelled || attempts >= maxAttempts) return;
+      const currentAttempt = attempts;
       attempts++;
 
       try {
@@ -90,7 +134,13 @@ export function WebViewer({
           "poll_webview_metadata",
           { webviewLabel },
         );
-        if (cancelled || !meta) return;
+        if (cancelled) return;
+        if (!meta) {
+          if (currentAttempt === maxAttempts - 1) {
+            setIsLoading(false);
+          }
+          return;
+        }
 
         const buffer = buffers.find((b) => b.id === bufferId);
         if (!buffer || buffer.type !== "webViewer") return;
@@ -106,19 +156,33 @@ export function WebViewer({
           title: meta.title,
           ...(meta.favicon ? { favicon: meta.favicon } : {}),
         });
+        setIsLoading(false);
       } catch {
-        // Webview may not be ready yet
+        if (currentAttempt === maxAttempts - 1) {
+          setIsLoading(false);
+        }
+      } finally {
+        const nextDelay = pollDelays[currentAttempt + 1];
+        if (!cancelled && nextDelay) {
+          timeoutId = setTimeout(pollMetadata, nextDelay);
+        }
       }
     };
 
-    // Poll a few times after page load to catch title updates
-    const timer = setTimeout(pollMetadata, 1000);
-    const timer2 = setTimeout(pollMetadata, 3000);
+    setIsLoading(true);
+    timeoutId = setTimeout(pollMetadata, pollDelays[0]);
+    const failSafeTimer = setTimeout(() => {
+      if (!cancelled) {
+        setIsLoading(false);
+      }
+    }, 10000);
 
     return () => {
       cancelled = true;
-      clearTimeout(timer);
-      clearTimeout(timer2);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      clearTimeout(failSafeTimer);
     };
   }, [webviewLabel, bufferId, currentUrl, isActive, isVisible, buffers, updateBuffer]);
 
@@ -148,20 +212,17 @@ export function WebViewer({
         });
       } catch (error) {
         console.error("Failed to navigate:", error);
+        setIsLoading(false);
+        return;
       }
-
-      setIsLoading(false);
 
       if (addToHistory) {
-        historyRef.current = historyRef.current.slice(0, historyIndexRef.current + 1);
-        historyRef.current.push(normalizedUrl);
-        historyIndexRef.current = historyRef.current.length - 1;
+        pushHistoryEntry(normalizedUrl);
+      } else {
+        syncHistoryState();
       }
-
-      setCanGoBack(historyIndexRef.current > 0);
-      setCanGoForward(historyIndexRef.current < historyRef.current.length - 1);
     },
-    [webviewLabel],
+    [pushHistoryEntry, syncHistoryState, webviewLabel],
   );
 
   const handleGoBack = useCallback(() => {
@@ -198,6 +259,7 @@ export function WebViewer({
         setIsLoading(true);
         historyRef.current = [normalizedUrl];
         historyIndexRef.current = 0;
+        syncHistoryState();
         return;
       }
 
