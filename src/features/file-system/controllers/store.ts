@@ -1621,6 +1621,8 @@ export const useFileSystemStore = createSelectors(
           state.filesVersion++;
         });
 
+        await get().handleFileSelect(filePath, false);
+
         return filePath;
       },
 

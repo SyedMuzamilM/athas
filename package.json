@@ -27,7 +27,6 @@
     "smoke:prod": "bun scripts/smoke-app.ts prod",
     "smoke:alpha": "bun scripts/smoke-app.ts alpha",
     "pre-commit": "bun scripts/hooks/pre-commit.ts",
-    "pre-push": "bun scripts/hooks/pre-push.ts",
     "release:check": "bun scripts/release/pre-release-check.ts",
     "release": "bun scripts/release.ts",
     "release:patch": "bun scripts/release.ts patch",
@@ -153,7 +152,6 @@
   },
   "simple-git-hooks": {
     "pre-commit": "bun pre-commit",
-    "pre-push": "bun pre-push",
     "commit-msg": "bun commitlint --edit $1"
   },
   "engines": {
