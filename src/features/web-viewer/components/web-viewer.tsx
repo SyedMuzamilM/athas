@@ -46,6 +46,7 @@ export function WebViewer({
   isActive = true,
   isVisible = true,
 }: WebViewerProps) {
+  const canOpenDevTools = import.meta.env.DEV;
   const isNewTab = initialUrl === "https://" || initialUrl === "http://" || !initialUrl;
   const [currentUrl, setCurrentUrl] = useState(isNewTab ? "" : initialUrl);
   const [inputUrl, setInputUrl] = useState(isNewTab ? "" : initialUrl);
@@ -387,6 +388,8 @@ export function WebViewer({
   );
 
   const handleOpenExternal = useCallback(async () => {
+    if (!currentUrl) return;
+
     try {
       const { openUrl } = await import("@tauri-apps/plugin-opener");
       await openUrl(currentUrl);
@@ -396,13 +399,13 @@ export function WebViewer({
   }, [currentUrl]);
 
   const handleOpenDevTools = useCallback(async () => {
-    if (!webviewLabel) return;
+    if (!webviewLabel || !canOpenDevTools) return;
     try {
       await invoke("open_webview_devtools", { webviewLabel });
     } catch (error) {
       console.error("Failed to open devtools:", error);
     }
-  }, [webviewLabel]);
+  }, [canOpenDevTools, webviewLabel]);
 
   const handleZoomIn = useCallback(async () => {
     if (!webviewLabel) return;
@@ -616,7 +619,15 @@ export function WebViewer({
       <WebViewerToolbar
         canGoBack={canGoBack}
         canGoForward={canGoForward}
+        canOpenDevTools={canOpenDevTools && Boolean(webviewLabel)}
+        canOpenExternal={Boolean(currentUrl)}
+        canCopyUrl={Boolean(currentUrl)}
         copied={copied}
+        devToolsTooltip={
+          canOpenDevTools
+            ? "Open Developer Tools"
+            : "Developer Tools are only available in development builds"
+        }
         inputUrl={inputUrl}
         isLoading={isLoading}
         isLocalhost={security.isLocalhost}

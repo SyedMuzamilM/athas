@@ -22,7 +22,11 @@ import Input from "@/ui/input";
 interface WebViewerToolbarProps {
   canGoBack: boolean;
   canGoForward: boolean;
+  canOpenDevTools: boolean;
+  canOpenExternal: boolean;
+  canCopyUrl: boolean;
   copied: boolean;
+  devToolsTooltip: string;
   inputUrl: string;
   isLoading: boolean;
   isLocalhost: boolean;
@@ -48,7 +52,11 @@ interface WebViewerToolbarProps {
 export function WebViewerToolbar({
   canGoBack,
   canGoForward,
+  canOpenDevTools,
+  canOpenExternal,
+  canCopyUrl,
   copied,
+  devToolsTooltip,
   inputUrl,
   isLoading,
   isLocalhost,
@@ -131,6 +139,7 @@ export function WebViewerToolbar({
               variant="ghost"
               size="icon-xs"
               onClick={onCopyUrl}
+              disabled={!canCopyUrl}
               className="text-text-lighter hover:text-text"
               tooltip="Copy URL"
             >
@@ -212,11 +221,18 @@ export function WebViewerToolbar({
           variant="ghost"
           size="icon-sm"
           onClick={onOpenDevTools}
-          tooltip="Open Developer Tools"
+          disabled={!canOpenDevTools}
+          tooltip={devToolsTooltip}
         >
           <Code2 />
         </Button>
-        <Button variant="ghost" size="icon-sm" onClick={onOpenExternal} tooltip="Open in browser">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={onOpenExternal}
+          disabled={!canOpenExternal}
+          tooltip="Open in browser"
+        >
           <ExternalLink />
         </Button>
       </div>
