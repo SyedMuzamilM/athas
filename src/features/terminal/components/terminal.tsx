@@ -218,49 +218,52 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
       addons.fitAddon.fit();
 
       const existingSession = getSession(sessionId);
+
+      // If the session already has a live PTY connection (e.g., component
+      // remounted after a pane split or tab move), reuse the existing
+      // connection instead of killing the running process.
+      let activeConnectionId: string;
       if (existingSession?.connectionId) {
-        try {
-          await invoke("close_terminal", { id: existingSession.connectionId });
-        } catch {}
-      }
+        activeConnectionId = existingSession.connectionId;
+      } else {
+        const targetDirectory =
+          workingDirectory || existingSession?.currentDirectory || rootFolderPath;
+        const remoteInfo = targetDirectory ? parseRemotePath(targetDirectory) : null;
+        const effectiveRemoteConnectionId = remoteConnectionId || remoteInfo?.connectionId;
 
-      const targetDirectory =
-        workingDirectory || existingSession?.currentDirectory || rootFolderPath;
-      const remoteInfo = targetDirectory ? parseRemotePath(targetDirectory) : null;
-      const effectiveRemoteConnectionId = remoteConnectionId || remoteInfo?.connectionId;
+        activeConnectionId = effectiveRemoteConnectionId
+          ? await (async () => {
+              const connection = await connectionStore.getConnection(effectiveRemoteConnectionId);
+              if (!connection) {
+                throw new Error("Remote terminal connection not found.");
+              }
 
-      const newConnectionId = effectiveRemoteConnectionId
-        ? await (async () => {
-            const connection = await connectionStore.getConnection(effectiveRemoteConnectionId);
-            if (!connection) {
-              throw new Error("Remote terminal connection not found.");
-            }
-
-            return invoke<string>("create_remote_terminal", {
-              host: connection.host,
-              port: connection.port,
-              username: connection.username,
-              password: connection.password || null,
-              keyPath: connection.keyPath || null,
-              workingDirectory: remoteInfo?.remotePath || "/",
-              rows: terminal.rows,
-              cols: terminal.cols,
+              return invoke<string>("create_remote_terminal", {
+                host: connection.host,
+                port: connection.port,
+                username: connection.username,
+                password: connection.password || null,
+                keyPath: connection.keyPath || null,
+                workingDirectory: remoteInfo?.remotePath || "/",
+                rows: terminal.rows,
+                cols: terminal.cols,
+              });
+            })()
+          : await invoke<string>("create_terminal", {
+              config: {
+                working_directory: targetDirectory || undefined,
+                shell: existingSession?.shell || undefined,
+                rows: terminal.rows,
+                cols: terminal.cols,
+              },
             });
-          })()
-        : await invoke<string>("create_terminal", {
-            config: {
-              working_directory: targetDirectory || undefined,
-              shell: existingSession?.shell || undefined,
-              rows: terminal.rows,
-              cols: terminal.cols,
-            },
-          });
 
-      updateSession(sessionId, {
-        connectionId: newConnectionId,
-        currentDirectory: targetDirectory,
-        remoteConnectionId: effectiveRemoteConnectionId,
-      });
+        updateSession(sessionId, {
+          connectionId: activeConnectionId,
+          currentDirectory: targetDirectory,
+          remoteConnectionId: effectiveRemoteConnectionId,
+        });
+      }
       setIsInitialized(true);
       isInitializingRef.current = false;
 
@@ -269,7 +272,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
 
       window.dispatchEvent(
         new CustomEvent("terminal-ready", {
-          detail: { terminalId: sessionId, connectionId: newConnectionId },
+          detail: { terminalId: sessionId, connectionId: activeConnectionId },
         }),
       );
 
@@ -403,19 +406,19 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     };
   }, [initializeTerminal, isInitialized, isVisible]);
 
+  // Dispose only the xterm UI on unmount. The PTY process is owned by
+  // the buffer store and killed in closeBufferForce when the user actually
+  // closes the tab — NOT here. This prevents pane splits, tab moves, and
+  // other layout changes from killing running terminal processes.
   useEffect(() => {
     return () => {
-      const activeSession = getSession(sessionId);
       if (xtermRef.current) {
-        if (activeSession?.connectionId) {
-          void invoke("close_terminal", { id: activeSession.connectionId });
-        }
         xtermRef.current.dispose();
         xtermRef.current = null;
         addonsRef.current = null;
       }
     };
-  }, [getSession, sessionId]);
+  }, [sessionId]);
 
   useEffect(() => {
     if (!addonsRef.current || !terminalContainerRef.current || !isInitialized) return;
