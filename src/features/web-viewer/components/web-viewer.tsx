@@ -32,6 +32,14 @@ interface EmbeddedWebviewShortcutEvent {
   shortcut: string;
 }
 
+interface EmbeddedWebviewLocationChangeEvent {
+  webviewLabel: string;
+  url: string;
+  navigationType: "navigate" | "push" | "replace" | "traverse";
+}
+
+type PendingNavigationAction = "push" | "back" | "forward" | "reload" | null;
+
 export function WebViewer({
   url: initialUrl,
   bufferId,
@@ -50,6 +58,7 @@ export function WebViewer({
   const urlInputRef = useRef<HTMLInputElement>(null);
   const historyRef = useRef<string[]>(isNewTab ? [] : [initialUrl]);
   const historyIndexRef = useRef(isNewTab ? -1 : 0);
+  const pendingNavigationActionRef = useRef<PendingNavigationAction>(null);
 
   const { updateBuffer } = useBufferStore.use.actions();
   const buffers = useBufferStore.use.buffers();
@@ -91,6 +100,26 @@ export function WebViewer({
     [syncHistoryState],
   );
 
+  const stepHistoryToUrl = useCallback(
+    (url: string) => {
+      const previousUrl = historyRef.current[historyIndexRef.current - 1];
+      const nextUrl = historyRef.current[historyIndexRef.current + 1];
+
+      if (previousUrl === url) {
+        historyIndexRef.current -= 1;
+      } else if (nextUrl === url) {
+        historyIndexRef.current += 1;
+      } else {
+        historyRef.current = historyRef.current.slice(0, historyIndexRef.current + 1);
+        historyRef.current.push(url);
+        historyIndexRef.current = historyRef.current.length - 1;
+      }
+
+      syncHistoryState();
+    },
+    [syncHistoryState],
+  );
+
   useEffect(() => {
     syncHistoryState();
   }, [syncHistoryState]);
@@ -122,6 +151,7 @@ export function WebViewer({
             return;
           }
 
+          pendingNavigationActionRef.current = null;
           setIsLoading(false);
           setCurrentUrl(event.payload.url);
           setInputUrl(event.payload.url);
@@ -167,6 +197,69 @@ export function WebViewer({
       // Invalid URL, ignore
     }
   }, [currentUrl, bufferId, buffers, updateBuffer]);
+
+  useEffect(() => {
+    if (!webviewLabel) return;
+
+    let disposed = false;
+    let unlisten: (() => void) | undefined;
+
+    const setupListener = async () => {
+      unlisten = await listen<EmbeddedWebviewLocationChangeEvent>(
+        "embedded-webview-location-change",
+        (event) => {
+          if (disposed) return;
+          if (event.payload.webviewLabel !== webviewLabel) return;
+
+          const nextUrl = event.payload.url;
+          const pendingAction = pendingNavigationActionRef.current;
+
+          if (pendingAction === "push" || event.payload.navigationType === "push") {
+            if (historyRef.current[historyIndexRef.current] !== nextUrl) {
+              pushHistoryEntry(nextUrl);
+            } else {
+              syncHistoryState();
+            }
+            return;
+          }
+
+          if (pendingAction === "back" || pendingAction === "forward") {
+            replaceCurrentHistoryEntry(nextUrl);
+            return;
+          }
+
+          if (event.payload.navigationType === "replace" || pendingAction === "reload") {
+            replaceCurrentHistoryEntry(nextUrl);
+            return;
+          }
+
+          if (event.payload.navigationType === "traverse") {
+            stepHistoryToUrl(nextUrl);
+            return;
+          }
+
+          if (historyRef.current[historyIndexRef.current] !== nextUrl) {
+            pushHistoryEntry(nextUrl);
+          }
+        },
+      );
+    };
+
+    void setupListener();
+
+    return () => {
+      disposed = true;
+      if (unlisten) {
+        unlisten();
+      }
+    };
+  }, [
+    pushHistoryEntry,
+    replaceCurrentHistoryEntry,
+    stepHistoryToUrl,
+    syncHistoryState,
+    webviewLabel,
+  ]);
 
   useEffect(() => {
     if (!webviewLabel || !bufferId) return;
@@ -227,6 +320,9 @@ export function WebViewer({
       setIsLoading(true);
       setCurrentUrl(normalizedUrl);
       setInputUrl(normalizedUrl);
+      pendingNavigationActionRef.current = addToHistory
+        ? "push"
+        : (pendingNavigationActionRef.current ?? "reload");
 
       try {
         await invoke("navigate_embedded_webview", {
@@ -235,34 +331,33 @@ export function WebViewer({
         });
       } catch (error) {
         console.error("Failed to navigate:", error);
+        pendingNavigationActionRef.current = null;
         setIsLoading(false);
         return;
       }
-
-      if (addToHistory) {
-        pushHistoryEntry(normalizedUrl);
-      } else {
-        syncHistoryState();
-      }
     },
-    [pushHistoryEntry, syncHistoryState, webviewLabel],
+    [webviewLabel],
   );
 
   const handleGoBack = useCallback(() => {
     if (historyIndexRef.current > 0) {
+      pendingNavigationActionRef.current = "back";
       historyIndexRef.current--;
+      syncHistoryState();
       const prevUrl = historyRef.current[historyIndexRef.current];
       navigateTo(prevUrl, false);
     }
-  }, [navigateTo]);
+  }, [navigateTo, syncHistoryState]);
 
   const handleGoForward = useCallback(() => {
     if (historyIndexRef.current < historyRef.current.length - 1) {
+      pendingNavigationActionRef.current = "forward";
       historyIndexRef.current++;
+      syncHistoryState();
       const nextUrl = historyRef.current[historyIndexRef.current];
       navigateTo(nextUrl, false);
     }
-  }, [navigateTo]);
+  }, [navigateTo, syncHistoryState]);
 
   const handleRefresh = useCallback(() => {
     navigateTo(currentUrl, false);

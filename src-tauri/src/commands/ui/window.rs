@@ -19,6 +19,14 @@ struct EmbeddedWebviewPageLoadEvent {
    event: String,
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct EmbeddedWebviewLocationChangeEvent {
+   webview_label: String,
+   url: String,
+   navigation_type: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateAppWindowRequest {
@@ -154,6 +162,14 @@ fn build_webview_bridge_script(webview_label: &str) -> Result<String, String> {
     }});
   }}
 
+  function emitLocationChange(navigationType) {{
+    emit('embedded-webview-location-change', {{
+      webviewLabel: WEBVIEW_LABEL,
+      url: window.location.href,
+      navigationType
+    }});
+  }}
+
   function readMetadata() {{
     const title = document.title || '';
     let favicon = null;
@@ -190,6 +206,18 @@ fn build_webview_bridge_script(webview_label: &str) -> Result<String, String> {
   function scheduleMetadataEmit() {{
     if (metadataFrame !== null) return;
     metadataFrame = window.requestAnimationFrame(emitMetadata);
+  }}
+
+  function wrapHistoryMethod(name, navigationType) {{
+    const original = window.history[name];
+    if (typeof original !== 'function') return;
+
+    window.history[name] = function() {{
+      const result = original.apply(this, arguments);
+      scheduleMetadataEmit();
+      emitLocationChange(navigationType);
+      return result;
+    }};
   }}
 
   document.addEventListener('keydown', function(e) {{
@@ -248,6 +276,19 @@ fn build_webview_bridge_script(webview_label: &str) -> Result<String, String> {
     }}
   }}, true);
 
+  wrapHistoryMethod('pushState', 'push');
+  wrapHistoryMethod('replaceState', 'replace');
+
+  window.addEventListener('popstate', function() {{
+    scheduleMetadataEmit();
+    emitLocationChange('traverse');
+  }});
+
+  window.addEventListener('hashchange', function() {{
+    scheduleMetadataEmit();
+    emitLocationChange('push');
+  }});
+
   window.addEventListener('load', scheduleMetadataEmit, true);
   window.addEventListener('pageshow', scheduleMetadataEmit, true);
   document.addEventListener('DOMContentLoaded', scheduleMetadataEmit, true);
@@ -302,6 +343,18 @@ pub async fn create_embedded_webview(
       webview_builder.initialization_script(build_webview_bridge_script(&webview_label)?);
    let app_handle = app.clone();
    let event_webview_label = webview_label.clone();
+   let navigation_webview_label = webview_label.clone();
+   let navigation_app_handle = app.clone();
+   webview_builder = webview_builder.on_navigation(move |url| {
+      let event = EmbeddedWebviewLocationChangeEvent {
+         webview_label: navigation_webview_label.clone(),
+         url: url.to_string(),
+         navigation_type: "navigate".to_string(),
+      };
+
+      let _ = navigation_app_handle.emit("embedded-webview-location-change", event);
+      true
+   });
    webview_builder = webview_builder.on_page_load(move |_webview, payload| {
       let event = EmbeddedWebviewPageLoadEvent {
          webview_label: event_webview_label.clone(),
