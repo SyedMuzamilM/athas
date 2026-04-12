@@ -3,6 +3,8 @@ import { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } fro
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
+import type { GitDiff, GitDiffLine } from "@/features/git/types/git-types";
+import type { MultiFileDiff } from "@/features/git/types/git-diff-types";
 import { Button } from "@/ui/button";
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
@@ -24,6 +26,49 @@ import { useGitHubStore } from "../stores/github-store";
 import { PRActivityPanel } from "./pr-activity-panel";
 import { PRFilesPanel } from "./pr-files-panel";
 import { PRViewerHeader } from "./pr-viewer-header";
+
+function parsePatchLinesToGitDiffLines(patchLines: string[]): GitDiffLine[] {
+  const result: GitDiffLine[] = [];
+  let oldLine = 0;
+  let newLine = 0;
+
+  for (const line of patchLines) {
+    if (line.startsWith("@@")) {
+      const match = line.match(/@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
+      if (match) {
+        oldLine = Number.parseInt(match[1], 10);
+        newLine = Number.parseInt(match[2], 10);
+      }
+      result.push({ line_type: "header", content: line });
+    } else if (line.startsWith("+")) {
+      result.push({
+        line_type: "added",
+        content: line.slice(1),
+        new_line_number: newLine,
+      });
+      newLine++;
+    } else if (line.startsWith("-")) {
+      result.push({
+        line_type: "removed",
+        content: line.slice(1),
+        old_line_number: oldLine,
+      });
+      oldLine++;
+    } else {
+      const content = line.startsWith(" ") ? line.slice(1) : line;
+      result.push({
+        line_type: "context",
+        content,
+        old_line_number: oldLine,
+        new_line_number: newLine,
+      });
+      oldLine++;
+      newLine++;
+    }
+  }
+
+  return result;
+}
 
 interface PRViewerProps {
   prNumber: number;
@@ -351,16 +396,65 @@ const PRViewer = memo(({ prNumber }: PRViewerProps) => {
   }, [selectedPRDetails?.headRef]);
 
   const handleToggleFilesView = useCallback(() => {
-    setActiveTab((current) => {
-      const next = current === "files" ? "activity" : "files";
-
-      if (next === "files" && repoPath) {
-        void fetchPRContent(repoPath, prNumber, { mode: "files" });
+    if (!selectedPRDiff || !selectedPRDetails) {
+      // Diff not loaded yet — fetch first, then open
+      if (repoPath) {
+        void fetchPRContent(repoPath, prNumber, { mode: "files" }).then(() => {
+          // Will be handled on next render when data is available
+        });
       }
+      return;
+    }
 
-      return next;
-    });
-  }, [fetchPRContent, prNumber, repoPath]);
+    const sectionIndex = buildDiffSectionIndex(selectedPRDiff);
+    const prFiles = selectedPRFiles.map(toFileDiffFromMetadata).filter((f) => f.path.length > 0);
+
+    const gitDiffs: GitDiff[] = [];
+    for (const file of prFiles) {
+      const patch = extractFilePatch(selectedPRDiff, file.path, sectionIndex);
+      const lines = patch?.lines ?? [];
+      const diffLines = parsePatchLinesToGitDiffLines(lines);
+
+      gitDiffs.push({
+        file_path: file.path,
+        old_path: file.oldPath,
+        new_path: file.path,
+        is_new: file.status === "added",
+        is_deleted: file.status === "deleted",
+        is_renamed: file.status === "renamed",
+        lines: diffLines,
+      });
+    }
+
+    const totalAdditions =
+      selectedPRDetails.additions ?? prFiles.reduce((sum, f) => sum + f.additions, 0);
+    const totalDeletions =
+      selectedPRDetails.deletions ?? prFiles.reduce((sum, f) => sum + f.deletions, 0);
+
+    const multiDiff: MultiFileDiff = {
+      title: `PR #${prNumber}: ${selectedPRDetails.title}`,
+      commitHash: `pr-${prNumber}`,
+      files: gitDiffs,
+      totalFiles: gitDiffs.length,
+      totalAdditions,
+      totalDeletions,
+      isLoading: false,
+    };
+
+    const virtualPath = `diff://pr-${prNumber}/changes`;
+    useBufferStore
+      .getState()
+      .actions.openBuffer(
+        virtualPath,
+        `PR #${prNumber} Changes`,
+        "",
+        false,
+        undefined,
+        true,
+        true,
+        multiDiff,
+      );
+  }, [fetchPRContent, prNumber, repoPath, selectedPRDiff, selectedPRDetails, selectedPRFiles]);
 
   const handleOpenChangedFile = useCallback(
     (relativePath: string) => {
