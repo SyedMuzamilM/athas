@@ -196,6 +196,16 @@ export const defaultKeymaps: Keybinding[] = [
     source: "default",
   },
   {
+    key: "cmd+shift+e",
+    command: "workbench.showFileExplorer",
+    source: "default",
+  },
+  {
+    key: "cmd+shift+g",
+    command: "workbench.showSourceControl",
+    source: "default",
+  },
+  {
     key: "cmd+shift+b",
     command: "workbench.toggleSidebarPosition",
     source: "default",

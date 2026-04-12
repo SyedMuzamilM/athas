@@ -36,6 +36,7 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       description: "Switch to files explorer view",
       icon: <FolderOpen />,
       category: "Navigation",
+      commandId: "workbench.showFileExplorer",
       action: () => {
         setIsSidebarVisible(true);
         setActiveView("files");
@@ -48,6 +49,7 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       description: "Switch to Git view",
       icon: <GitBranch />,
       category: "Navigation",
+      commandId: "workbench.showSourceControl",
       action: () => {
         setIsSidebarVisible(true);
         setActiveView("git");

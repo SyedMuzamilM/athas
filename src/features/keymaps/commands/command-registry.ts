@@ -391,6 +391,36 @@ const viewCommands: Command[] = [
     },
   },
   {
+    id: "workbench.showFileExplorer",
+    title: "Show File Explorer",
+    category: "View",
+    keybinding: "cmd+shift+e",
+    execute: () => {
+      const state = useUIState.getState();
+      if (state.isSidebarVisible && state.activeSidebarView === "files") {
+        state.setIsSidebarVisible(false);
+      } else {
+        state.setActiveView("files");
+        state.setIsSidebarVisible(true);
+      }
+    },
+  },
+  {
+    id: "workbench.showSourceControl",
+    title: "Show Source Control",
+    category: "View",
+    keybinding: "cmd+shift+g",
+    execute: () => {
+      const state = useUIState.getState();
+      if (state.isSidebarVisible && state.activeSidebarView === "git") {
+        state.setIsSidebarVisible(false);
+      } else {
+        state.setActiveView("git");
+        state.setIsSidebarVisible(true);
+      }
+    },
+  },
+  {
     id: "workbench.toggleSidebarPosition",
     title: "Toggle Sidebar Position",
     category: "View",
