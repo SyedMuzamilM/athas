@@ -9,7 +9,7 @@ interface SelectionLayerProps {
   fontFamily: string;
   lineHeight: number;
   tabSize: number;
-  viewportRange?: { startLine: number; endLine: number };
+  wordWrap?: boolean;
 }
 
 interface SelectionOffsets {
@@ -23,8 +23,6 @@ interface SelectionBox {
   width: number;
   height: number;
 }
-
-const VIEWPORT_BUFFER_LINES = 20;
 
 function findLineForOffset(offset: number, lineOffsets: number[]): number {
   if (lineOffsets.length === 0) return 0;
@@ -62,7 +60,7 @@ function offsetToLineColumn(
 }
 
 const SelectionLayerComponent = forwardRef<HTMLDivElement, SelectionLayerProps>(
-  ({ textareaRef, content, fontSize, fontFamily, lineHeight, tabSize, viewportRange }, ref) => {
+  ({ textareaRef, content, fontSize, fontFamily, lineHeight, tabSize, wordWrap = false }, ref) => {
     const textarea = textareaRef.current;
     const lines = useMemo(() => content.split("\n"), [content]);
     const lineOffsets = useMemo(() => buildLineOffsetMap(content), [content]);
@@ -71,6 +69,11 @@ const SelectionLayerComponent = forwardRef<HTMLDivElement, SelectionLayerProps>(
     const [selectionBoxes, setSelectionBoxes] = useState<SelectionBox[]>([]);
 
     useEffect(() => {
+      if (wordWrap) {
+        setSelectionOffsets(null);
+        return;
+      }
+
       if (!textarea) {
         setSelectionOffsets(null);
         return;
@@ -111,25 +114,16 @@ const SelectionLayerComponent = forwardRef<HTMLDivElement, SelectionLayerProps>(
         textarea.removeEventListener("blur", updateSelection);
         document.removeEventListener("selectionchange", updateSelection);
       };
-    }, [textarea]);
+    }, [textarea, wordWrap]);
 
     useEffect(() => {
-      if (!measureRef.current || !selectionOffsets) {
+      if (wordWrap || !measureRef.current || !selectionOffsets) {
         setSelectionBoxes([]);
         return;
       }
 
       const measure = measureRef.current;
       const boxes: SelectionBox[] = [];
-
-      const viewportStartLine = Math.max(
-        0,
-        (viewportRange?.startLine ?? 0) - VIEWPORT_BUFFER_LINES,
-      );
-      const viewportEndLine = Math.min(
-        lines.length,
-        (viewportRange?.endLine ?? lines.length) + VIEWPORT_BUFFER_LINES,
-      );
 
       const getTextWidth = (text: string): number => {
         measure.textContent = text;
@@ -144,24 +138,8 @@ const SelectionLayerComponent = forwardRef<HTMLDivElement, SelectionLayerProps>(
 
       const startPos = offsetToLineColumn(selectionOffsets.start, lineOffsets, content.length);
       const endPos = offsetToLineColumn(selectionOffsets.end, lineOffsets, content.length);
-      const overlapEndLine = findLineForOffset(
-        Math.max(selectionOffsets.start, selectionOffsets.end - 1),
-        lineOffsets,
-      );
 
-      if (
-        startPos.line >= viewportEndLine ||
-        overlapEndLine < viewportStartLine ||
-        viewportEndLine <= viewportStartLine
-      ) {
-        setSelectionBoxes([]);
-        return;
-      }
-
-      const firstVisibleLine = Math.max(startPos.line, viewportStartLine);
-      const lastVisibleLine = Math.min(endPos.line, viewportEndLine - 1);
-
-      for (let line = firstVisibleLine; line <= lastVisibleLine; line++) {
+      for (let line = startPos.line; line <= endPos.line; line++) {
         const lineText = lines[line] || "";
         let startCol = 0;
         let endCol = lineText.length;
@@ -193,13 +171,16 @@ const SelectionLayerComponent = forwardRef<HTMLDivElement, SelectionLayerProps>(
       }
 
       setSelectionBoxes(boxes);
-    }, [selectionOffsets, lines, lineOffsets, content.length, lineHeight, viewportRange]);
+    }, [selectionOffsets, lines, lineOffsets, content.length, lineHeight, wordWrap]);
 
     return (
       <div
         ref={ref}
         className="selection-layer pointer-events-none absolute inset-0 z-[3]"
-        style={{ willChange: "transform" }}
+        style={{
+          willChange: "transform",
+          display: wordWrap ? "none" : undefined,
+        }}
       >
         <span
           ref={measureRef}
@@ -240,7 +221,6 @@ export const SelectionLayer = memo(SelectionLayerComponent, (prev, next) => {
     prev.fontFamily === next.fontFamily &&
     prev.lineHeight === next.lineHeight &&
     prev.tabSize === next.tabSize &&
-    prev.viewportRange?.startLine === next.viewportRange?.startLine &&
-    prev.viewportRange?.endLine === next.viewportRange?.endLine
+    prev.wordWrap === next.wordWrap
   );
 });

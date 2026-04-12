@@ -1003,7 +1003,7 @@ export function Editor({
           fontFamily={fontFamily}
           lineHeight={lineHeight}
           tabSize={tabSize}
-          viewportRange={shouldVirtualizeRendering ? viewportRange : undefined}
+          wordWrap={wordWrap}
         />
         {inlineEditState.inlineEditVisible && inlineEditState.popoverPosition && (
           <div ref={inlineEditOverlayRef} className="pointer-events-none absolute inset-0 z-[200]">
@@ -1210,6 +1210,7 @@ export function Editor({
             fontFamily={fontFamily}
             lineHeight={lineHeight}
             tabSize={tabSize}
+            wordWrap={wordWrap}
           />
         )}
 

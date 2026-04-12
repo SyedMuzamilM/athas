@@ -73,7 +73,7 @@ const InputLayerComponent = ({
       onMouseUp={onMouseUp}
       onContextMenu={onContextMenu}
       onScroll={onScroll}
-      className="input-layer editor-textarea editor-viewport"
+      className={`input-layer editor-textarea editor-viewport ${wordWrap ? "native-selection" : "selection-transparent"}`}
       style={{
         position: "absolute",
         top: 0,

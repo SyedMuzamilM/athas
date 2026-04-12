@@ -66,6 +66,34 @@ export function useEditorScroll({
 
       scrollLogger.log(scrollTop, scrollLeft, "editor-scroll");
 
+      if (highlightRef.current) {
+        highlightRef.current.style.transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
+      }
+      if (multiCursorRef.current) {
+        multiCursorRef.current.style.transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
+      }
+      if (searchHighlightRef.current) {
+        searchHighlightRef.current.style.transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
+      }
+      if (selectionLayerRef.current) {
+        selectionLayerRef.current.style.transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
+      }
+      if (vimCursorRef.current) {
+        vimCursorRef.current.style.transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
+      }
+      if (autocompleteCompletionRef.current) {
+        autocompleteCompletionRef.current.style.transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
+      }
+      if (inlineEditOverlayRef.current) {
+        inlineEditOverlayRef.current.style.transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
+      }
+      if (gitBlameRef.current) {
+        gitBlameRef.current.style.transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
+      }
+      if (inlineDiffRef.current) {
+        inlineDiffRef.current.style.transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
+      }
+
       if (scrollRafRef.current === null) {
         scrollRafRef.current = requestAnimationFrame(() => {
           // Bail if a buffer switch happened since this RAF was queued
@@ -78,34 +106,6 @@ export function useEditorScroll({
 
           if (minimapEnabled) {
             setEditorScrollTop(top);
-          }
-
-          if (highlightRef.current) {
-            highlightRef.current.style.transform = `translate(-${left}px, -${top}px)`;
-          }
-          if (multiCursorRef.current) {
-            multiCursorRef.current.style.transform = `translate(-${left}px, -${top}px)`;
-          }
-          if (searchHighlightRef.current) {
-            searchHighlightRef.current.style.transform = `translate(-${left}px, -${top}px)`;
-          }
-          if (selectionLayerRef.current) {
-            selectionLayerRef.current.style.transform = `translate(-${left}px, -${top}px)`;
-          }
-          if (vimCursorRef.current) {
-            vimCursorRef.current.style.transform = `translate(-${left}px, -${top}px)`;
-          }
-          if (autocompleteCompletionRef.current) {
-            autocompleteCompletionRef.current.style.transform = `translate(-${left}px, -${top}px)`;
-          }
-          if (inlineEditOverlayRef.current) {
-            inlineEditOverlayRef.current.style.transform = `translate(-${left}px, -${top}px)`;
-          }
-          if (gitBlameRef.current) {
-            gitBlameRef.current.style.transform = `translate(-${left}px, -${top}px)`;
-          }
-          if (inlineDiffRef.current) {
-            inlineDiffRef.current.style.transform = `translate(-${left}px, -${top}px)`;
           }
 
           const now = performance.now();

@@ -30,7 +30,7 @@ export const useEditorSettingsStore = createSelectors(
       fontSize: 14,
       fontFamily: "Menlo, Consolas, Liberation Mono, monospace",
       tabSize: 2,
-      wordWrap: true,
+      wordWrap: false,
       lineNumbers: true,
       disabled: false,
       theme: "athas-dark",

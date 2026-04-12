@@ -13,6 +13,7 @@ interface GitBlameLayerProps {
   fontFamily: string;
   lineHeight: number;
   tabSize?: number;
+  wordWrap?: boolean;
 }
 
 const GitBlameLayerComponent = forwardRef<HTMLDivElement, GitBlameLayerProps>(
@@ -26,6 +27,7 @@ const GitBlameLayerComponent = forwardRef<HTMLDivElement, GitBlameLayerProps>(
       fontFamily,
       lineHeight,
       tabSize = 2,
+      wordWrap = false,
     },
     ref,
   ) => {
@@ -50,12 +52,11 @@ const GitBlameLayerComponent = forwardRef<HTMLDivElement, GitBlameLayerProps>(
     }, [currentLineContent, fontSize, fontFamily, tabSize, filePath]);
 
     // Calculate position only when we have valid data
-    const shouldShowBlame = blameLine && lineContentWidth > 0;
+    const shouldShowBlame = !wordWrap && blameLine && lineContentWidth > 0;
 
     // Position at absolute content coordinates (scroll handled by container transform)
-    const top = visualCursorLine * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
-    const left =
-      lineContentWidth + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT + EDITOR_CONSTANTS.GUTTER_MARGIN;
+    const top = visualCursorLine * lineHeight;
+    const left = lineContentWidth + EDITOR_CONSTANTS.GUTTER_MARGIN;
 
     return (
       <div

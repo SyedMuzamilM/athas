@@ -115,15 +115,15 @@
   background: transparent;
 }
 
-/* Selection styling for the input layer */
-.input-layer::selection {
-  background: transparent;
-  color: inherit;
+/* Native selection styling for wrapped mode */
+.input-layer.native-selection::selection {
+  background: var(--selection-bg, rgba(173, 214, 255, 0.4));
+  color: transparent;
 }
 
-.input-layer::-moz-selection {
-  background: transparent;
-  color: inherit;
+.input-layer.native-selection::-moz-selection {
+  background: var(--selection-bg, rgba(173, 214, 255, 0.4));
+  color: transparent;
 }
 
 /* Line structure in highlight layer */

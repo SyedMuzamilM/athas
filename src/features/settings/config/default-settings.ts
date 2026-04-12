@@ -14,7 +14,7 @@ export const defaultSettings: Settings = {
   fontFamily: "Geist Mono Variable",
   fontSize: 14,
   tabSize: 2,
-  wordWrap: true,
+  wordWrap: false,
   lineNumbers: true,
   showMinimap: false,
   // Terminal
