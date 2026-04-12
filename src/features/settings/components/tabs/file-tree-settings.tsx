@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
-import Badge from "@/ui/badge";
-import Input from "@/ui/input";
 import Section, { SettingRow } from "../settings-section";
+import { controlFieldSurfaceVariants } from "@/ui/control-field";
+import { cn } from "@/utils/cn";
 
 export const FileTreeSettings = () => {
   const { settings, updateSetting } = useSettingsStore();
@@ -22,61 +22,26 @@ export const FileTreeSettings = () => {
     setDirectoryPatternsInput(settings.hiddenDirectoryPatterns.join(", "));
   }, [settings.hiddenDirectoryPatterns]);
 
-  const handleFilePatternsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFilePatternsInput(e.target.value);
-  };
-
-  const handleDirectoryPatternsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setDirectoryPatternsInput(e.target.value);
-  };
-
   const parsePatterns = (input: string) =>
     input
       .split(",")
       .map((p) => p.trim())
       .filter((p) => p.length > 0);
 
-  const handleFilePatternsBlur = () => {
+  const commitFilePatterns = () => {
     updateSetting("hiddenFilePatterns", parsePatterns(filePatternsInput));
   };
 
-  const handleDirectoryPatternsBlur = () => {
+  const commitDirectoryPatterns = () => {
     updateSetting("hiddenDirectoryPatterns", parsePatterns(directoryPatternsInput));
-  };
-
-  const handlePatternInputEnter = (
-    e: React.KeyboardEvent<HTMLInputElement>,
-    onCommit: () => void,
-  ) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      onCommit();
-    }
-  };
-
-  const renderPatternPills = (patterns: string[]) => {
-    if (patterns.length === 0) {
-      return <p className="ui-font ui-text-sm text-text-lighter">No patterns configured.</p>;
-    }
-
-    return (
-      <div className="flex flex-wrap gap-1.5">
-        {patterns.map((pattern) => (
-          <Badge key={pattern} variant="default" size="compact">
-            {pattern}
-          </Badge>
-        ))}
-      </div>
-    );
   };
 
   return (
     <div className="space-y-4">
       <Section title="Filters">
         <SettingRow
-          label="Hidden File Patterns"
-          description="Files matching these glob patterns will be hidden from the file tree"
-          className="flex-col items-start gap-2"
+          label="Hidden Files"
+          description="Comma-separated glob patterns"
           onReset={() =>
             updateSetting("hiddenFilePatterns", getDefaultSetting("hiddenFilePatterns"))
           }
@@ -85,24 +50,28 @@ export const FileTreeSettings = () => {
             getDefaultSetting("hiddenFilePatterns").join(",")
           }
         >
-          <Input
-            id="hiddenFilePatterns"
-            type="text"
+          <textarea
             value={filePatternsInput}
-            onChange={handleFilePatternsChange}
-            onBlur={handleFilePatternsBlur}
-            onKeyDown={(e) => handlePatternInputEnter(e, handleFilePatternsBlur)}
-            placeholder="e.g., *.log, *.tmp, **/*.bak"
-            size="md"
+            onChange={(e) => setFilePatternsInput(e.target.value)}
+            onBlur={commitFilePatterns}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                commitFilePatterns();
+              }
+            }}
+            placeholder="*.log, *.tmp, **/*.bak"
+            rows={2}
+            className={cn(
+              controlFieldSurfaceVariants({ variant: "secondary" }),
+              "ui-font ui-text-sm w-48 resize-none px-2 py-1.5 placeholder:text-text-lighter",
+            )}
           />
-          <p className="ui-font ui-text-sm text-text-lighter">Use comma-separated glob patterns.</p>
-          {renderPatternPills(settings.hiddenFilePatterns)}
         </SettingRow>
 
         <SettingRow
-          label="Hidden Directory Patterns"
-          description="Directories matching these glob patterns will be hidden from the file tree"
-          className="flex-col items-start gap-2"
+          label="Hidden Directories"
+          description="Comma-separated glob patterns"
           onReset={() =>
             updateSetting("hiddenDirectoryPatterns", getDefaultSetting("hiddenDirectoryPatterns"))
           }
@@ -111,18 +80,23 @@ export const FileTreeSettings = () => {
             getDefaultSetting("hiddenDirectoryPatterns").join(",")
           }
         >
-          <Input
-            id="hiddenDirectoryPatterns"
-            type="text"
+          <textarea
             value={directoryPatternsInput}
-            onChange={handleDirectoryPatternsChange}
-            onBlur={handleDirectoryPatternsBlur}
-            onKeyDown={(e) => handlePatternInputEnter(e, handleDirectoryPatternsBlur)}
-            placeholder="e.g., node_modules, .git, build/"
-            size="md"
+            onChange={(e) => setDirectoryPatternsInput(e.target.value)}
+            onBlur={commitDirectoryPatterns}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                commitDirectoryPatterns();
+              }
+            }}
+            placeholder="node_modules, .git, build/"
+            rows={2}
+            className={cn(
+              controlFieldSurfaceVariants({ variant: "secondary" }),
+              "ui-font ui-text-sm w-48 resize-none px-2 py-1.5 placeholder:text-text-lighter",
+            )}
           />
-          <p className="ui-font ui-text-sm text-text-lighter">Use comma-separated glob patterns.</p>
-          {renderPatternPills(settings.hiddenDirectoryPatterns)}
         </SettingRow>
       </Section>
     </div>
