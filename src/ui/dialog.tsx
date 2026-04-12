@@ -16,6 +16,7 @@ interface DialogProps {
   footer?: ReactNode;
   size?: "sm" | "md" | "lg";
   headerBorder?: boolean;
+  footerBorder?: boolean;
   classNames?: Partial<{
     backdrop: string;
     modal: string;
@@ -52,6 +53,7 @@ const Dialog = ({
   footer,
   size = "md",
   headerBorder = true,
+  footerBorder = true,
   classNames,
 }: DialogProps) => {
   return (
@@ -108,7 +110,12 @@ const Dialog = ({
             <div className={cn("flex-1 overflow-y-auto p-4", classNames?.content)}>{children}</div>
 
             {footer && (
-              <div className="flex shrink-0 items-center justify-end gap-2 border-border border-t px-4 py-3">
+              <div
+                className={cn(
+                  "flex shrink-0 items-center justify-end gap-2 px-4 py-3",
+                  footerBorder && "border-border border-t",
+                )}
+              >
                 {footer}
               </div>
             )}

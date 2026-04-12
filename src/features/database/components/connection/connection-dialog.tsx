@@ -145,7 +145,8 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
     <Dialog
       onClose={onClose}
       title="Connect to Database"
-      icon={FolderOpen}
+      headerBorder={false}
+      footerBorder={false}
       classNames={{
         backdrop: "bg-black/40 backdrop-blur-[2px]",
         modal: "max-w-md",
@@ -167,9 +168,6 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
               Test
             </Button>
           )}
-          <Button type="button" variant="ghost" size="sm" onClick={onClose} aria-label="Cancel">
-            Cancel
-          </Button>
           <Button
             type="button"
             size="sm"
@@ -184,21 +182,17 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
         </>
       }
     >
-      <div className="space-y-1.5">
-        <label htmlFor="db-conn-provider" className="ui-font block text-sm text-text">
-          Database
-        </label>
-        <Select
-          value={dbType}
-          onChange={(value) => handleDbTypeChange(value as DatabaseType)}
-          options={CONNECTION_DB_TYPES.map((type) => ({
-            value: type,
-            label: PROVIDER_REGISTRY[type].label,
-          }))}
-          className="w-full"
-          menuClassName="z-[10040]"
-        />
-      </div>
+      <Select
+        value={dbType}
+        onChange={(value) => handleDbTypeChange(value as DatabaseType)}
+        options={CONNECTION_DB_TYPES.map((type) => ({
+          value: type,
+          label: PROVIDER_REGISTRY[type].label,
+        }))}
+        variant="secondary"
+        className="w-full"
+        menuClassName="z-[10040]"
+      />
 
       <div className="rounded-full bg-primary-bg/70 p-1">
         <div className="grid grid-cols-2 gap-1">
