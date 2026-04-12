@@ -83,6 +83,7 @@ const TerminalContainer = ({
     registerTerminalFocus,
     clearTerminalFocus,
     setIsBottomPaneVisible,
+    setBottomPaneActiveTab,
     isBottomPaneVisible,
     bottomPaneActiveTab,
   } = useUIState();
@@ -383,6 +384,7 @@ const TerminalContainer = ({
       const { command, name } = customEvent.detail;
 
       // Show bottom pane and switch to terminal tab
+      setBottomPaneActiveTab("terminal");
       setIsBottomPaneVisible(true);
 
       // Create a new terminal
@@ -410,7 +412,13 @@ const TerminalContainer = ({
     window.addEventListener("create-terminal-with-command", handleCreateTerminalWithCommand);
     return () =>
       window.removeEventListener("create-terminal-with-command", handleCreateTerminalWithCommand);
-  }, [createTerminal, currentDirectory, getDisplayNameFromDirectory, setIsBottomPaneVisible]);
+  }, [
+    createTerminal,
+    currentDirectory,
+    getDisplayNameFromDirectory,
+    setBottomPaneActiveTab,
+    setIsBottomPaneVisible,
+  ]);
 
   // Listen for terminal-ready events to execute pending commands
   useEffect(() => {
