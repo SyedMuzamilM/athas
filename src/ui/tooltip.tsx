@@ -27,7 +27,7 @@ export default function Tooltip({
     <TooltipPrimitive.Provider delayDuration={150} skipDelayDuration={100} disableHoverableContent>
       <TooltipPrimitive.Root>
         <TooltipPrimitive.Trigger asChild>
-          <span className="inline-block">{children}</span>
+          <span className="inline-flex items-center">{children}</span>
         </TooltipPrimitive.Trigger>
         <TooltipPrimitive.Portal>
           <TooltipPrimitive.Content

@@ -28,7 +28,7 @@ const actionButtonClass = cn(
 );
 
 const statusChipClass =
-  "ui-font inline-flex h-5 items-center rounded-md border border-transparent px-1.5 text-[10px] text-text-lighter transition-colors hover:bg-hover hover:text-text";
+  "ui-font inline-flex h-5 items-center self-center rounded-md border border-transparent px-1.5 text-[10px] leading-none text-text-lighter transition-colors hover:bg-hover hover:text-text";
 
 const menuTriggerClass = cn(
   buttonVariants({ variant: "ghost", size: "icon-xs" }),
@@ -312,7 +312,7 @@ export function EditorStatusActions() {
       </span>
 
       {activeBuffer && isEditorContent(activeBuffer) && (
-        <div className="relative flex items-center">
+        <div className="relative flex h-5 items-center self-center">
           <Button
             ref={languageButtonRef}
             type="button"
@@ -321,10 +321,10 @@ export function EditorStatusActions() {
               setLanguageSearch("");
             }}
             variant="ghost"
-            size="sm"
+            size="xs"
             className={cn(
               statusChipClass,
-              "cursor-pointer",
+              "min-w-0 cursor-pointer",
               isLanguageOpen && "bg-hover text-text",
             )}
             aria-expanded={isLanguageOpen}
