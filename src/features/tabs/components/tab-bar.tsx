@@ -188,9 +188,19 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
   }, [jumpListActions]);
 
   const handleSplitActivePane = useCallback(() => {
-    if (!paneId || !activeBufferId) return;
-    splitPane(paneId, "horizontal", activeBufferId);
-  }, [activeBufferId, paneId, splitPane]);
+    if (!paneId) return;
+
+    // Terminal, agent, and other session-based buffers cannot be shared
+    // across panes — open the new split with an empty new-tab view instead.
+    const activeBuffer = buffers.find((b) => b.id === activeBufferId);
+    const isSessionBuffer =
+      activeBuffer &&
+      (activeBuffer.type === "terminal" ||
+        activeBuffer.type === "agent" ||
+        activeBuffer.type === "webViewer");
+
+    splitPane(paneId, "horizontal", isSessionBuffer ? undefined : (activeBufferId ?? undefined));
+  }, [activeBufferId, buffers, paneId, splitPane]);
 
   const handleTogglePaneFullscreen = useCallback(() => {
     if (!paneId) return;

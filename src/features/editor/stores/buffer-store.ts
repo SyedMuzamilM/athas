@@ -59,9 +59,12 @@ const syncAndFocusBufferInPane = (bufferId: string) => {
 
 const removeBufferFromPanes = (bufferId: string) => {
   const paneStore = usePaneStore.getState();
-  const pane = paneStore.actions.getPaneByBufferId(bufferId);
-  if (pane) {
-    paneStore.actions.removeBufferFromPane(pane.id, bufferId);
+  // Remove from ALL panes that contain this buffer, not just the first one.
+  // A buffer can end up in multiple panes if the user split an editor tab.
+  for (const pane of paneStore.actions.getAllPaneGroups()) {
+    if (pane.bufferIds.includes(bufferId)) {
+      paneStore.actions.removeBufferFromPane(pane.id, bufferId);
+    }
   }
 };
 
