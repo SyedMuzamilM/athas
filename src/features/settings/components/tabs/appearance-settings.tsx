@@ -13,6 +13,7 @@ import {
 } from "@/features/settings/lib/ui-font-size";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
 import { Button } from "@/ui/button";
+import Combobox from "@/ui/combobox";
 import NumberInput from "@/ui/number-input";
 import Section, { SETTINGS_CONTROL_WIDTHS, SettingRow } from "../settings-section";
 import Select from "@/ui/select";
@@ -155,14 +156,14 @@ export const AppearanceSettings = () => {
               <Upload />
               Upload
             </Button>
-            <Select
+            <Combobox
               value={settings.theme}
               options={normalizedThemeOptions}
               onChange={(value) => updateSetting("theme", value)}
+              searchPlaceholder="Search themes..."
               className={SETTINGS_CONTROL_WIDTHS.wide}
               size="xs"
               variant="secondary"
-              searchable
               disabled={settings.syncSystemTheme}
             />
           </div>
@@ -189,14 +190,14 @@ export const AppearanceSettings = () => {
               onReset={() => updateSetting("autoThemeLight", getDefaultSetting("autoThemeLight"))}
               canReset={settings.autoThemeLight !== getDefaultSetting("autoThemeLight")}
             >
-              <Select
+              <Combobox
                 value={settings.autoThemeLight}
                 options={lightThemeOptions}
                 onChange={(value) => updateSetting("autoThemeLight", value)}
+                searchPlaceholder="Search light themes..."
                 className={SETTINGS_CONTROL_WIDTHS.wide}
                 size="xs"
                 variant="secondary"
-                searchable
               />
             </SettingRow>
 
@@ -206,14 +207,14 @@ export const AppearanceSettings = () => {
               onReset={() => updateSetting("autoThemeDark", getDefaultSetting("autoThemeDark"))}
               canReset={settings.autoThemeDark !== getDefaultSetting("autoThemeDark")}
             >
-              <Select
+              <Combobox
                 value={settings.autoThemeDark}
                 options={darkThemeOptions}
                 onChange={(value) => updateSetting("autoThemeDark", value)}
+                searchPlaceholder="Search dark themes..."
                 className={SETTINGS_CONTROL_WIDTHS.wide}
                 size="xs"
                 variant="secondary"
-                searchable
               />
             </SettingRow>
           </>
@@ -225,14 +226,14 @@ export const AppearanceSettings = () => {
           onReset={() => updateSetting("iconTheme", getDefaultSetting("iconTheme"))}
           canReset={settings.iconTheme !== getDefaultSetting("iconTheme")}
         >
-          <Select
+          <Combobox
             value={settings.iconTheme}
             options={normalizedIconThemeOptions}
             onChange={handleIconThemeChange}
+            searchPlaceholder="Search icon themes..."
             className={SETTINGS_CONTROL_WIDTHS.wide}
             size="xs"
             variant="secondary"
-            searchable
           />
         </SettingRow>
       </Section>

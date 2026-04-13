@@ -10,6 +10,7 @@ import {
   getAllTerminalProfiles,
 } from "@/features/terminal/utils/terminal-profiles";
 import { Button } from "@/ui/button";
+import Combobox from "@/ui/combobox";
 import Input from "@/ui/input";
 import NumberInput from "@/ui/number-input";
 import Section, { SETTINGS_CONTROL_WIDTHS, SettingRow } from "../settings-section";
@@ -150,7 +151,7 @@ export const TerminalSettings = () => {
             settings.terminalDefaultProfileId !== getDefaultSetting("terminalDefaultProfileId")
           }
         >
-          <Select
+          <Combobox
             value={selectedDefaultProfileId}
             options={profileOptions}
             onChange={(value) =>
@@ -159,10 +160,10 @@ export const TerminalSettings = () => {
                 value === SYSTEM_DEFAULT_PROFILE_ID ? "" : value,
               )
             }
+            searchPlaceholder="Search profiles..."
             className={SETTINGS_CONTROL_WIDTHS.xwide}
             size="xs"
             variant="secondary"
-            searchable
           />
         </SettingRow>
       </Section>
@@ -298,14 +299,14 @@ export const TerminalSettings = () => {
           canReset={settings.terminalFontFamily !== getDefaultSetting("terminalFontFamily")}
         >
           <div className="flex items-center gap-2">
-            <Select
+            <Combobox
               value={settings.terminalFontFamily}
               options={fontOptions}
               onChange={(val) => updateSetting("terminalFontFamily", val)}
+              searchPlaceholder="Search terminal fonts..."
               className={SETTINGS_CONTROL_WIDTHS.xwide}
               size="xs"
               variant="secondary"
-              searchable
               placeholder="Select font..."
             />
             <Tooltip content={FONT_HELP_TEXT} side="left">

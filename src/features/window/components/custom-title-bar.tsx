@@ -21,6 +21,7 @@ import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import { IS_LINUX, IS_MAC } from "@/utils/platform";
 import { AccountMenu } from "./account-menu";
+import { NotificationsMenu } from "./notifications-menu";
 import ProjectTabs from "./project-tabs";
 import RunActionsButton from "./run-actions-button";
 import WindowTitleDisplay from "./window-title-display";
@@ -332,6 +333,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         {/* Account menu */}
         <div className="mr-1 flex h-8 items-center gap-1">
           <RunActionsButton />
+          <NotificationsMenu iconSize={13} />
           <AccountMenu iconSize={13} />
         </div>
         {titleBarContextMenuPortal}
@@ -401,6 +403,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
       {/* Right side */}
       <div className="z-20 flex items-center gap-1">
         <RunActionsButton />
+        <NotificationsMenu iconSize={12} />
         {/* Account menu */}
         <AccountMenu iconSize={12} className="mr-1" />
 

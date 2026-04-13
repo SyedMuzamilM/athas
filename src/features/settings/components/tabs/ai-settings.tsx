@@ -13,6 +13,7 @@ import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
 import { useAuthStore } from "@/features/window/stores/auth-store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
+import Combobox from "@/ui/combobox";
 import Input from "@/ui/input";
 import Section, { SETTINGS_CONTROL_WIDTHS, SettingRow } from "../settings-section";
 import Select from "@/ui/select";
@@ -327,13 +328,13 @@ export const AISettings = () => {
             settings.aiModelId !== getDefaultSetting("aiModelId")
           }
         >
-          <Select
+          <Combobox
             value={settings.aiProviderId}
             options={providerOptions}
             onChange={handleProviderChange}
+            searchPlaceholder="Search providers..."
             size="xs"
             variant="secondary"
-            searchable
             className={SETTINGS_CONTROL_WIDTHS.xwide}
           />
         </SettingRow>
@@ -345,13 +346,13 @@ export const AISettings = () => {
           canReset={settings.aiModelId !== getDefaultSetting("aiModelId")}
         >
           <div className="flex items-center gap-2">
-            <Select
+            <Combobox
               value={settings.aiModelId}
               options={modelOptions}
               onChange={(value) => updateSetting("aiModelId", value)}
+              searchPlaceholder="Search models..."
               size="xs"
               variant="secondary"
-              searchable
               className={SETTINGS_CONTROL_WIDTHS.xwide}
               disabled={modelOptions.length === 0}
             />
@@ -614,16 +615,16 @@ export const AISettings = () => {
           canReset={settings.aiAutocompleteModelId !== getDefaultSetting("aiAutocompleteModelId")}
         >
           <div className="flex items-center gap-2">
-            <Select
+            <Combobox
               value={settings.aiAutocompleteModelId}
               options={autocompleteModels.map((model) => ({
                 value: model.id,
                 label: model.name,
               }))}
               onChange={(value) => updateSetting("aiAutocompleteModelId", value)}
+              searchPlaceholder="Search autocomplete models..."
               size="xs"
               variant="secondary"
-              searchable
               className={SETTINGS_CONTROL_WIDTHS.xwide}
               disabled={!aiCompletionAllowedByPolicy}
             />
