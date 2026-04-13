@@ -54,12 +54,10 @@ const GitBlameLayerComponent = forwardRef<HTMLDivElement, GitBlameLayerProps>(
       }
     }, [currentColumnContent, fontSize, fontFamily, tabSize, filePath]);
 
-    // Wrapped lines do not have a stable "line end", so pin blame to the right edge there.
     const shouldShowBlame = !!blameLine && (wordWrap || lineContentWidth > 0);
 
     // Position at absolute content coordinates (scroll handled by container transform)
-    const verticalOffset = Math.max(2, Math.round((lineHeight - fontSize) / 2));
-    const top = visualCursorLine * lineHeight + verticalOffset;
+    const top = visualCursorLine * lineHeight + EDITOR_CONSTANTS.EDITOR_PADDING_TOP;
     const left = lineContentWidth + EDITOR_CONSTANTS.GUTTER_MARGIN + 8;
 
     return (
@@ -93,7 +91,6 @@ const GitBlameLayerComponent = forwardRef<HTMLDivElement, GitBlameLayerProps>(
             style={{
               top: `${top}px`,
               height: `${lineHeight}px`,
-              lineHeight: `${lineHeight}px`,
               ...(wordWrap
                 ? {
                     left: `${Math.max(
