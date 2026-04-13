@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useFontStore } from "@/features/settings/stores/font-store";
 import type { FontInfo } from "@/features/settings/stores/types/font";
-import Combobox from "@/ui/combobox";
+import Select from "@/ui/select";
 import { cn } from "@/utils/cn";
 
 // Bundled fonts that are always available
@@ -94,15 +94,16 @@ export const FontSelector = ({
   }
 
   return (
-    <Combobox
+    <Select
       value={selectedFont}
       options={fontOptions}
       onChange={handleFontChange}
       placeholder="Select font"
-      searchPlaceholder="Search fonts..."
       className={className}
       size="xs"
       variant="secondary"
+      searchable
+      searchableTrigger="input"
     />
   );
 };

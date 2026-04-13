@@ -13,7 +13,6 @@ import {
 } from "@/features/settings/lib/ui-font-size";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
 import { Button } from "@/ui/button";
-import Combobox from "@/ui/combobox";
 import NumberInput from "@/ui/number-input";
 import Section, { SETTINGS_CONTROL_WIDTHS, SettingRow } from "../settings-section";
 import Select from "@/ui/select";
@@ -152,20 +151,21 @@ export const AppearanceSettings = () => {
           canReset={settings.theme !== getDefaultSetting("theme")}
         >
           <div className="flex items-center gap-2">
+            <Select
+              value={settings.theme}
+              options={normalizedThemeOptions}
+              onChange={(value) => updateSetting("theme", value)}
+              className={SETTINGS_CONTROL_WIDTHS.wide}
+              size="xs"
+              variant="secondary"
+              searchable
+              searchableTrigger="input"
+              disabled={settings.syncSystemTheme}
+            />
             <Button onClick={handleUploadTheme} variant="secondary" size="xs" className="gap-1">
               <Upload />
               Upload
             </Button>
-            <Combobox
-              value={settings.theme}
-              options={normalizedThemeOptions}
-              onChange={(value) => updateSetting("theme", value)}
-              searchPlaceholder="Search themes..."
-              className={SETTINGS_CONTROL_WIDTHS.wide}
-              size="xs"
-              variant="secondary"
-              disabled={settings.syncSystemTheme}
-            />
           </div>
         </SettingRow>
 
@@ -182,43 +182,41 @@ export const AppearanceSettings = () => {
           />
         </SettingRow>
 
-        {settings.syncSystemTheme ? (
-          <>
-            <SettingRow
-              label="Preferred Light Theme"
-              description="Used when Sync With OS is enabled and the system appearance is light"
-              onReset={() => updateSetting("autoThemeLight", getDefaultSetting("autoThemeLight"))}
-              canReset={settings.autoThemeLight !== getDefaultSetting("autoThemeLight")}
-            >
-              <Combobox
-                value={settings.autoThemeLight}
-                options={lightThemeOptions}
-                onChange={(value) => updateSetting("autoThemeLight", value)}
-                searchPlaceholder="Search light themes..."
-                className={SETTINGS_CONTROL_WIDTHS.wide}
-                size="xs"
-                variant="secondary"
-              />
-            </SettingRow>
+        <SettingRow
+          label="Preferred Light Theme"
+          description="Used when Sync With OS is enabled and the system appearance is light"
+          onReset={() => updateSetting("autoThemeLight", getDefaultSetting("autoThemeLight"))}
+          canReset={settings.autoThemeLight !== getDefaultSetting("autoThemeLight")}
+        >
+          <Select
+            value={settings.autoThemeLight}
+            options={lightThemeOptions}
+            onChange={(value) => updateSetting("autoThemeLight", value)}
+            className={SETTINGS_CONTROL_WIDTHS.wide}
+            size="xs"
+            variant="secondary"
+            searchable
+            searchableTrigger="input"
+          />
+        </SettingRow>
 
-            <SettingRow
-              label="Preferred Dark Theme"
-              description="Used when Sync With OS is enabled and the system appearance is dark"
-              onReset={() => updateSetting("autoThemeDark", getDefaultSetting("autoThemeDark"))}
-              canReset={settings.autoThemeDark !== getDefaultSetting("autoThemeDark")}
-            >
-              <Combobox
-                value={settings.autoThemeDark}
-                options={darkThemeOptions}
-                onChange={(value) => updateSetting("autoThemeDark", value)}
-                searchPlaceholder="Search dark themes..."
-                className={SETTINGS_CONTROL_WIDTHS.wide}
-                size="xs"
-                variant="secondary"
-              />
-            </SettingRow>
-          </>
-        ) : null}
+        <SettingRow
+          label="Preferred Dark Theme"
+          description="Used when Sync With OS is enabled and the system appearance is dark"
+          onReset={() => updateSetting("autoThemeDark", getDefaultSetting("autoThemeDark"))}
+          canReset={settings.autoThemeDark !== getDefaultSetting("autoThemeDark")}
+        >
+          <Select
+            value={settings.autoThemeDark}
+            options={darkThemeOptions}
+            onChange={(value) => updateSetting("autoThemeDark", value)}
+            className={SETTINGS_CONTROL_WIDTHS.wide}
+            size="xs"
+            variant="secondary"
+            searchable
+            searchableTrigger="input"
+          />
+        </SettingRow>
 
         <SettingRow
           label="Icon Theme"
@@ -226,14 +224,15 @@ export const AppearanceSettings = () => {
           onReset={() => updateSetting("iconTheme", getDefaultSetting("iconTheme"))}
           canReset={settings.iconTheme !== getDefaultSetting("iconTheme")}
         >
-          <Combobox
+          <Select
             value={settings.iconTheme}
             options={normalizedIconThemeOptions}
             onChange={handleIconThemeChange}
-            searchPlaceholder="Search icon themes..."
             className={SETTINGS_CONTROL_WIDTHS.wide}
             size="xs"
             variant="secondary"
+            searchable
+            searchableTrigger="input"
           />
         </SettingRow>
       </Section>
