@@ -8,15 +8,14 @@ import { SidebarPaneSelector } from "@/features/layout/components/sidebar/sideba
 import {
   resolveSidebarPaneClick,
   type SidebarView,
-} from "@/features/layout/components/sidebar/sidebar-pane-utils";
+} from "@/features/layout/utils/sidebar-pane-utils";
 import SettingsDialog from "@/features/settings/components/settings-dialog";
 import { useSettingsStore } from "@/features/settings/store";
-import { useContextMenu } from "@/hooks/use-context-menu";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { Button } from "@/ui/button";
-import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
+import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import { IS_LINUX, IS_MAC } from "@/utils/platform";
