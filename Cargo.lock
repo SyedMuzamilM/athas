@@ -746,6 +746,7 @@ dependencies = [
  "reqwest",
  "serde",
  "tar",
+ "tempfile",
  "which",
  "zip 2.4.2",
 ]
@@ -770,6 +771,7 @@ version = "0.1.0"
 dependencies = [
  "athas-runtime",
  "flate2",
+ "futures-util",
  "log",
  "reqwest",
  "serde",
@@ -777,6 +779,8 @@ dependencies = [
  "tar",
  "tauri",
  "tempfile",
+ "tokio",
+ "url",
  "walkdir",
  "which",
  "zip 2.4.2",
