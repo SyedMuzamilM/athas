@@ -10,6 +10,7 @@ const UpdateDialog = lazy(() => import("@/features/settings/components/update-di
 import { MainLayout } from "./features/layout/components/main-layout";
 import { ZoomIndicator } from "./features/window/components/zoom-indicator";
 import { ToastContainer } from "./ui/toast";
+import { TooltipProvider } from "./ui/tooltip";
 import { WindowResizeBorder } from "./features/window/components/window-resize-border";
 
 function App() {
@@ -31,7 +32,7 @@ function App() {
   const completeOnboarding = useOnboardingStore((state) => state.complete);
 
   return (
-    <>
+    <TooltipProvider>
       {/* Linux window resize handles (must be outside zoom container) */}
       <WindowResizeBorder />
 
@@ -67,7 +68,7 @@ function App() {
           </Suspense>
         )}
       </div>
-    </>
+    </TooltipProvider>
   );
 }
 
