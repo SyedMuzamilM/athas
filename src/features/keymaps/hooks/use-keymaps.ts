@@ -108,8 +108,18 @@ export function useKeymaps() {
         return;
       }
 
-      // Get all keybindings from registry
-      const allKeybindings = keymapRegistry.getAllKeybindings();
+      // Get keybindings from registry (defaults and extensions)
+      const registryKeybindings = keymapRegistry.getAllKeybindings();
+
+      // Get user keybindings from store
+      const userKeybindings = useKeymapStore.getState().keybindings;
+
+      // Merge keybindings: user overrides take priority over registry
+      const userCommandIds = new Set(userKeybindings.map((kb) => kb.command));
+      const allKeybindings = [
+        ...userKeybindings,
+        ...registryKeybindings.filter((kb) => !userCommandIds.has(kb.command)),
+      ];
 
       // Get current event key
       const eventKey = eventToKey(e);

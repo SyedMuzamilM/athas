@@ -6,7 +6,6 @@ import { cn } from "@/utils/cn";
 import { useKeybindingConflicts } from "../hooks/use-keybinding-conflicts";
 import { useKeymapStore } from "../stores/store";
 import type { Command, Keybinding } from "../types";
-import { keymapRegistry } from "../utils/registry";
 import { KeybindingInput } from "./keybinding-input";
 
 interface KeybindingRowProps {
@@ -24,16 +23,19 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
   );
 
   const handleSave = (newKey: string) => {
-    if (keybinding) {
-      updateKeybinding(command.id, {
-        key: newKey,
-      });
+    if (keybinding?.source === "user") {
+      // Update existing user keybinding
+      updateKeybinding(command.id, { key: newKey });
     } else {
+      // Remove any existing user override first, then add new one
+      // This handles both "no keybinding" and "default/extension keybinding" cases
+      removeKeybinding(command.id);
       addKeybinding({
         key: newKey,
         command: command.id,
         source: "user",
         enabled: true,
+        when: keybinding?.when,
       });
     }
     setIsEditing(false);
@@ -44,17 +46,8 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
   };
 
   const handleReset = () => {
-    const defaultBinding = keymapRegistry
-      .getAllKeybindings()
-      .find((kb) => kb.command === command.id && kb.source === "default");
-
-    if (defaultBinding) {
-      updateKeybinding(command.id, {
-        key: defaultBinding.key,
-      });
-    } else {
-      removeKeybinding(command.id);
-    }
+    // Remove user override - the default keybinding will be used automatically
+    removeKeybinding(command.id);
   };
 
   const source = keybinding?.source || "default";
