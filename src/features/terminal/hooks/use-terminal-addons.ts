@@ -1,6 +1,5 @@
 import { ask } from "@tauri-apps/plugin-dialog";
 import { open } from "@tauri-apps/plugin-shell";
-import { ClipboardAddon } from "@xterm/addon-clipboard";
 import { FitAddon } from "@xterm/addon-fit";
 import { SearchAddon } from "@xterm/addon-search";
 import { SerializeAddon } from "@xterm/addon-serialize";
@@ -29,13 +28,11 @@ export function createTerminalAddons(
   const searchAddon = new SearchAddon();
   const serializeAddon = new SerializeAddon();
   const unicode11Addon = new Unicode11Addon();
-  const clipboardAddon = new ClipboardAddon();
 
   terminal.loadAddon(fitAddon);
   terminal.loadAddon(searchAddon);
   terminal.loadAddon(serializeAddon);
   terminal.loadAddon(unicode11Addon);
-  terminal.loadAddon(clipboardAddon);
 
   let webglAddon: WebglAddon | null = null;
 

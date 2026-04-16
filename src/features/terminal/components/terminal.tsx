@@ -181,29 +181,35 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
           }
         });
 
-        terminal.textarea.addEventListener("paste", (event) => {
-          const text = event.clipboardData?.getData("text/plain");
-          if (!text || !currentConnectionIdRef.current) return;
+        terminal.textarea.addEventListener(
+          "paste",
+          (event) => {
+            const text = event.clipboardData?.getData("text/plain");
+            if (!text || !currentConnectionIdRef.current) return;
 
-          const normalizedText = text.replace(/\r\n/g, "\n");
-          const lineCount = normalizedText.split("\n").length;
-          const requiresConfirmation =
-            lineCount >= MULTILINE_PASTE_LINE_THRESHOLD ||
-            normalizedText.length >= LARGE_PASTE_CHAR_THRESHOLD;
+            const normalizedText = text.replace(/\r\n/g, "\n");
+            const lineCount = normalizedText.split("\n").length;
+            const requiresConfirmation =
+              lineCount >= MULTILINE_PASTE_LINE_THRESHOLD ||
+              normalizedText.length >= LARGE_PASTE_CHAR_THRESHOLD;
 
-          if (
-            requiresConfirmation &&
-            !window.confirm(
-              `Paste ${lineCount} lines into the terminal? This may execute multiple commands.`,
-            )
-          ) {
+            if (
+              requiresConfirmation &&
+              !window.confirm(
+                `Paste ${lineCount} lines into the terminal? This may execute multiple commands.`,
+              )
+            ) {
+              event.preventDefault();
+              event.stopImmediatePropagation();
+              return;
+            }
+
             event.preventDefault();
-            return;
-          }
-
-          event.preventDefault();
-          writeBuffered(normalizedText);
-        });
+            event.stopImmediatePropagation();
+            writeBuffered(normalizedText);
+          },
+          true,
+        );
       }
 
       loadWebLinksAddon(terminal);
