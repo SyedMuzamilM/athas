@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { keybindingToDisplay } from "@/utils/keybinding-display";
 import { normalizeKey } from "@/utils/platform";
 import { useKeymapStore } from "../stores/store";
 
@@ -69,7 +70,7 @@ export function useKeybindingRecorder(commandId: string) {
       const normalized = normalizeKey(combination);
 
       setState({
-        keys: [...modifiers.map((m) => m.charAt(0).toUpperCase() + m.slice(1)), key.toUpperCase()],
+        keys: keybindingToDisplay(normalized),
         keybindingString: normalized,
       });
     };
