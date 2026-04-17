@@ -42,7 +42,11 @@ const useKeymapStoreBase = create<KeymapState>()(
       actions: {
         addKeybinding: (keybinding) =>
           set((state) => ({
-            keybindings: [...state.keybindings, keybinding],
+            // Remove any existing keybinding for the same command first to prevent duplicates
+            keybindings: [
+              ...state.keybindings.filter((kb) => kb.command !== keybinding.command),
+              keybinding,
+            ],
           })),
         removeKeybinding: (commandId) =>
           set((state) => ({
