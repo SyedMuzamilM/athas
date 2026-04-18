@@ -4,6 +4,13 @@ import {
   DEFAULT_AI_MODEL_ID,
   DEFAULT_AI_PROVIDER_ID,
 } from "@/features/settings/config/default-settings";
+import {
+  FOOTER_LEADING_ITEM_IDS,
+  FOOTER_TRAILING_ITEM_IDS,
+  HEADER_TRAILING_ITEM_IDS,
+  SIDEBAR_ACTIVITY_ITEM_IDS,
+  normalizeItemOrder,
+} from "@/features/layout/config/item-order";
 import { normalizeUiFontSize } from "@/features/settings/lib/ui-font-size";
 import type { Settings } from "@/features/settings/types/settings";
 
@@ -90,6 +97,23 @@ export function normalizeSettings(settings: Settings): Settings {
   ) {
     normalizedSettings.iconTheme = "material";
   }
+
+  normalizedSettings.headerTrailingItemsOrder = normalizeItemOrder(
+    normalizedSettings.headerTrailingItemsOrder,
+    HEADER_TRAILING_ITEM_IDS,
+  );
+  normalizedSettings.sidebarActivityItemsOrder = normalizeItemOrder(
+    normalizedSettings.sidebarActivityItemsOrder,
+    SIDEBAR_ACTIVITY_ITEM_IDS,
+  );
+  normalizedSettings.footerLeadingItemsOrder = normalizeItemOrder(
+    normalizedSettings.footerLeadingItemsOrder,
+    FOOTER_LEADING_ITEM_IDS,
+  );
+  normalizedSettings.footerTrailingItemsOrder = normalizeItemOrder(
+    normalizedSettings.footerTrailingItemsOrder,
+    FOOTER_TRAILING_ITEM_IDS,
+  );
 
   return normalizedSettings;
 }

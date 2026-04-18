@@ -2,12 +2,13 @@ import {
   AlertCircle,
   Download,
   Puzzle,
+  Rows3,
   Settings2,
   Sparkles,
   Terminal as TerminalIcon,
   X,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Dropdown } from "@/ui/dropdown";
 import { useAIChatStore } from "@/features/ai/store/store";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics-store";
@@ -24,6 +25,13 @@ import { getApiBase } from "@/utils/api-base";
 import { cn } from "@/utils/cn";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
+import { usePaneStore } from "@/features/panes/stores/pane-store";
+import { getAllPaneGroups } from "@/features/panes/utils/pane-tree";
+import type {
+  FooterLeadingItemId,
+  FooterTrailingItemId,
+} from "@/features/layout/config/item-order";
+import { ReorderableItemStrip } from "@/features/layout/components/reorderable-item-strip";
 import { useFileSystemStore } from "../../../file-system/controllers/store";
 
 type AutocompleteUsageSummary = {
@@ -37,6 +45,12 @@ type AutocompleteUsageSummary = {
   promptTokens: number;
   completionTokens: number;
   maxRequestCostCents: number;
+};
+
+type FooterItem<T extends string> = {
+  id: T;
+  label: string;
+  content: ReactNode;
 };
 
 function extractAutocompleteUsage(subscription: unknown): AutocompleteUsageSummary | null {
@@ -307,7 +321,13 @@ const AiUsageStatusIndicator = () => {
 const Footer = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const settings = useSettingsStore((state) => state.settings);
+  const updateSetting = useSettingsStore((state) => state.updateSetting);
   const uiState = useUIState();
+  const bottomRoot = usePaneStore.use.bottomRoot();
+  const bottomPaneBufferCount = getAllPaneGroups(bottomRoot).reduce(
+    (total, pane) => total + pane.bufferIds.length,
+    0,
+  );
   const { rootFolderPath } = useFileSystemStore();
   const workspaceGitStatus = useGitStore((state) => state.workspaceGitStatus);
   const { actions } = useGitStore();
@@ -320,128 +340,188 @@ const Footer = () => {
     0,
   );
 
-  return (
-    <div className="relative z-20 flex min-h-9 shrink-0 items-center justify-between bg-secondary-bg/70 px-2.5 py-1 backdrop-blur-sm">
-      <div className="ui-font ui-text-sm flex items-center gap-1 text-text-lighter">
-        {/* Git branch manager */}
-        {rootFolderPath && workspaceGitStatus?.branch && (
-          <GitBranchManager
-            currentBranch={workspaceGitStatus.branch}
-            repoPath={rootFolderPath}
-            paletteTarget
-            placement="up"
-            onBranchChange={async () => {
-              const status = await getGitStatus(rootFolderPath);
-              actions.setWorkspaceGitStatus(status, rootFolderPath);
-            }}
-            compact={true}
-          />
-        )}
+  const footerLeadingItemsSource: Array<FooterItem<FooterLeadingItemId> | null> = [
+    rootFolderPath && workspaceGitStatus?.branch
+      ? {
+          id: "branch",
+          label: "Git branch",
+          content: (
+            <GitBranchManager
+              currentBranch={workspaceGitStatus.branch}
+              repoPath={rootFolderPath}
+              paletteTarget
+              placement="up"
+              onBranchChange={async () => {
+                const status = await getGitStatus(rootFolderPath);
+                actions.setWorkspaceGitStatus(status, rootFolderPath);
+              }}
+              compact={true}
+            />
+          ),
+        }
+      : null,
+    settings.coreFeatures.terminal
+      ? {
+          id: "terminal",
+          label: "Terminal",
+          content: (
+            <Button
+              onClick={() => {
+                uiState.setBottomPaneActiveTab("terminal");
+                const showingTerminal =
+                  !uiState.isBottomPaneVisible || uiState.bottomPaneActiveTab !== "terminal";
+                uiState.setIsBottomPaneVisible(showingTerminal);
 
-        {/* Terminal indicator */}
-        {settings.coreFeatures.terminal && (
-          <Button
-            onClick={() => {
-              uiState.setBottomPaneActiveTab("terminal");
-              const showingTerminal =
-                !uiState.isBottomPaneVisible || uiState.bottomPaneActiveTab !== "terminal";
-              uiState.setIsBottomPaneVisible(showingTerminal);
-
-              if (showingTerminal) {
-                setTimeout(() => {
-                  uiState.requestTerminalFocus();
-                }, 100);
+                if (showingTerminal) {
+                  setTimeout(() => {
+                    uiState.requestTerminalFocus();
+                  }, 100);
+                }
+              }}
+              variant="secondary"
+              size="icon-sm"
+              className="rounded-md bg-primary-bg/40 text-text-lighter"
+              data-active={
+                uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "terminal"
               }
-            }}
-            variant="secondary"
-            size="icon-sm"
-            className="rounded-md bg-primary-bg/40 text-text-lighter"
-            data-active={uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "terminal"}
-            style={{ minHeight: 0, minWidth: 0 }}
-            tooltip="Toggle Terminal"
-            commandId="workbench.toggleTerminal"
-          >
-            <TerminalIcon />
-          </Button>
-        )}
+              style={{ minHeight: 0, minWidth: 0 }}
+              tooltip="Toggle Terminal"
+              commandId="workbench.toggleTerminal"
+            >
+              <TerminalIcon />
+            </Button>
+          ),
+        }
+      : null,
+    bottomPaneBufferCount > 0 || uiState.bottomPaneActiveTab === "buffers"
+      ? {
+          id: "bottom-tabs",
+          label: "Bottom tabs",
+          content: (
+            <Button
+              onClick={() => {
+                uiState.setBottomPaneActiveTab("buffers");
+                const showingBuffers =
+                  !uiState.isBottomPaneVisible || uiState.bottomPaneActiveTab !== "buffers";
+                uiState.setIsBottomPaneVisible(showingBuffers);
+              }}
+              variant="secondary"
+              size="icon-sm"
+              className="rounded-md bg-primary-bg/40 text-text-lighter"
+              data-active={uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "buffers"}
+              style={{ minHeight: 0, minWidth: 0 }}
+              tooltip="Toggle Bottom Tabs"
+            >
+              <Rows3 />
+            </Button>
+          ),
+        }
+      : null,
+    settings.coreFeatures.diagnostics
+      ? {
+          id: "diagnostics",
+          label: "Diagnostics",
+          content: (
+            <Button
+              onClick={() => {
+                uiState.setBottomPaneActiveTab("diagnostics");
+                const showingDiagnostics =
+                  !uiState.isBottomPaneVisible || uiState.bottomPaneActiveTab !== "diagnostics";
+                uiState.setIsBottomPaneVisible(showingDiagnostics);
+              }}
+              variant="secondary"
+              size="xs"
+              className={cn(
+                "rounded-md bg-primary-bg/40 px-2 text-text-lighter",
+                !(uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "diagnostics") &&
+                  diagnosticsCount > 0 &&
+                  "text-warning",
+              )}
+              data-active={
+                uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "diagnostics"
+              }
+              style={{ minHeight: 0, minWidth: 0 }}
+              tooltip={
+                diagnosticsCount > 0
+                  ? `${diagnosticsCount} diagnostic${diagnosticsCount === 1 ? "" : "s"}`
+                  : "Toggle Diagnostics Panel"
+              }
+              commandId="workbench.toggleDiagnostics"
+            >
+              <AlertCircle />
+              {diagnosticsCount > 0 && (
+                <span className="ui-text-sm ml-0.5">{diagnosticsCount}</span>
+              )}
+            </Button>
+          ),
+        }
+      : null,
+    extensionUpdatesCount > 0
+      ? {
+          id: "extensions",
+          label: "Extension updates",
+          content: (
+            <Button
+              onClick={() => uiState.openSettingsDialog("extensions")}
+              variant="secondary"
+              size="xs"
+              className="rounded-md bg-primary-bg/40 px-2 text-blue-400"
+              style={{ minHeight: 0, minWidth: 0 }}
+              tooltip={`${extensionUpdatesCount} extension update${extensionUpdatesCount === 1 ? "" : "s"} available`}
+            >
+              <Puzzle />
+              <span className="ui-text-sm ml-0.5">{extensionUpdatesCount}</span>
+            </Button>
+          ),
+        }
+      : null,
+    available
+      ? {
+          id: "updates",
+          label: "App updates",
+          content: (
+            <Button
+              onClick={downloadAndInstall}
+              disabled={downloading || installing}
+              variant="secondary"
+              size="icon-sm"
+              className={cn(
+                "rounded-md bg-primary-bg/40 text-text-lighter",
+                downloading || installing
+                  ? "cursor-not-allowed opacity-60"
+                  : "text-blue-400 hover:text-blue-300",
+              )}
+              style={{ minHeight: 0, minWidth: 0 }}
+              tooltip={
+                downloading
+                  ? "Downloading update..."
+                  : installing
+                    ? "Installing update..."
+                    : `Update available: ${updateInfo?.version}`
+              }
+            >
+              <Download className={downloading || installing ? "animate-pulse" : ""} />
+            </Button>
+          ),
+        }
+      : null,
+  ];
+  const footerLeadingItems = footerLeadingItemsSource.filter(
+    (item): item is FooterItem<FooterLeadingItemId> => item !== null,
+  );
 
-        {/* Diagnostics indicator - clickable */}
-        {settings.coreFeatures.diagnostics && (
-          <Button
-            onClick={() => {
-              uiState.setBottomPaneActiveTab("diagnostics");
-              const showingDiagnostics =
-                !uiState.isBottomPaneVisible || uiState.bottomPaneActiveTab !== "diagnostics";
-              uiState.setIsBottomPaneVisible(showingDiagnostics);
-            }}
-            variant="secondary"
-            size="xs"
-            className={cn(
-              "rounded-md bg-primary-bg/40 px-2 text-text-lighter",
-              !(uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "diagnostics") &&
-                diagnosticsCount > 0 &&
-                "text-warning",
-            )}
-            data-active={
-              uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "diagnostics"
-            }
-            style={{ minHeight: 0, minWidth: 0 }}
-            tooltip={
-              diagnosticsCount > 0
-                ? `${diagnosticsCount} diagnostic${diagnosticsCount === 1 ? "" : "s"}`
-                : "Toggle Diagnostics Panel"
-            }
-            commandId="workbench.toggleDiagnostics"
-          >
-            <AlertCircle />
-            {diagnosticsCount > 0 && <span className="ui-text-sm ml-0.5">{diagnosticsCount}</span>}
-          </Button>
-        )}
-        {/* Extension updates indicator */}
-        {extensionUpdatesCount > 0 && (
-          <Button
-            onClick={() => uiState.openSettingsDialog("extensions")}
-            variant="secondary"
-            size="xs"
-            className="rounded-md bg-primary-bg/40 px-2 text-blue-400"
-            style={{ minHeight: 0, minWidth: 0 }}
-            tooltip={`${extensionUpdatesCount} extension update${extensionUpdatesCount === 1 ? "" : "s"} available`}
-          >
-            <Puzzle />
-            <span className="ui-text-sm ml-0.5">{extensionUpdatesCount}</span>
-          </Button>
-        )}
-        {/* Update indicator */}
-        {available && (
-          <Button
-            onClick={downloadAndInstall}
-            disabled={downloading || installing}
-            variant="secondary"
-            size="icon-sm"
-            className={cn(
-              "rounded-md bg-primary-bg/40 text-text-lighter",
-              downloading || installing
-                ? "cursor-not-allowed opacity-60"
-                : "text-blue-400 hover:text-blue-300",
-            )}
-            style={{ minHeight: 0, minWidth: 0 }}
-            tooltip={
-              downloading
-                ? "Downloading update..."
-                : installing
-                  ? "Installing update..."
-                  : `Update available: ${updateInfo?.version}`
-            }
-          >
-            <Download className={downloading || installing ? "animate-pulse" : ""} />
-          </Button>
-        )}
-      </div>
-
-      <div className="ui-font ui-text-sm flex items-center gap-1 text-text-lighter">
-        {isAuthenticated && <AiUsageStatusIndicator />}
-
-        {/* AI Chat button */}
+  const footerTrailingItemsSource: Array<FooterItem<FooterTrailingItemId> | null> = [
+    isAuthenticated
+      ? {
+          id: "ai-usage",
+          label: "AI usage",
+          content: <AiUsageStatusIndicator />,
+        }
+      : null,
+    {
+      id: "ai-chat",
+      label: "AI chat",
+      content: (
         <Button
           onClick={() => {
             useSettingsStore.getState().toggleAIChatVisible();
@@ -456,6 +536,35 @@ const Footer = () => {
         >
           <Sparkles />
         </Button>
+      ),
+    },
+  ];
+  const footerTrailingItems = footerTrailingItemsSource.filter(
+    (item): item is FooterItem<FooterTrailingItemId> => item !== null,
+  );
+
+  return (
+    <div className="relative z-20 flex min-h-9 shrink-0 items-center justify-between bg-secondary-bg/70 px-2.5 py-1 backdrop-blur-sm">
+      <div className="ui-font ui-text-sm flex items-center gap-1 text-text-lighter">
+        <ReorderableItemStrip
+          items={footerLeadingItems}
+          orderedIds={settings.footerLeadingItemsOrder}
+          onReorder={(orderedIds) => {
+            void updateSetting("footerLeadingItemsOrder", orderedIds);
+          }}
+          className="gap-1"
+        />
+      </div>
+
+      <div className="ui-font ui-text-sm flex items-center gap-1 text-text-lighter">
+        <ReorderableItemStrip
+          items={footerTrailingItems}
+          orderedIds={settings.footerTrailingItemsOrder}
+          onReorder={(orderedIds) => {
+            void updateSetting("footerTrailingItemsOrder", orderedIds);
+          }}
+          className="gap-1"
+        />
       </div>
     </div>
   );

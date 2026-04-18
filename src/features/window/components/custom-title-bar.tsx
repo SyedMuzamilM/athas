@@ -1,9 +1,11 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Maximize2, MenuIcon, Minimize2, Minus, SquareArrowOutUpRight, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { openFolder } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { ReorderableItemStrip } from "@/features/layout/components/reorderable-item-strip";
+import type { HeaderTrailingItemId } from "@/features/layout/config/item-order";
 import { SidebarPaneSelector } from "@/features/layout/components/sidebar/sidebar-pane-selector";
 import {
   resolveSidebarPaneClick,
@@ -31,8 +33,15 @@ interface CustomTitleBarProps {
   showMinimal?: boolean;
 }
 
+type HeaderItem<T extends string> = {
+  id: T;
+  label: string;
+  content: ReactNode;
+};
+
 const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
   const { settings } = useSettingsStore();
+  const updateSetting = useSettingsStore((state) => state.updateSetting);
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
   const {
@@ -218,6 +227,48 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     document.body,
   );
 
+  const menuItem = !settings.nativeMenuBar ? (
+    settings.compactMenuBar ? (
+      <div className="relative">
+        <Tooltip content="Menu" side="bottom">
+          <Button
+            onClick={() => {
+              setMenuBarActiveMenu("File");
+            }}
+            variant="secondary"
+            size="icon-sm"
+            className="pointer-events-auto"
+          >
+            <MenuIcon />
+          </Button>
+        </Tooltip>
+        <CustomMenuBar
+          activeMenu={menuBarActiveMenu}
+          setActiveMenu={setMenuBarActiveMenu}
+          compactFloating
+        />
+      </div>
+    ) : (
+      <CustomMenuBar activeMenu={menuBarActiveMenu} setActiveMenu={setMenuBarActiveMenu} />
+    )
+  ) : null;
+
+  const headerTrailingItems: Array<HeaderItem<HeaderTrailingItemId>> = [
+    { id: "run-actions", label: "Run actions", content: <RunActionsButton /> },
+    {
+      id: "notifications",
+      label: "Notifications",
+      content: <NotificationsMenu iconSize={isMacOS ? 13 : 12} />,
+    },
+    {
+      id: "account",
+      label: "Account",
+      content: (
+        <AccountMenu iconSize={isMacOS ? 13 : 12} className={!isMacOS ? "mr-1" : undefined} />
+      ),
+    },
+  ];
+
   if (showMinimal) {
     return (
       <div
@@ -283,31 +334,8 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         )}
       >
         {/* Left side: keep clear of traffic lights */}
-        <div className="pointer-events-auto flex h-8 min-w-0 items-center gap-1">
-          {!settings.nativeMenuBar && !settings.compactMenuBar && (
-            <CustomMenuBar activeMenu={menuBarActiveMenu} setActiveMenu={setMenuBarActiveMenu} />
-          )}
-          {!settings.nativeMenuBar && settings.compactMenuBar && (
-            <div className="relative">
-              <Tooltip content="Menu" side="bottom">
-                <Button
-                  onClick={() => {
-                    setMenuBarActiveMenu("File");
-                  }}
-                  variant="secondary"
-                  size="icon-sm"
-                  className="pointer-events-auto"
-                >
-                  <MenuIcon />
-                </Button>
-              </Tooltip>
-              <CustomMenuBar
-                activeMenu={menuBarActiveMenu}
-                setActiveMenu={setMenuBarActiveMenu}
-                compactFloating
-              />
-            </div>
-          )}
+        <div className="pointer-events-auto flex h-8 min-w-0 items-center">
+          {menuItem}
           <SidebarPaneSelector
             activeSidebarView={activeSidebarView}
             isGitViewActive={isGitViewActive}
@@ -330,10 +358,15 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         </div>
 
         {/* Account menu */}
-        <div className="mr-1 flex h-8 items-center gap-1">
-          <RunActionsButton />
-          <NotificationsMenu iconSize={13} />
-          <AccountMenu iconSize={13} />
+        <div className="mr-1 flex h-8 items-center">
+          <ReorderableItemStrip
+            items={headerTrailingItems}
+            orderedIds={settings.headerTrailingItemsOrder}
+            onReorder={(orderedIds) => {
+              void updateSetting("headerTrailingItemsOrder", orderedIds);
+            }}
+            className="gap-1"
+          />
         </div>
         {titleBarContextMenuPortal}
       </div>
@@ -349,43 +382,19 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     >
       {/* Left side */}
       <div data-tauri-drag-region className="flex flex-1 items-center px-1">
-        {!settings.nativeMenuBar && !settings.compactMenuBar && (
-          <CustomMenuBar activeMenu={menuBarActiveMenu} setActiveMenu={setMenuBarActiveMenu} />
-        )}
-
-        {/* Menu bar button */}
-        {!settings.nativeMenuBar && settings.compactMenuBar && (
-          <div className="relative mr-2">
-            <Tooltip content="Menu" side="bottom">
-              <Button
-                onClick={() => {
-                  setMenuBarActiveMenu("File");
-                }}
-                variant="secondary"
-                size="icon-sm"
-                className="pointer-events-auto"
-              >
-                <MenuIcon />
-              </Button>
-            </Tooltip>
-            <CustomMenuBar
-              activeMenu={menuBarActiveMenu}
-              setActiveMenu={setMenuBarActiveMenu}
-              compactFloating
+        <div className="pointer-events-auto">
+          <div className="flex items-center gap-2">
+            {menuItem}
+            <SidebarPaneSelector
+              activeSidebarView={activeSidebarView}
+              isGitViewActive={isGitViewActive}
+              isGitHubPRsViewActive={isGitHubPRsViewActive}
+              coreFeatures={settings.coreFeatures}
+              onViewChange={handleSidebarViewChange}
+              onSearchClick={() => setIsGlobalSearchVisible(!isGlobalSearchVisible)}
+              compact
             />
           </div>
-        )}
-
-        <div className="pointer-events-auto mr-2">
-          <SidebarPaneSelector
-            activeSidebarView={activeSidebarView}
-            isGitViewActive={isGitViewActive}
-            isGitHubPRsViewActive={isGitHubPRsViewActive}
-            coreFeatures={settings.coreFeatures}
-            onViewChange={handleSidebarViewChange}
-            onSearchClick={() => setIsGlobalSearchVisible(!isGlobalSearchVisible)}
-            compact
-          />
         </div>
       </div>
 
@@ -400,11 +409,15 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
       </div>
 
       {/* Right side */}
-      <div className="z-20 flex items-center gap-1">
-        <RunActionsButton />
-        <NotificationsMenu iconSize={12} />
-        {/* Account menu */}
-        <AccountMenu iconSize={12} className="mr-1" />
+      <div className="z-20 flex items-center">
+        <ReorderableItemStrip
+          items={headerTrailingItems}
+          orderedIds={settings.headerTrailingItemsOrder}
+          onReorder={(orderedIds) => {
+            void updateSetting("headerTrailingItemsOrder", orderedIds);
+          }}
+          className="gap-1"
+        />
 
         {/* Window controls - only show on Linux */}
         {isLinux && (

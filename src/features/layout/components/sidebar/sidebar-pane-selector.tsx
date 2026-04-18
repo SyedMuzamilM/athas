@@ -1,8 +1,13 @@
 import { Folder, GitBranch, GitPullRequest, Search } from "lucide-react";
+import { useMemo } from "react";
 import type { CoreFeaturesState } from "@/features/settings/types/feature";
 import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
 import { DynamicIcon } from "@/extensions/ui/components/dynamic-icon";
-import { Tabs, type TabsItem } from "@/ui/tabs";
+import { ReorderableItemStrip } from "@/features/layout/components/reorderable-item-strip";
+import { normalizeItemOrder } from "@/features/layout/config/item-order";
+import { useSettingsStore } from "@/features/settings/store";
+import { Tab, TabsList, type TabsItem } from "@/ui/tabs";
+import Tooltip from "@/ui/tooltip";
 import type { SidebarView } from "../../utils/sidebar-pane-utils";
 
 interface SidebarPaneSelectorProps {
@@ -27,6 +32,10 @@ export const SidebarPaneSelector = ({
   const tooltipSide = compact ? "bottom" : "right";
   const isFilesActive = !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "files";
   const extensionViews = useExtensionViews();
+  const sidebarActivityItemsOrder = useSettingsStore(
+    (state) => state.settings.sidebarActivityItemsOrder,
+  );
+  const updateSetting = useSettingsStore((state) => state.updateSetting);
 
   const items: TabsItem[] = [
     {
@@ -112,12 +121,67 @@ export const SidebarPaneSelector = ({
     ),
   ];
 
+  const orderedIds = useMemo(
+    () =>
+      normalizeItemOrder(
+        sidebarActivityItemsOrder,
+        items.map((item) => item.id),
+      ),
+    [items, sidebarActivityItemsOrder],
+  );
+
+  const reorderableItems = items.map((item) => {
+    const tabNode = (
+      <Tab
+        role={item.role}
+        aria-selected={item.isActive}
+        aria-label={item.ariaLabel}
+        tabIndex={item.tabIndex}
+        title={item.title}
+        isActive={!!item.isActive}
+        size={compact ? "xs" : "sm"}
+        variant={compact ? "segmented" : "default"}
+        className={item.className}
+        onClick={item.onClick}
+      >
+        {item.icon}
+        {item.label}
+      </Tab>
+    );
+
+    const content = item.tooltip ? (
+      <Tooltip
+        content={item.tooltip.content}
+        shortcut={item.tooltip.shortcut}
+        side={item.tooltip.side}
+        className={item.tooltip.className}
+      >
+        {tabNode}
+      </Tooltip>
+    ) : (
+      tabNode
+    );
+
+    return {
+      id: item.id,
+      label: item.tooltip?.content ?? item.ariaLabel ?? item.title ?? item.id,
+      content,
+    };
+  });
+
   return (
-    <Tabs
-      items={items}
-      size={compact ? "xs" : "sm"}
+    <TabsList
       variant={compact ? "segmented" : "default"}
       className={compact ? undefined : "gap-0.5 p-1"}
-    />
+    >
+      <ReorderableItemStrip
+        items={reorderableItems}
+        orderedIds={orderedIds}
+        onReorder={(nextOrderedIds) => {
+          void updateSetting("sidebarActivityItemsOrder", nextOrderedIds);
+        }}
+        className="gap-0.5"
+      />
+    </TabsList>
   );
 };

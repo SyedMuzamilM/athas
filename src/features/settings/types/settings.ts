@@ -1,4 +1,10 @@
 import type { CoreFeaturesState } from "./feature";
+import type {
+  FooterLeadingItemId,
+  FooterTrailingItemId,
+  HeaderTrailingItemId,
+  SidebarActivityItemId,
+} from "@/features/layout/config/item-order";
 
 export type Theme = string;
 
@@ -37,6 +43,10 @@ export interface Settings {
   nativeMenuBar: boolean;
   compactMenuBar: boolean;
   titleBarProjectMode: "tabs" | "window";
+  headerTrailingItemsOrder: HeaderTrailingItemId[];
+  sidebarActivityItemsOrder: Array<SidebarActivityItemId | string>;
+  footerLeadingItemsOrder: FooterLeadingItemId[];
+  footerTrailingItemsOrder: FooterTrailingItemId[];
   openFoldersInNewWindow: boolean;
   // AI
   aiProviderId: string;

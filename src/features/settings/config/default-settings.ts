@@ -1,4 +1,10 @@
 import { normalizeUiFontSize, UI_FONT_SIZE_DEFAULT } from "@/features/settings/lib/ui-font-size";
+import {
+  FOOTER_LEADING_ITEM_IDS,
+  FOOTER_TRAILING_ITEM_IDS,
+  HEADER_TRAILING_ITEM_IDS,
+  SIDEBAR_ACTIVITY_ITEM_IDS,
+} from "@/features/layout/config/item-order";
 import type { Settings } from "@/features/settings/types/settings";
 
 export const DEFAULT_AI_PROVIDER_ID = "anthropic";
@@ -40,6 +46,10 @@ export const defaultSettings: Settings = {
   nativeMenuBar: false,
   compactMenuBar: true,
   titleBarProjectMode: "tabs",
+  headerTrailingItemsOrder: [...HEADER_TRAILING_ITEM_IDS],
+  sidebarActivityItemsOrder: [...SIDEBAR_ACTIVITY_ITEM_IDS],
+  footerLeadingItemsOrder: [...FOOTER_LEADING_ITEM_IDS],
+  footerTrailingItemsOrder: [...FOOTER_TRAILING_ITEM_IDS],
   openFoldersInNewWindow: false,
   // AI
   aiProviderId: DEFAULT_AI_PROVIDER_ID,
@@ -120,6 +130,10 @@ export function getDefaultSettingsSnapshot(): Settings {
     enterpriseAllowedExtensionIds: [...defaultSettings.enterpriseAllowedExtensionIds],
     hiddenFilePatterns: [...defaultSettings.hiddenFilePatterns],
     hiddenDirectoryPatterns: [...defaultSettings.hiddenDirectoryPatterns],
+    headerTrailingItemsOrder: [...defaultSettings.headerTrailingItemsOrder],
+    sidebarActivityItemsOrder: [...defaultSettings.sidebarActivityItemsOrder],
+    footerLeadingItemsOrder: [...defaultSettings.footerLeadingItemsOrder],
+    footerTrailingItemsOrder: [...defaultSettings.footerTrailingItemsOrder],
     uiFontSize: normalizeUiFontSize(defaultSettings.uiFontSize),
   };
 }
