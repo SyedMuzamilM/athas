@@ -2199,7 +2199,7 @@ export const useFileSystemStore = createSelectors(
           // Clear project store
           const { setRootFolderPath, setProjectName } = useProjectStore.getState();
           setRootFolderPath(undefined);
-          setProjectName("Explorer");
+          setProjectName("Files");
           restoreProjectUiState(undefined);
 
           // Reset file system state

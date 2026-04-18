@@ -35,10 +35,10 @@ export const SidebarPaneSelector = ({
       isActive: isFilesActive,
       onClick: () => onViewChange("files"),
       role: "tab",
-      ariaLabel: "File Explorer",
+      ariaLabel: "Files",
       className: compact ? undefined : "w-8 rounded-md",
       tooltip: {
-        content: "File Explorer",
+        content: "Files",
         shortcut: "Mod+Shift+E",
         side: tooltipSide,
       },

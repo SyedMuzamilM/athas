@@ -156,7 +156,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     tab: "git",
     section: "Git View",
     label: "Folder-Based Changes",
-    description: "Show Git changes in a folder tree, similar to File Explorer",
+    description: "Show Git changes in a folder tree, similar to Files",
     keywords: ["git", "changes", "folder", "tree", "files", "explorer", "sidebar"],
   },
   {
@@ -212,8 +212,8 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     tab: "git",
     section: "File Tree",
     label: "Show Git Status In File Tree",
-    description: "Display Git decorations in the file explorer",
-    keywords: ["git", "file tree", "file explorer", "decorations", "status"],
+    description: "Display Git decorations in Files",
+    keywords: ["git", "file tree", "files", "file explorer", "decorations", "status"],
   },
   {
     id: "git-compact-status-badges",

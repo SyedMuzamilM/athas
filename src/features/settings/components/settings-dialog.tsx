@@ -45,7 +45,7 @@ const SETTINGS_TAB_LABELS: Record<SettingsTab, string> = {
   enterprise: "Enterprise",
   advanced: "Advanced",
   terminal: "Terminal",
-  "file-explorer": "File Explorer",
+  "file-explorer": "Files",
 };
 
 const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {

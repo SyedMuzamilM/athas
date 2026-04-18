@@ -402,7 +402,7 @@ const viewCommands: Command[] = [
   },
   {
     id: "workbench.showFileExplorer",
-    title: "Show File Explorer",
+    title: "Show Files",
     category: "View",
     keybinding: "cmd+shift+e",
     execute: () => {

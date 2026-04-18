@@ -33,7 +33,7 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
     {
       id: "view-show-files",
       label: "View: Show Files",
-      description: "Switch to files explorer view",
+      description: "Switch to files view",
       icon: <FolderOpen />,
       category: "Navigation",
       commandId: "workbench.showFileExplorer",
