@@ -7,7 +7,7 @@ import Checkbox from "@/ui/checkbox";
 import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
 import Select from "@/ui/select";
-import { cn } from "@/utils/cn";
+import { Tab, TabsList } from "@/ui/tabs";
 import type { DatabaseType } from "../../models/provider.types";
 import { PROVIDER_REGISTRY } from "../../providers/provider-registry";
 import { type SavedConnection, useConnectionStore } from "../../stores/connection-store";
@@ -194,44 +194,31 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
         menuClassName="z-[10040]"
       />
 
-      <div className="rounded-full bg-primary-bg/70 p-1">
-        <div className="grid grid-cols-2 gap-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setMode("form")}
-            className={cn(
-              "rounded-full",
-              mode === "form"
-                ? "bg-selected text-text hover:bg-selected"
-                : "text-text-lighter hover:text-text",
-            )}
-            data-active={mode === "form"}
-            aria-label="Form mode"
-          >
-            Form
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => !isFileBased && setMode("string")}
-            disabled={isFileBased}
-            className={cn(
-              "rounded-full",
-              mode === "string"
-                ? "bg-selected text-text hover:bg-selected"
-                : "text-text-lighter hover:text-text",
-              isFileBased && "hover:bg-transparent",
-            )}
-            data-active={mode === "string"}
-            aria-label="Connection string mode"
-          >
-            Connection String
-          </Button>
-        </div>
-      </div>
+      <TabsList variant="default" className="grid grid-cols-2">
+        <Tab
+          role="tab"
+          aria-selected={mode === "form"}
+          aria-label="Form mode"
+          isActive={mode === "form"}
+          size="sm"
+          variant="default"
+          onClick={() => setMode("form")}
+        >
+          Form
+        </Tab>
+        <Tab
+          role="tab"
+          aria-selected={mode === "string"}
+          aria-label="Connection string mode"
+          isActive={mode === "string"}
+          size="sm"
+          variant="default"
+          onClick={() => !isFileBased && setMode("string")}
+          className={isFileBased ? "pointer-events-none opacity-50" : undefined}
+        >
+          Connection String
+        </Tab>
+      </TabsList>
 
       {mode === "form" ? (
         <div className="space-y-3">
