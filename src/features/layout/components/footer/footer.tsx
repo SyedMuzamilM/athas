@@ -10,6 +10,8 @@ import {
 } from "@phosphor-icons/react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Dropdown } from "@/ui/dropdown";
+import { Tab, TabsList } from "@/ui/tabs";
+import Tooltip from "@/ui/tooltip";
 import { useAIChatStore } from "@/features/ai/store/store";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics-store";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
@@ -54,8 +56,6 @@ type FooterItem<T extends string> = {
 
 const FOOTER_SEGMENT_CLASS_NAME =
   "flex h-6 items-stretch overflow-hidden rounded-lg border border-border/70 bg-primary-bg/65";
-const FOOTER_SEGMENT_BUTTON_CLASS_NAME =
-  "h-full rounded-none border-0 bg-transparent text-text-lighter hover:bg-hover/50 hover:text-text data-[active=true]:bg-hover/80 data-[active=true]:text-text";
 const FOOTER_ICON_BUTTON_CLASS_NAME = "min-w-7 px-0 [&_svg]:size-4";
 const FOOTER_PILL_BUTTON_CLASS_NAME = "px-2.5 [&_svg]:size-4";
 
@@ -111,6 +111,45 @@ function formatUsageDate(value: string): string {
     day: "numeric",
     year: "numeric",
   }).format(date);
+}
+
+function FooterTabControl({
+  tooltip,
+  active = false,
+  className,
+  onClick,
+  children,
+}: {
+  tooltip: string;
+  active?: boolean;
+  className?: string;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <TabsList variant="segmented" className={FOOTER_SEGMENT_CLASS_NAME}>
+      <Tooltip content={tooltip} side="top">
+        <Tab
+          role="button"
+          aria-label={tooltip}
+          tabIndex={0}
+          isActive={active}
+          size="xs"
+          variant="segmented"
+          className={className}
+          onClick={onClick}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              onClick();
+            }
+          }}
+        >
+          {children}
+        </Tab>
+      </Tooltip>
+    </TabsList>
+  );
 }
 
 const AiUsageStatusIndicator = () => {
@@ -379,33 +418,25 @@ const Footer = () => {
           id: "terminal",
           label: "Terminal",
           content: (
-            <div className={FOOTER_SEGMENT_CLASS_NAME}>
-              <Button
-                onClick={() => {
-                  uiState.setBottomPaneActiveTab("terminal");
-                  const showingTerminal =
-                    !uiState.isBottomPaneVisible || uiState.bottomPaneActiveTab !== "terminal";
-                  uiState.setIsBottomPaneVisible(showingTerminal);
+            <FooterTabControl
+              tooltip="Toggle Terminal"
+              active={uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "terminal"}
+              className={FOOTER_ICON_BUTTON_CLASS_NAME}
+              onClick={() => {
+                uiState.setBottomPaneActiveTab("terminal");
+                const showingTerminal =
+                  !uiState.isBottomPaneVisible || uiState.bottomPaneActiveTab !== "terminal";
+                uiState.setIsBottomPaneVisible(showingTerminal);
 
-                  if (showingTerminal) {
-                    setTimeout(() => {
-                      uiState.requestTerminalFocus();
-                    }, 100);
-                  }
-                }}
-                variant="ghost"
-                size="xs"
-                className={cn(FOOTER_SEGMENT_BUTTON_CLASS_NAME, FOOTER_ICON_BUTTON_CLASS_NAME)}
-                data-active={
-                  uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "terminal"
+                if (showingTerminal) {
+                  setTimeout(() => {
+                    uiState.requestTerminalFocus();
+                  }, 100);
                 }
-                style={{ minHeight: 0, minWidth: 0 }}
-                tooltip="Toggle Terminal"
-                commandId="workbench.toggleTerminal"
-              >
-                <TerminalWindow weight="duotone" />
-              </Button>
-            </div>
+              }}
+            >
+              <TerminalWindow weight="duotone" />
+            </FooterTabControl>
           ),
         }
       : null,
@@ -414,26 +445,19 @@ const Footer = () => {
           id: "bottom-tabs",
           label: "Bottom tabs",
           content: (
-            <div className={FOOTER_SEGMENT_CLASS_NAME}>
-              <Button
-                onClick={() => {
-                  uiState.setBottomPaneActiveTab("buffers");
-                  const showingBuffers =
-                    !uiState.isBottomPaneVisible || uiState.bottomPaneActiveTab !== "buffers";
-                  uiState.setIsBottomPaneVisible(showingBuffers);
-                }}
-                variant="ghost"
-                size="xs"
-                className={cn(FOOTER_SEGMENT_BUTTON_CLASS_NAME, FOOTER_ICON_BUTTON_CLASS_NAME)}
-                data-active={
-                  uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "buffers"
-                }
-                style={{ minHeight: 0, minWidth: 0 }}
-                tooltip="Toggle Bottom Tabs"
-              >
-                <Rows weight="duotone" />
-              </Button>
-            </div>
+            <FooterTabControl
+              tooltip="Toggle Bottom Tabs"
+              active={uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "buffers"}
+              className={FOOTER_ICON_BUTTON_CLASS_NAME}
+              onClick={() => {
+                uiState.setBottomPaneActiveTab("buffers");
+                const showingBuffers =
+                  !uiState.isBottomPaneVisible || uiState.bottomPaneActiveTab !== "buffers";
+                uiState.setIsBottomPaneVisible(showingBuffers);
+              }}
+            >
+              <Rows weight="duotone" />
+            </FooterTabControl>
           ),
         }
       : null,
@@ -442,40 +466,31 @@ const Footer = () => {
           id: "diagnostics",
           label: "Diagnostics",
           content: (
-            <div className={FOOTER_SEGMENT_CLASS_NAME}>
-              <Button
-                onClick={() => {
-                  uiState.setBottomPaneActiveTab("diagnostics");
-                  const showingDiagnostics =
-                    !uiState.isBottomPaneVisible || uiState.bottomPaneActiveTab !== "diagnostics";
-                  uiState.setIsBottomPaneVisible(showingDiagnostics);
-                }}
-                variant="ghost"
-                size="xs"
-                className={cn(
-                  FOOTER_SEGMENT_BUTTON_CLASS_NAME,
-                  FOOTER_PILL_BUTTON_CLASS_NAME,
-                  !(uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "diagnostics") &&
-                    diagnosticsCount > 0 &&
-                    "text-warning",
-                )}
-                data-active={
-                  uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "diagnostics"
-                }
-                style={{ minHeight: 0, minWidth: 0 }}
-                tooltip={
-                  diagnosticsCount > 0
-                    ? `${diagnosticsCount} diagnostic${diagnosticsCount === 1 ? "" : "s"}`
-                    : "Toggle Diagnostics Panel"
-                }
-                commandId="workbench.toggleDiagnostics"
-              >
-                <WarningCircle weight="duotone" />
-                {diagnosticsCount > 0 && (
-                  <span className="ui-text-sm ml-0.5">{diagnosticsCount}</span>
-                )}
-              </Button>
-            </div>
+            <FooterTabControl
+              tooltip={
+                diagnosticsCount > 0
+                  ? `${diagnosticsCount} diagnostic${diagnosticsCount === 1 ? "" : "s"}`
+                  : "Toggle Diagnostics Panel"
+              }
+              active={uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "diagnostics"}
+              className={cn(
+                FOOTER_PILL_BUTTON_CLASS_NAME,
+                !(uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "diagnostics") &&
+                  diagnosticsCount > 0 &&
+                  "text-warning",
+              )}
+              onClick={() => {
+                uiState.setBottomPaneActiveTab("diagnostics");
+                const showingDiagnostics =
+                  !uiState.isBottomPaneVisible || uiState.bottomPaneActiveTab !== "diagnostics";
+                uiState.setIsBottomPaneVisible(showingDiagnostics);
+              }}
+            >
+              <WarningCircle weight="duotone" />
+              {diagnosticsCount > 0 && (
+                <span className="ui-text-sm ml-0.5">{diagnosticsCount}</span>
+              )}
+            </FooterTabControl>
           ),
         }
       : null,
@@ -484,23 +499,14 @@ const Footer = () => {
           id: "extensions",
           label: "Extension updates",
           content: (
-            <div className={FOOTER_SEGMENT_CLASS_NAME}>
-              <Button
-                onClick={() => uiState.openSettingsDialog("extensions")}
-                variant="ghost"
-                size="xs"
-                className={cn(
-                  FOOTER_SEGMENT_BUTTON_CLASS_NAME,
-                  FOOTER_PILL_BUTTON_CLASS_NAME,
-                  "text-blue-400 hover:text-blue-300",
-                )}
-                style={{ minHeight: 0, minWidth: 0 }}
-                tooltip={`${extensionUpdatesCount} extension update${extensionUpdatesCount === 1 ? "" : "s"} available`}
-              >
-                <PuzzlePiece weight="duotone" />
-                <span className="ui-text-sm ml-0.5">{extensionUpdatesCount}</span>
-              </Button>
-            </div>
+            <FooterTabControl
+              tooltip={`${extensionUpdatesCount} extension update${extensionUpdatesCount === 1 ? "" : "s"} available`}
+              className={cn(FOOTER_PILL_BUTTON_CLASS_NAME, "text-blue-400 hover:text-blue-300")}
+              onClick={() => uiState.openSettingsDialog("extensions")}
+            >
+              <PuzzlePiece weight="duotone" />
+              <span className="ui-text-sm ml-0.5">{extensionUpdatesCount}</span>
+            </FooterTabControl>
           ),
         }
       : null,
@@ -509,34 +515,31 @@ const Footer = () => {
           id: "updates",
           label: "App updates",
           content: (
-            <div className={FOOTER_SEGMENT_CLASS_NAME}>
-              <Button
-                onClick={downloadAndInstall}
-                disabled={downloading || installing}
-                variant="ghost"
-                size="xs"
-                className={cn(
-                  FOOTER_SEGMENT_BUTTON_CLASS_NAME,
-                  FOOTER_ICON_BUTTON_CLASS_NAME,
-                  downloading || installing
-                    ? "cursor-not-allowed opacity-60"
-                    : "text-blue-400 hover:text-blue-300",
-                )}
-                style={{ minHeight: 0, minWidth: 0 }}
-                tooltip={
-                  downloading
-                    ? "Downloading update..."
-                    : installing
-                      ? "Installing update..."
-                      : `Update available: ${updateInfo?.version}`
+            <FooterTabControl
+              tooltip={
+                downloading
+                  ? "Downloading update..."
+                  : installing
+                    ? "Installing update..."
+                    : `Update available: ${updateInfo?.version}`
+              }
+              className={cn(
+                FOOTER_ICON_BUTTON_CLASS_NAME,
+                downloading || installing
+                  ? "cursor-not-allowed opacity-60"
+                  : "text-blue-400 hover:text-blue-300",
+              )}
+              onClick={() => {
+                if (!downloading && !installing) {
+                  void downloadAndInstall();
                 }
-              >
-                <DownloadSimple
-                  className={downloading || installing ? "animate-pulse" : ""}
-                  weight="duotone"
-                />
-              </Button>
-            </div>
+              }}
+            >
+              <DownloadSimple
+                className={cn(downloading || (installing && "animate-pulse"))}
+                weight="duotone"
+              />
+            </FooterTabControl>
           ),
         }
       : null,
@@ -557,22 +560,16 @@ const Footer = () => {
       id: "ai-chat",
       label: "AI chat",
       content: (
-        <div className={FOOTER_SEGMENT_CLASS_NAME}>
-          <Button
-            onClick={() => {
-              useSettingsStore.getState().toggleAIChatVisible();
-            }}
-            variant="ghost"
-            size="xs"
-            className={cn(FOOTER_SEGMENT_BUTTON_CLASS_NAME, FOOTER_ICON_BUTTON_CLASS_NAME)}
-            data-active={settings.isAIChatVisible}
-            style={{ minHeight: 0, minWidth: 0 }}
-            tooltip="Toggle AI Chat"
-            commandId="workbench.toggleAIChat"
-          >
-            <Sparkle weight="duotone" />
-          </Button>
-        </div>
+        <FooterTabControl
+          tooltip="Toggle AI Chat"
+          active={settings.isAIChatVisible}
+          className={FOOTER_ICON_BUTTON_CLASS_NAME}
+          onClick={() => {
+            useSettingsStore.getState().toggleAIChatVisible();
+          }}
+        >
+          <Sparkle weight="duotone" />
+        </FooterTabControl>
       ),
     },
   ];
