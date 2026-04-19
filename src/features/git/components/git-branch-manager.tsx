@@ -72,7 +72,7 @@ const GitBranchManager = ({
   const dropdownWidth = compact ? COMPACT_DROPDOWN_WIDTH : DEFAULT_DROPDOWN_WIDTH;
   const activeBranch = currentBranch ?? "";
   const triggerText = isDropdownOpen ? branchQuery || activeBranch : activeBranch;
-  const compactTriggerWidthCh = Math.min(Math.max(triggerText.length + 6, 12), 28);
+  const compactTriggerWidthCh = Math.min(Math.max(triggerText.length + 6, 14), 40);
   const normalizedQuery = branchQuery.trim();
   const filteredBranches = useMemo(
     () => getFilteredBranches(branches, activeBranch, branchQuery),
@@ -254,13 +254,13 @@ const GitBranchManager = ({
         size="sm"
         variant="ghost"
         containerClassName={
-          compact ? "inline-flex w-fit min-w-0 max-w-[240px] shrink" : "w-fit min-w-0"
+          compact ? "inline-flex w-fit min-w-0 max-w-[360px] shrink-0" : "w-fit min-w-0"
         }
         className={cn(
           "ui-font ui-text-sm min-w-0 pl-7 pr-7 font-medium text-text-lighter",
-          compact ? "max-w-[240px] truncate" : "w-fit rounded-full",
+          compact ? "max-w-[360px] truncate" : "w-fit rounded-full",
         )}
-        style={compact ? { width: `${compactTriggerWidthCh}ch`, maxWidth: "240px" } : undefined}
+        style={compact ? { width: `${compactTriggerWidthCh}ch`, maxWidth: "360px" } : undefined}
         placeholder={currentBranch}
         aria-label="Search branches"
       />

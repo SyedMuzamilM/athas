@@ -3,7 +3,6 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -17,8 +16,7 @@ import { ProBadge } from "@/extensions/ui/components/pro-badge";
 import { getProviderApiToken } from "@/features/ai/services/ai-token-service";
 import Input from "@/ui/input";
 import { Button } from "@/ui/button";
-import { controlFieldSizeVariants, controlFieldSurfaceVariants } from "@/ui/control-field";
-import { MenuPopover } from "@/ui/dropdown";
+import { Dropdown } from "@/ui/dropdown";
 import { cn } from "@/utils/cn";
 import { getProvider } from "@/features/ai/services/providers/ai-provider-registry";
 
@@ -28,13 +26,6 @@ interface ProviderModelSelectorProps {
   onProviderChange: (id: string) => void;
   onModelChange: (id: string) => void;
   disabled?: boolean;
-}
-
-interface DropdownPosition {
-  left: number;
-  top: number;
-  width: number;
-  maxHeight: number;
 }
 
 interface FilteredProviderItem {
@@ -65,7 +56,6 @@ export function ProviderModelSelector({
   const [pendingProviderSelection, setPendingProviderSelection] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [position, setPosition] = useState<DropdownPosition | null>(null);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [modelFetchError, setModelFetchError] = useState<string | null>(null);
 
@@ -77,10 +67,7 @@ export function ProviderModelSelector({
   const removeApiKey = useAIChatStore((state) => state.removeApiKey);
   const setApiKeyModalState = useAIChatStore((state) => state.setApiKeyModalState);
 
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const portalContainer = document.body;
 
   const providers = getAvailableProviders();
   const currentProvider = getProviderById(providerId);
@@ -224,78 +211,13 @@ export function ProviderModelSelector({
   useEffect(() => {
     if (isOpen) {
       inputRef.current?.focus();
+      inputRef.current?.select();
       return;
     }
 
     setSearch("");
     setSelectedIndex(0);
   }, [isOpen]);
-
-  const updateDropdownPosition = useCallback(() => {
-    const trigger = triggerRef.current;
-    if (!trigger) return;
-
-    const rect = trigger.getBoundingClientRect();
-    const viewportPadding = 8;
-    const minWidth = Math.max(rect.width, 300);
-    const maxWidth = Math.min(420, window.innerWidth - viewportPadding * 2);
-    const safeWidth = Math.max(Math.min(minWidth, maxWidth), Math.min(280, maxWidth));
-    const estimatedHeight = 480;
-    const availableBelow = window.innerHeight - rect.bottom - viewportPadding;
-    const availableAbove = rect.top - viewportPadding;
-    const openUp =
-      availableBelow < Math.min(estimatedHeight, 240) && availableAbove > availableBelow;
-    const maxHeight = Math.max(
-      160,
-      Math.min(estimatedHeight, openUp ? availableAbove - 6 : availableBelow - 6),
-    );
-    const measuredHeight = dropdownRef.current?.getBoundingClientRect().height ?? estimatedHeight;
-    const visibleHeight = Math.min(maxHeight, measuredHeight);
-    const left = Math.max(
-      viewportPadding,
-      Math.min(rect.left, window.innerWidth - safeWidth - viewportPadding),
-    );
-    const top = openUp ? Math.max(viewportPadding, rect.top - visibleHeight - 6) : rect.bottom + 6;
-
-    setPosition({ left, top, width: safeWidth, maxHeight });
-  }, [activePanel]);
-
-  useLayoutEffect(() => {
-    if (!isOpen) return;
-    updateDropdownPosition();
-  }, [isOpen, search, selectableItems.length, updateDropdownPosition]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleDocumentMouseDown = (event: MouseEvent) => {
-      const target = event.target as Node;
-      if (dropdownRef.current?.contains(target) || triggerRef.current?.contains(target)) {
-        return;
-      }
-      setIsOpen(false);
-    };
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      event.preventDefault();
-      setIsOpen(false);
-    };
-
-    const handleReposition = () => updateDropdownPosition();
-
-    document.addEventListener("mousedown", handleDocumentMouseDown);
-    document.addEventListener("keydown", handleEscape);
-    window.addEventListener("resize", handleReposition);
-    window.addEventListener("scroll", handleReposition, true);
-
-    return () => {
-      document.removeEventListener("mousedown", handleDocumentMouseDown);
-      document.removeEventListener("keydown", handleEscape);
-      window.removeEventListener("resize", handleReposition);
-      window.removeEventListener("scroll", handleReposition, true);
-    };
-  }, [isOpen, updateDropdownPosition]);
 
   const handleProviderSelect = useCallback(
     (selectedProviderId: string) => {
@@ -379,95 +301,86 @@ export function ProviderModelSelector({
   );
 
   let selectableIndex = -1;
+  const triggerValue = isOpen
+    ? search
+    : `${currentProvider?.name || providerId} / ${currentModelName}`;
 
   return (
     <div>
-      <button
-        ref={triggerRef}
-        type="button"
-        onClick={() => {
+      <Input
+        ref={inputRef}
+        type="text"
+        value={triggerValue}
+        onFocus={() => {
           if (disabled) return;
           setActivePanel("provider");
-          setIsOpen((open) => !open);
+          setIsOpen(true);
         }}
+        onClick={() => {
+          if (disabled) return;
+          if (!isOpen) {
+            setActivePanel("provider");
+            setIsOpen(true);
+          }
+        }}
+        onChange={(event) => setSearch(event.target.value)}
+        onKeyDown={handleKeyDown}
         disabled={disabled}
-        className={cn(
-          controlFieldSurfaceVariants({ variant: "secondary" }),
-          controlFieldSizeVariants({ size: "sm" }),
-          "inline-flex w-[min(420px,100%)] min-w-0 items-center justify-between gap-2 px-2 text-left",
-        )}
-        aria-label="Select AI provider and model"
-      >
-        <span className="flex min-w-0 items-center gap-2">
-          <ProviderIcon providerId={providerId} size={14} className="text-text-lighter" />
-          <span className="min-w-0 truncate text-text">{currentProvider?.name || providerId}</span>
-          <span className="shrink-0 text-text-lighter">/</span>
-          <span className="min-w-0 truncate text-text">{currentModelName}</span>
-        </span>
-        <ChevronDown
-          className={cn("text-text-lighter transition-transform", isOpen && "rotate-180")}
-        />
-      </button>
-
-      <MenuPopover
-        isOpen={isOpen && !!position}
-        menuRef={dropdownRef}
-        portalContainer={portalContainer}
-        initial={{ opacity: 0, y: -4, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: -4, scale: 0.98 }}
-        transition={{ duration: 0.15, ease: "easeOut" }}
-        className="pointer-events-auto z-[10050] flex max-w-[min(420px,calc(100vw-16px))] flex-col overflow-hidden rounded-2xl bg-primary-bg/95 p-0 shadow-xl"
-        style={
-          position
-            ? {
-                left: `${position.left}px`,
-                top: `${position.top}px`,
-                width: `${position.width}px`,
-                maxHeight: `${position.maxHeight}px`,
-              }
-            : undefined
+        readOnly={!isOpen}
+        leftIcon={Search}
+        rightIcon={ChevronDown}
+        size="sm"
+        variant="default"
+        containerClassName="w-[min(420px,100%)] min-w-0"
+        className={cn("min-w-0 pr-7", !isOpen && "cursor-pointer")}
+        placeholder={
+          activePanel === "provider"
+            ? "Search providers..."
+            : `Search ${currentProvider?.name || "provider"} models...`
         }
+        aria-label="Select AI provider and model"
+      />
+
+      <Dropdown
+        isOpen={isOpen}
+        anchorRef={inputRef}
+        anchorSide="bottom"
+        onClose={() => setIsOpen(false)}
+        className="flex w-[min(420px,calc(100vw-16px))] flex-col overflow-hidden rounded-2xl p-0"
+        menuClassName="flex min-h-0 flex-1 flex-col overflow-hidden"
+        style={{ maxHeight: "480px" }}
       >
-        <div className="flex items-center gap-1 border-border/60 border-b px-1.5 pb-1.5 pt-0.5">
-          <Input
-            ref={inputRef}
-            type="text"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={
-              activePanel === "provider"
-                ? "Search providers..."
-                : `Search ${currentProvider?.name || "provider"} models...`
-            }
-            variant="ghost"
-            leftIcon={Search}
-            className="min-w-0 flex-1"
-          />
-          {activePanel === "model" && supportsDynamicModels && (
+        <div className="flex items-center justify-between gap-1 border-border/60 border-b px-1.5 py-1.5">
+          <div className="min-w-0 text-text-lighter text-xs">
+            {activePanel === "provider"
+              ? "Select provider"
+              : `${currentProvider?.name || providerId} models`}
+          </div>
+          <div className="flex items-center gap-1">
+            {activePanel === "model" && supportsDynamicModels && (
+              <Button
+                type="button"
+                onClick={() => void fetchDynamicModels()}
+                disabled={isLoadingModels}
+                variant="ghost"
+                size="icon-sm"
+                className="rounded-md text-text-lighter"
+                aria-label="Refresh models"
+              >
+                <RefreshCw className={cn(isLoadingModels && "animate-spin")} />
+              </Button>
+            )}
             <Button
               type="button"
-              onClick={() => void fetchDynamicModels()}
-              disabled={isLoadingModels}
+              onClick={() => setIsOpen(false)}
               variant="ghost"
               size="icon-sm"
               className="rounded-md text-text-lighter"
-              aria-label="Refresh models"
+              aria-label="Close model selector"
             >
-              <RefreshCw className={cn(isLoadingModels && "animate-spin")} />
+              <X />
             </Button>
-          )}
-          <Button
-            type="button"
-            onClick={() => setIsOpen(false)}
-            variant="ghost"
-            size="icon-sm"
-            className="rounded-md text-text-lighter"
-            aria-label="Close model selector"
-          >
-            <X />
-          </Button>
+          </div>
         </div>
 
         <div
@@ -522,10 +435,11 @@ export function ProviderModelSelector({
                   setActivePanel("provider");
                   setSearch("");
                   setSelectedIndex(0);
+                  inputRef.current?.focus();
                 }}
                 variant="ghost"
                 size="sm"
-                className="sticky top-0 z-10 mb-1 h-auto w-full justify-start rounded-lg border border-border/70 bg-primary-bg/95 px-2.5 py-2 text-left text-xs text-text-lighter backdrop-blur"
+                className="sticky top-0 z-10 mb-1 h-auto w-full justify-start rounded-lg border border-border/70 bg-secondary-bg px-2.5 py-2 text-left text-xs text-text-lighter"
               >
                 Back to providers
               </Button>
@@ -562,7 +476,7 @@ export function ProviderModelSelector({
             </>
           )}
         </div>
-      </MenuPopover>
+      </Dropdown>
       <ProviderApiKeyModal
         isOpen={apiKeyModalState.isOpen}
         onClose={handleApiKeyModalClose}
