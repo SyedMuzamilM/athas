@@ -35,6 +35,23 @@ export function GeminiIcon({ size, className, ...props }: IconProps) {
   );
 }
 
+export function V0Icon({ size, className, ...props }: IconProps) {
+  return (
+    <svg
+      aria-hidden="true"
+      {...defaultProps(size, className)}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <path d="M5 6l4 12 3-7 7-3-12-2z" />
+    </svg>
+  );
+}
+
 export function XAIIcon({ size, className, ...props }: IconProps) {
   return (
     <svg aria-hidden="true" {...defaultProps(size, className)} {...props}>
@@ -128,6 +145,8 @@ export function ProviderIcon({
     case "openai":
     case "codex-cli":
       return <OpenAIIcon {...props} />;
+    case "v0":
+      return <V0Icon {...props} />;
     case "anthropic":
     case "claude-code":
       return <AnthropicIcon {...props} />;

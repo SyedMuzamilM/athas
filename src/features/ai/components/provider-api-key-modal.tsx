@@ -1,8 +1,8 @@
-import { motion } from "framer-motion";
-import { AlertCircle, CheckCircle, ExternalLink, Key, X } from "lucide-react";
+import { AlertCircle, CheckCircle, ExternalLink, Key } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { getProviderById } from "@/features/ai/types/providers";
 import { Button } from "@/ui/button";
+import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 
@@ -14,6 +14,22 @@ interface ProviderApiKeyModalProps {
   onRemove: (providerId: string) => Promise<void>;
   hasExistingKey: boolean;
 }
+
+const DASHBOARD_LINKS: Partial<Record<string, string>> = {
+  openrouter: "https://openrouter.ai/keys",
+  v0: "https://v0.dev/chat/settings/keys",
+  grok: "https://console.x.ai",
+  openai: "https://platform.openai.com/api-keys",
+  anthropic: "https://console.anthropic.com/settings/keys",
+  gemini: "https://aistudio.google.com/app/apikey",
+};
+
+const PLACEHOLDERS: Partial<Record<string, string>> = {
+  openrouter: "sk-or-v1-xxxxxxxxxxxxxxxxxxxx",
+  v0: "v0_xxxxxxxxxxxxxxxxxxxx",
+  grok: "xai-xxxxxxxxxxxxxxxxxxxx",
+  openai: "sk-xxxxxxxxxxxxxxxxxxxx",
+};
 
 const ProviderApiKeyModal = ({
   isOpen,
@@ -29,100 +45,35 @@ const ProviderApiKeyModal = ({
   const [errorMessage, setErrorMessage] = useState("");
 
   const provider = getProviderById(providerId);
+  const dashboardLink = providerId ? DASHBOARD_LINKS[providerId] : undefined;
+  const placeholder = providerId ? PLACEHOLDERS[providerId] || "Enter your API key..." : "";
 
   const inputRef = useCallback((node: HTMLInputElement | null) => {
-    if (node !== null) {
+    if (node) {
       node.focus();
     }
   }, []);
 
   useEffect(() => {
-    if (isOpen) {
-      if (hasExistingKey) {
-        setApiKey("••••••••••••••••••••"); // Mask existing key
-      } else {
-        setApiKey("");
-      }
-      setValidationStatus("idle");
-      setErrorMessage("");
-    }
-  }, [isOpen, hasExistingKey]);
+    if (!isOpen) return;
+    setApiKey(hasExistingKey ? "••••••••••••••••••••" : "");
+    setValidationStatus("idle");
+    setErrorMessage("");
+  }, [hasExistingKey, isOpen]);
 
-  if (!isOpen || !provider) return null;
-
-  const getApiKeyPlaceholder = () => {
-    switch (providerId) {
-      case "athas":
-        return "No API key needed - subscription based";
-      case "openrouter":
-        return "sk-or-v1-xxxxxxxxxxxxxxxxxxxx";
-      case "grok":
-        return "xai-xxxxxxxxxxxxxxxxxxxx";
-      default:
-        return "Enter your API key...";
-    }
-  };
-
-  const getInstructions = () => {
-    switch (providerId) {
-      case "athas":
-        return {
-          title: "Athas AI Subscription:",
-          steps: [
-            "Choose a subscription plan that fits your needs",
-            "Get unlimited access to premium AI models",
-            "No API key management required",
-            "Focus on coding, we handle the rest",
-          ],
-          link: "https://athas.dev/pricing",
-        };
-      case "openrouter":
-        return {
-          title: "How to get your OpenRouter API key:",
-          steps: [
-            "Go to OpenRouter Keys page",
-            'Click "Create Key"',
-            "Give your key a name (optional)",
-            "Copy the generated key and paste it above",
-            "Note: OpenRouter provides access to many models",
-          ],
-          link: "https://openrouter.ai/keys",
-        };
-      case "grok":
-        return {
-          title: "How to get your xAI Grok API key:",
-          steps: [
-            "Go to the xAI API Keys page",
-            'Click "Create API Key"',
-            "Copy the generated key immediately (you won't see it again)",
-            "Paste the key above",
-            "Note: Grok offers advanced reasoning capabilities",
-          ],
-          link: "https://console.x.ai",
-        };
-      default:
-        return {
-          title: "API Key Required:",
-          steps: [
-            "Visit the provider's website",
-            "Create an account if needed",
-            "Generate an API key",
-            "Paste the key above",
-          ],
-          link: "",
-        };
-    }
-  };
+  if (!isOpen || !provider) {
+    return null;
+  }
 
   const handleSaveKey = async () => {
-    // If using existing key, just close
     if (hasExistingKey && apiKey.startsWith("•")) {
       onClose();
       return;
     }
 
     if (!apiKey.trim()) {
-      setErrorMessage("Please enter an API key");
+      setErrorMessage("Please enter an API key.");
+      setValidationStatus("invalid");
       return;
     }
 
@@ -132,19 +83,16 @@ const ProviderApiKeyModal = ({
 
     try {
       const isValid = await onSave(providerId, apiKey);
-
       if (isValid) {
         setValidationStatus("valid");
-        setTimeout(() => {
-          onClose();
-        }, 1000);
+        window.setTimeout(() => onClose(), 600);
       } else {
         setValidationStatus("invalid");
-        setErrorMessage("Invalid API key. Please check your key and try again.");
+        setErrorMessage("Invalid API key.");
       }
     } catch {
       setValidationStatus("invalid");
-      setErrorMessage("Failed to validate API key. Please try again.");
+      setErrorMessage("Failed to validate API key.");
     } finally {
       setIsValidating(false);
     }
@@ -157,159 +105,111 @@ const ProviderApiKeyModal = ({
       setValidationStatus("idle");
       setErrorMessage("");
     } catch {
-      setErrorMessage("Failed to remove API key");
+      setValidationStatus("invalid");
+      setErrorMessage("Failed to remove API key.");
     }
   };
 
-  const handleKeyChange = (value: string) => {
-    setApiKey(value);
-    setValidationStatus("idle");
-    setErrorMessage("");
-  };
-
-  const instructions = getInstructions();
-
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.15 }}
-      className="fixed inset-0 z-150 flex items-center justify-center bg-black/50"
-    >
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.15, ease: "easeOut" }}
-        className="flex max-h-[90vh] w-[480px] flex-col rounded-lg border border-border bg-primary-bg"
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between border-border border-b p-4">
-          <div className="flex items-center gap-2">
-            <Key className="text-text" />
-            <h3 className="ui-font text-sm text-text">{provider.name} API Key</h3>
-          </div>
+    <Dialog
+      onClose={onClose}
+      title={`${provider.name} API Key`}
+      icon={Key}
+      size="md"
+      classNames={{
+        backdrop: "bg-transparent backdrop-blur-none",
+        modal: "max-w-[440px]",
+        content: "space-y-4",
+      }}
+      footer={
+        <>
+          {hasExistingKey && (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => void handleRemoveKey()}
+              className="mr-auto text-red-500 hover:bg-red-500/10"
+            >
+              Remove
+            </Button>
+          )}
+          <Button type="button" variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
           <Button
             type="button"
-            variant="ghost"
-            size="icon-sm"
-            onClick={onClose}
-            className="text-text-lighter hover:text-text"
-          >
-            <X />
-          </Button>
-        </div>
-
-        <div className="flex-1 space-y-4 overflow-y-auto p-4">
-          <div className="text-text-lighter text-xs leading-relaxed">
-            Connect to {provider.name} to access their AI models for intelligent code assistance.
-          </div>
-
-          {/* API Key Input */}
-          <div className="space-y-2">
-            <label
-              htmlFor="api-key-input"
-              className="flex items-center gap-2 font-medium text-text text-xs"
-            >
-              <Key />
-              API Key
-            </label>
-
-            <Input
-              ref={inputRef}
-              id="api-key-input"
-              type="password"
-              value={apiKey}
-              onChange={(e) => handleKeyChange(e.target.value)}
-              placeholder={getApiKeyPlaceholder()}
-              className={cn("w-full bg-secondary-bg")}
-              disabled={isValidating}
-            />
-
-            {/* Validation Status */}
-            {validationStatus === "valid" && (
-              <div className="flex items-center gap-2 text-green-500 text-xs">
-                <CheckCircle />
-                API key validated successfully!
-              </div>
-            )}
-
-            {validationStatus === "invalid" && (
-              <div className="flex items-center gap-2 text-red-500 text-xs">
-                <AlertCircle />
-                {errorMessage}
-              </div>
-            )}
-          </div>
-
-          {/* Instructions */}
-          <div className="space-y-2 rounded border border-border bg-secondary-bg p-3">
-            <div className="mb-2 font-medium text-text text-xs">{instructions.title}</div>
-            <ol className="list-inside list-decimal space-y-1 text-text-lighter text-xs">
-              {instructions.steps.map((step, index) => (
-                <li key={index}>{step}</li>
-              ))}
-            </ol>
-            {instructions.link && (
-              <div className="mt-2 border-border border-t pt-2">
-                <a
-                  href={instructions.link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-blue-400 text-xs transition-colors hover:text-blue-300"
-                >
-                  <ExternalLink />
-                  Open {provider.name} Dashboard
-                </a>
-              </div>
-            )}
-          </div>
-
-          {/* Model Info */}
-          <div className="rounded border border-border bg-secondary-bg p-3">
-            <div className="mb-2 font-medium text-text text-xs">Available Models:</div>
-            <div className="space-y-1">
-              {provider.models.slice(0, 3).map((model) => (
-                <div key={model.id} className="flex items-center justify-between text-xs">
-                  <span className="text-text">{model.name}</span>
-                </div>
-              ))}
-              {provider.models.length > 3 && (
-                <div className="text-text-lighter text-xs">
-                  +{provider.models.length - 3} more models
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className="flex gap-2 border-border border-t p-4">
-          <Button
-            onClick={handleSaveKey}
+            onClick={() => void handleSaveKey()}
             disabled={!apiKey.trim() || isValidating}
-            className="flex-1"
           >
             {isValidating
               ? "Validating..."
               : hasExistingKey && apiKey.startsWith("•")
                 ? "Use Existing"
-                : "Save & Connect"}
+                : "Save"}
           </Button>
-          {hasExistingKey && (
-            <Button
-              onClick={handleRemoveKey}
-              variant="ghost"
-              className="px-4 text-red-500 hover:bg-red-500/10"
-            >
-              Remove
-            </Button>
-          )}
-          <Button onClick={onClose} variant="ghost" className="px-4">
-            Cancel
-          </Button>
+        </>
+      }
+    >
+      <p className="text-text-lighter text-sm">
+        Enter your {provider.name} API key to use this provider in Athas.
+      </p>
+
+      <div className="space-y-2">
+        <label htmlFor="provider-api-key" className="font-medium text-text text-xs">
+          API Key
+        </label>
+        <Input
+          ref={inputRef}
+          id="provider-api-key"
+          type="password"
+          value={apiKey}
+          onChange={(event) => {
+            setApiKey(event.target.value);
+            setValidationStatus("idle");
+            setErrorMessage("");
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              void handleSaveKey();
+            }
+          }}
+          placeholder={placeholder}
+          className="w-full bg-secondary-bg"
+          disabled={isValidating}
+          autoComplete="off"
+        />
+      </div>
+
+      {validationStatus === "valid" && (
+        <div className="flex items-center gap-2 text-green-500 text-xs">
+          <CheckCircle />
+          API key saved.
         </div>
-      </motion.div>
-    </motion.div>
+      )}
+
+      {validationStatus === "invalid" && errorMessage && (
+        <div className="flex items-center gap-2 text-red-500 text-xs">
+          <AlertCircle />
+          {errorMessage}
+        </div>
+      )}
+
+      {dashboardLink && (
+        <a
+          href={dashboardLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={cn(
+            "inline-flex items-center gap-1.5 text-text-lighter text-xs transition-colors",
+            "hover:text-text",
+          )}
+        >
+          <ExternalLink />
+          Open {provider.name} dashboard
+        </a>
+      )}
+    </Dialog>
   );
 };
 
