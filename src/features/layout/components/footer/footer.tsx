@@ -20,6 +20,7 @@ import GitBranchManager from "@/features/git/components/git-branch-manager";
 import { useGitStore } from "@/features/git/stores/git-store";
 import { useUpdater } from "@/features/settings/hooks/use-updater";
 import { useSettingsStore } from "@/features/settings/store";
+import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 import { useAuthStore } from "@/features/window/stores/auth-store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
@@ -54,8 +55,6 @@ type FooterItem<T extends string> = {
   content: ReactNode;
 };
 
-const FOOTER_SEGMENT_CLASS_NAME =
-  "flex h-6 items-stretch overflow-hidden rounded-lg border border-border/70 bg-primary-bg/65";
 const FOOTER_ICON_BUTTON_CLASS_NAME = "min-w-7 px-0 [&_svg]:size-4";
 const FOOTER_PILL_BUTTON_CLASS_NAME = "px-2.5 [&_svg]:size-4";
 
@@ -118,17 +117,21 @@ function FooterTabControl({
   active = false,
   className,
   onClick,
+  commandId,
   children,
 }: {
   tooltip: string;
   active?: boolean;
   className?: string;
   onClick: () => void;
+  commandId?: string;
   children: ReactNode;
 }) {
+  const shortcut = useCommandShortcut(commandId);
+
   return (
-    <TabsList variant="segmented" className={FOOTER_SEGMENT_CLASS_NAME}>
-      <Tooltip content={tooltip} side="top">
+    <TabsList variant="segmented">
+      <Tooltip content={tooltip} shortcut={shortcut} side="top">
         <Tab
           role="button"
           aria-label={tooltip}
@@ -422,6 +425,7 @@ const Footer = () => {
               tooltip="Toggle Terminal"
               active={uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "terminal"}
               className={FOOTER_ICON_BUTTON_CLASS_NAME}
+              commandId="workbench.toggleTerminal"
               onClick={() => {
                 uiState.setBottomPaneActiveTab("terminal");
                 const showingTerminal =
@@ -479,6 +483,7 @@ const Footer = () => {
                   diagnosticsCount > 0 &&
                   "text-warning",
               )}
+              commandId="workbench.toggleDiagnostics"
               onClick={() => {
                 uiState.setBottomPaneActiveTab("diagnostics");
                 const showingDiagnostics =
@@ -564,6 +569,7 @@ const Footer = () => {
           tooltip="Toggle AI Chat"
           active={settings.isAIChatVisible}
           className={FOOTER_ICON_BUTTON_CLASS_NAME}
+          commandId="workbench.toggleAIChat"
           onClick={() => {
             useSettingsStore.getState().toggleAIChatVisible();
           }}
