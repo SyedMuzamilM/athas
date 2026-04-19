@@ -96,19 +96,19 @@ export const AI_PROVIDERS: ModelProvider[] = [
     requiresApiKey: true,
     models: [
       {
-        id: "claude-opus-4-6",
-        name: "Claude Opus 4.6",
-        maxTokens: 1000000,
+        id: "claude-opus-4-7",
+        name: "Claude Opus 4.7",
+        maxTokens: 128000,
       },
       {
         id: "claude-sonnet-4-6",
         name: "Claude Sonnet 4.6",
-        maxTokens: 1000000,
+        maxTokens: 64000,
       },
       {
         id: "claude-haiku-4-5",
         name: "Claude Haiku 4.5",
-        maxTokens: 200000,
+        maxTokens: 64000,
       },
     ],
   },
@@ -136,6 +136,11 @@ export const AI_PROVIDERS: ModelProvider[] = [
       {
         id: "gpt-5.2",
         name: "GPT-5.2",
+        maxTokens: 400000,
+      },
+      {
+        id: "gpt-5.2-pro",
+        name: "GPT-5.2 Pro",
         maxTokens: 400000,
       },
       {
@@ -206,6 +211,29 @@ export const AI_PROVIDERS: ModelProvider[] = [
     ],
   },
   {
+    id: "v0",
+    name: "v0",
+    apiUrl: "https://api.v0.dev/v1/chat/completions",
+    requiresApiKey: true,
+    models: [
+      {
+        id: "v0-1.5-lg",
+        name: "v0 1.5 Large",
+        maxTokens: 512000,
+      },
+      {
+        id: "v0-1.5-md",
+        name: "v0 1.5 Medium",
+        maxTokens: 128000,
+      },
+      {
+        id: "v0-1.0-md",
+        name: "v0 1.0 Medium",
+        maxTokens: 128000,
+      },
+    ],
+  },
+  {
     id: "gemini",
     name: "Google Gemini",
     apiUrl: "https://generativelanguage.googleapis.com/v1beta/models",
@@ -217,13 +245,13 @@ export const AI_PROVIDERS: ModelProvider[] = [
         maxTokens: 1048576,
       },
       {
-        id: "gemini-3.1-flash-lite-preview",
-        name: "Gemini 3.1 Flash-Lite Preview",
+        id: "gemini-3-flash-preview",
+        name: "Gemini 3 Flash Preview",
         maxTokens: 1048576,
       },
       {
-        id: "gemini-3-flash-preview",
-        name: "Gemini 3 Flash Preview",
+        id: "gemini-3.1-flash-lite-preview",
+        name: "Gemini 3.1 Flash-Lite Preview",
         maxTokens: 1048576,
       },
       {
@@ -234,6 +262,11 @@ export const AI_PROVIDERS: ModelProvider[] = [
       {
         id: "gemini-2.5-flash",
         name: "Gemini 2.5 Flash",
+        maxTokens: 1048576,
+      },
+      {
+        id: "gemini-2.5-flash-lite",
+        name: "Gemini 2.5 Flash-Lite",
         maxTokens: 1048576,
       },
     ],
@@ -372,13 +405,13 @@ export const AI_PROVIDERS: ModelProvider[] = [
     requiresApiKey: true,
     models: [
       {
-        id: "anthropic/claude-opus-4.6",
-        name: "Claude Opus 4.6",
+        id: "anthropic/claude-opus-4.5",
+        name: "Claude Opus 4.5",
         maxTokens: 1000000,
       },
       {
-        id: "anthropic/claude-sonnet-4.6",
-        name: "Claude Sonnet 4.6",
+        id: "anthropic/claude-sonnet-4.5",
+        name: "Claude Sonnet 4.5",
         maxTokens: 1000000,
       },
       {
@@ -404,6 +437,11 @@ export const AI_PROVIDERS: ModelProvider[] = [
       {
         id: "openai/gpt-5.2",
         name: "GPT-5.2",
+        maxTokens: 400000,
+      },
+      {
+        id: "openai/gpt-5.2-pro",
+        name: "GPT-5.2 Pro",
         maxTokens: 400000,
       },
       {
@@ -442,8 +480,8 @@ export const AI_PROVIDERS: ModelProvider[] = [
         maxTokens: 128000,
       },
       {
-        id: "x-ai/grok-4.20-reasoning",
-        name: "Grok 4.20 Reasoning",
+        id: "x-ai/grok-4.20",
+        name: "Grok 4.20",
         maxTokens: 2000000,
       },
       {
