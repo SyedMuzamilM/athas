@@ -408,8 +408,8 @@ export const AppearanceSettings = () => {
         </SettingRow>
 
         <SettingRow
-          label="Quick Open Preview"
-          description="Show right-side file preview in quick open and global search"
+          label="Global Search Preview"
+          description="Show the right-side file preview in global search"
           onReset={() => updateSetting("quickOpenPreview", getDefaultSetting("quickOpenPreview"))}
           canReset={settings.quickOpenPreview !== getDefaultSetting("quickOpenPreview")}
         >

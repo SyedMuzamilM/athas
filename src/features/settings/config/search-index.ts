@@ -378,9 +378,9 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     id: "appearance-quick-open-preview",
     tab: "appearance",
     section: "Layout",
-    label: "Quick Open Preview",
-    description: "Show right-side file preview in quick open and global search",
-    keywords: ["quick", "open", "preview", "file", "global", "search"],
+    label: "Global Search Preview",
+    description: "Show the right-side file preview in global search",
+    keywords: ["preview", "file", "global", "search"],
   },
   {
     id: "appearance-title-bar-project-mode",
