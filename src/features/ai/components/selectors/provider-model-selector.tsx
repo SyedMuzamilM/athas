@@ -93,12 +93,6 @@ export function ProviderModelSelector({
   const providerInstance = getProvider(providerId);
   const supportsDynamicModels = !!providerInstance?.getModels;
 
-  const currentModelName = useMemo(() => {
-    const dynamic = dynamicModels[providerId]?.find((model) => model.id === modelId);
-    if (dynamic) return dynamic.name;
-    return currentModel?.name || modelId;
-  }, [currentModel, dynamicModels, modelId, providerId]);
-
   const fetchDynamicModels = useCallback(async () => {
     const config = getProviderById(providerId);
     const instance = getProvider(providerId);
@@ -179,6 +173,35 @@ export function ProviderModelSelector({
 
     return Array.from(mergedModels.values());
   }, [currentProvider?.models, dynamicModels, providerId]);
+
+  useEffect(() => {
+    if (availableModels.length === 0) {
+      return;
+    }
+
+    if (!availableModels.some((model) => model.id === modelId)) {
+      onModelChange(availableModels[0].id);
+    }
+  }, [availableModels, modelId, onModelChange]);
+
+  const currentModelName = useMemo(() => {
+    const selectedModel = availableModels.find((model) => model.id === modelId);
+    if (selectedModel) {
+      return selectedModel.name;
+    }
+
+    if (supportsDynamicModels) {
+      if (isLoadingModels) {
+        return "Loading models...";
+      }
+
+      if (modelFetchError) {
+        return "Select model";
+      }
+    }
+
+    return availableModels[0]?.name || "Select model";
+  }, [availableModels, isLoadingModels, modelFetchError, modelId, supportsDynamicModels]);
 
   const filteredModels = useMemo(() => {
     const searchLower = search.toLowerCase();
