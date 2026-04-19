@@ -3,6 +3,8 @@ import { FileExplorerTree } from "@/features/file-explorer/components/file-explo
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import GitView from "@/features/git/components/git-view";
 import GitHubPRsView from "@/features/github/components/github-prs-view";
+import { SidebarPaneSelector } from "@/features/layout/components/sidebar/sidebar-pane-selector";
+import { resolveSidebarPaneClick } from "@/features/layout/utils/sidebar-pane-utils";
 import { useSettingsStore } from "@/features/settings/store";
 import { useSidebarStore } from "@/features/layout/stores/sidebar-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
@@ -12,7 +14,16 @@ import { cn } from "@/utils/cn";
 
 export const MainSidebar = memo(() => {
   // Get state from stores
-  const { isGitViewActive, isGitHubPRsViewActive, activeSidebarView } = useUIState();
+  const {
+    isGitViewActive,
+    isGitHubPRsViewActive,
+    activeSidebarView,
+    isSidebarVisible,
+    setActiveView,
+    setIsSidebarVisible,
+    setIsGlobalSearchVisible,
+    isGlobalSearchVisible,
+  } = useUIState();
   const extensionViews = useExtensionViews();
 
   // file system store
@@ -41,10 +52,39 @@ export const MainSidebar = memo(() => {
   const { settings } = useSettingsStore();
   const isFilesViewActive =
     !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "files";
+  const showLeftSidebarTabs = settings.sidebarTabsPosition === "left";
+
+  const handleSidebarViewChange = (view: typeof activeSidebarView) => {
+    const { nextIsSidebarVisible, nextView } = resolveSidebarPaneClick(
+      {
+        isSidebarVisible,
+        isGitViewActive,
+        isGitHubPRsViewActive,
+      },
+      view,
+    );
+
+    setActiveView(nextView);
+    setIsSidebarVisible(nextIsSidebarVisible);
+  };
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="min-h-0 flex-1 overflow-hidden">
+    <div className="flex h-full min-h-0">
+      {showLeftSidebarTabs ? (
+        <div className="flex shrink-0 border-border/70 border-r p-2">
+          <SidebarPaneSelector
+            activeSidebarView={activeSidebarView}
+            isGitViewActive={isGitViewActive}
+            isGitHubPRsViewActive={isGitHubPRsViewActive}
+            coreFeatures={settings.coreFeatures}
+            onViewChange={handleSidebarViewChange}
+            onSearchClick={() => setIsGlobalSearchVisible(!isGlobalSearchVisible)}
+            orientation="vertical"
+          />
+        </div>
+      ) : null}
+
+      <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
         {settings.coreFeatures.git && (
           <div className={cn("h-full", !isGitViewActive && "hidden")}>
             <GitView

@@ -9,7 +9,6 @@ import {
   Keyboard,
   PaintBrush,
   PuzzlePiece,
-  Robot,
   ShieldCheck,
   SlidersHorizontal,
   Sparkle,
@@ -29,7 +28,6 @@ import { cn } from "@/utils/cn";
 interface SettingsVerticalTabsProps {
   activeTab: SettingsTab;
   onTabChange: (tab: SettingsTab) => void;
-  orientation?: "vertical" | "horizontal";
 }
 
 interface TabItem {
@@ -120,11 +118,7 @@ const tabItems: TabItem[] = [
   },
 ];
 
-export const SettingsVerticalTabs = ({
-  activeTab,
-  onTabChange,
-  orientation = "vertical",
-}: SettingsVerticalTabsProps) => {
+export const SettingsVerticalTabs = ({ activeTab, onTabChange }: SettingsVerticalTabsProps) => {
   const searchQuery = useSettingsStore((state) => state.search.query);
   const searchResults = useSettingsStore((state) => state.search.results);
   const subscription = useAuthStore((state) => state.subscription);
@@ -132,7 +126,6 @@ export const SettingsVerticalTabs = ({
   const { promptUpgrade } = useUpgradeToPro();
   const hasEnterpriseAccess = Boolean(subscription?.enterprise?.has_access);
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
-  const isHorizontal = orientation === "horizontal";
 
   const matchingTabs = searchQuery ? new Set(searchResults.map((result) => result.tab)) : null;
 
@@ -161,29 +154,18 @@ export const SettingsVerticalTabs = ({
     const container = scrollContainerRef.current;
     if (!container) return;
 
-    const canScroll = isHorizontal
-      ? container.scrollWidth > container.clientWidth
-      : container.scrollHeight > container.clientHeight;
+    const canScroll = container.scrollHeight > container.clientHeight;
     if (!canScroll || event.deltaY === 0) return;
 
-    if (isHorizontal) {
-      container.scrollLeft += event.deltaY;
-    } else {
-      container.scrollTop += event.deltaY;
-    }
+    container.scrollTop += event.deltaY;
     event.preventDefault();
   };
 
   return (
-    <div className={cn("flex h-full", isHorizontal ? "min-w-0 items-center gap-2" : "flex-col")}>
+    <div className="flex h-full flex-col">
       <div
         ref={scrollContainerRef}
-        className={cn(
-          "min-w-0 flex-1",
-          isHorizontal
-            ? "flex items-center gap-1 overflow-x-auto overflow-y-hidden py-0.5 pr-1"
-            : "space-y-0.5 overflow-y-auto p-2",
-        )}
+        className="flex-1 space-y-0.5 overflow-y-auto p-2"
         onWheelCapture={handleSidebarWheel}
       >
         {visibleTabs.length > 0 ? (
@@ -199,8 +181,7 @@ export const SettingsVerticalTabs = ({
                 size="sm"
                 onClick={() => onTabChange(item.id)}
                 className={cn(
-                  "ui-text-sm h-auto gap-2.5 rounded-xl px-2.5 py-1.5",
-                  isHorizontal ? "shrink-0 whitespace-nowrap" : "w-full justify-start text-left",
+                  "ui-text-sm h-auto w-full justify-start gap-2.5 rounded-xl px-2.5 py-1.5 text-left",
                   isActive ? "bg-accent/10 text-accent" : "text-text hover:bg-hover",
                 )}
               >
@@ -217,16 +198,13 @@ export const SettingsVerticalTabs = ({
       </div>
 
       {!isPro ? (
-        <div className={cn(isHorizontal ? "shrink-0" : "p-2")}>
+        <div className="p-2">
           <Button
             type="button"
             variant="default"
             size="sm"
             onClick={promptUpgrade}
-            className={cn(
-              "justify-center border border-border/70",
-              isHorizontal ? "shrink-0 whitespace-nowrap" : "w-full",
-            )}
+            className="w-full justify-center border border-border/70"
           >
             <ArrowSquareUp className="size-4" weight="duotone" />
             Upgrade to Pro

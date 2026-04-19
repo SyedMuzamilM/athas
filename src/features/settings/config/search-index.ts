@@ -347,12 +347,12 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["sidebar", "position", "left", "right", "layout"],
   },
   {
-    id: "appearance-settings-navigation-position",
+    id: "appearance-sidebar-tabs-position",
     tab: "appearance",
     section: "Layout",
-    label: "Settings Navigation",
-    description: "Show settings tabs across the top or in the left sidebar",
-    keywords: ["settings", "navigation", "tabs", "top", "left", "sidebar", "layout"],
+    label: "Sidebar Tabs",
+    description: "Show sidebar activity tabs across the top or in a left rail",
+    keywords: ["sidebar", "tabs", "activity", "top", "left", "rail", "layout"],
   },
   ...(IS_MAC
     ? [

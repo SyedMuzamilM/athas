@@ -7,6 +7,7 @@ import { normalizeItemOrder } from "@/features/layout/config/item-order";
 import { useSettingsStore } from "@/features/settings/store";
 import { Tab, TabsList, type TabsItem } from "@/ui/tabs";
 import Tooltip from "@/ui/tooltip";
+import { cn } from "@/utils/cn";
 import type { SidebarView } from "../../utils/sidebar-pane-utils";
 
 function orderItems<T extends { id: string }>(items: T[], orderedIds: string[]) {
@@ -26,6 +27,7 @@ interface SidebarPaneSelectorProps {
   onViewChange: (view: SidebarView) => void;
   onSearchClick?: () => void;
   compact?: boolean;
+  orientation?: "horizontal" | "vertical";
 }
 
 export const SidebarPaneSelector = ({
@@ -36,8 +38,10 @@ export const SidebarPaneSelector = ({
   onViewChange,
   onSearchClick,
   compact = false,
+  orientation = "horizontal",
 }: SidebarPaneSelectorProps) => {
-  const tooltipSide = compact ? "bottom" : "right";
+  const isVertical = orientation === "vertical";
+  const tooltipSide = compact ? "bottom" : isVertical ? "right" : "bottom";
   const isFilesActive = !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "files";
   const extensionViews = useExtensionViews();
   const sidebarActivityItemsOrder = useSettingsStore(
@@ -181,7 +185,7 @@ export const SidebarPaneSelector = ({
   return (
     <TabsList
       variant={compact ? "segmented" : "default"}
-      className={compact ? undefined : "gap-0.5 p-1"}
+      className={cn(compact ? undefined : "gap-0.5 p-1", isVertical && "flex-col items-stretch")}
     >
       {renderedItems.map((item) => (
         <Fragment key={item.id}>{item.content}</Fragment>

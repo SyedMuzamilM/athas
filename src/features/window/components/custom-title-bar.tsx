@@ -74,6 +74,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
   const isMacOS = IS_MAC;
   const isLinux = IS_LINUX;
   const titleBarProjectMode = settings.titleBarProjectMode;
+  const showTopSidebarTabs = settings.sidebarTabsPosition === "top";
 
   useEffect(() => {
     const initWindow = async () => {
@@ -343,15 +344,17 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         {/* Left side: keep clear of traffic lights */}
         <div className="pointer-events-auto flex h-8 min-w-0 items-center">
           {menuItem}
-          <SidebarPaneSelector
-            activeSidebarView={activeSidebarView}
-            isGitViewActive={isGitViewActive}
-            isGitHubPRsViewActive={isGitHubPRsViewActive}
-            coreFeatures={settings.coreFeatures}
-            onViewChange={handleSidebarViewChange}
-            onSearchClick={() => setIsGlobalSearchVisible(!isGlobalSearchVisible)}
-            compact
-          />
+          {showTopSidebarTabs ? (
+            <SidebarPaneSelector
+              activeSidebarView={activeSidebarView}
+              isGitViewActive={isGitViewActive}
+              isGitHubPRsViewActive={isGitHubPRsViewActive}
+              coreFeatures={settings.coreFeatures}
+              onViewChange={handleSidebarViewChange}
+              onSearchClick={() => setIsGlobalSearchVisible(!isGlobalSearchVisible)}
+              compact
+            />
+          ) : null}
         </div>
 
         {/* Center - Project tabs for macOS */}
@@ -395,15 +398,17 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         <div className="pointer-events-auto">
           <div className="flex items-center gap-2">
             {menuItem}
-            <SidebarPaneSelector
-              activeSidebarView={activeSidebarView}
-              isGitViewActive={isGitViewActive}
-              isGitHubPRsViewActive={isGitHubPRsViewActive}
-              coreFeatures={settings.coreFeatures}
-              onViewChange={handleSidebarViewChange}
-              onSearchClick={() => setIsGlobalSearchVisible(!isGlobalSearchVisible)}
-              compact
-            />
+            {showTopSidebarTabs ? (
+              <SidebarPaneSelector
+                activeSidebarView={activeSidebarView}
+                isGitViewActive={isGitViewActive}
+                isGitHubPRsViewActive={isGitHubPRsViewActive}
+                coreFeatures={settings.coreFeatures}
+                onViewChange={handleSidebarViewChange}
+                onSearchClick={() => setIsGlobalSearchVisible(!isGlobalSearchVisible)}
+                compact
+              />
+            ) : null}
           </div>
         </div>
       </div>

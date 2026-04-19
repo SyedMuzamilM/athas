@@ -34,7 +34,7 @@ export const AppearanceSettings = () => {
     { value: "tabs", label: "Tabs" },
     { value: "window", label: "Window" },
   ];
-  const settingsNavigationPositionOptions = [
+  const sidebarTabsPositionOptions = [
     { value: "top", label: "Top" },
     { value: "left", label: "Left" },
   ];
@@ -293,24 +293,17 @@ export const AppearanceSettings = () => {
         </SettingRow>
 
         <SettingRow
-          label="Settings Navigation"
-          description="Show settings tabs across the top or in the left sidebar"
+          label="Sidebar Tabs"
+          description="Show sidebar activity tabs across the top or in a left rail"
           onReset={() =>
-            updateSetting(
-              "settingsNavigationPosition",
-              getDefaultSetting("settingsNavigationPosition"),
-            )
+            updateSetting("sidebarTabsPosition", getDefaultSetting("sidebarTabsPosition"))
           }
-          canReset={
-            settings.settingsNavigationPosition !== getDefaultSetting("settingsNavigationPosition")
-          }
+          canReset={settings.sidebarTabsPosition !== getDefaultSetting("sidebarTabsPosition")}
         >
           <Select
-            value={settings.settingsNavigationPosition}
-            options={settingsNavigationPositionOptions}
-            onChange={(value) =>
-              updateSetting("settingsNavigationPosition", value as "top" | "left")
-            }
+            value={settings.sidebarTabsPosition}
+            options={sidebarTabsPositionOptions}
+            onChange={(value) => updateSetting("sidebarTabsPosition", value as "top" | "left")}
             className={SETTINGS_CONTROL_WIDTHS.compact}
             size="xs"
             variant="secondary"
