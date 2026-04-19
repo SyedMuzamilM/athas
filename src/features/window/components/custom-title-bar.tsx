@@ -38,6 +38,8 @@ type HeaderItem<T extends string> = {
   content: ReactNode;
 };
 
+const CHROME_ICON_CLASS_NAME = "size-4";
+
 function orderHeaderItems<T extends string>(items: Array<HeaderItem<T>>, orderedIds: T[]) {
   const itemMap = new Map(items.map((item) => [item.id, item]));
   const orderedItems = orderedIds
@@ -243,10 +245,10 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
               setMenuBarActiveMenu("File");
             }}
             variant="secondary"
-            size="icon-sm"
+            size="icon-md"
             className="pointer-events-auto"
           >
-            <List weight="duotone" />
+            <List className={CHROME_ICON_CLASS_NAME} weight="duotone" />
           </Button>
         </Tooltip>
         <CustomMenuBar
@@ -265,14 +267,12 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     {
       id: "notifications",
       label: "Notifications",
-      content: <NotificationsMenu iconSize={isMacOS ? 13 : 12} />,
+      content: <NotificationsMenu iconSize={16} />,
     },
     {
       id: "account",
       label: "Account",
-      content: (
-        <AccountMenu iconSize={isMacOS ? 13 : 12} className={!isMacOS ? "mr-1" : undefined} />
-      ),
+      content: <AccountMenu iconSize={16} className={!isMacOS ? "mr-1" : undefined} />,
     },
   ];
 
@@ -293,23 +293,23 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
               <Button
                 onClick={handleMinimize}
                 variant="secondary"
-                size="icon-sm"
+                size="icon-md"
                 className="pointer-events-auto"
               >
-                <Minus className="size-3.5 text-text-lighter" weight="bold" />
+                <Minus className="size-4 text-text-lighter" weight="bold" />
               </Button>
             </Tooltip>
             <Tooltip content={isMaximized ? "Restore" : "Maximize"} side="bottom">
               <Button
                 onClick={handleToggleMaximize}
                 variant="secondary"
-                size="icon-sm"
+                size="icon-md"
                 className="pointer-events-auto"
               >
                 {isMaximized ? (
-                  <CornersIn className="size-3.5 text-text-lighter" weight="duotone" />
+                  <CornersIn className="size-4 text-text-lighter" weight="duotone" />
                 ) : (
-                  <CornersOut className="size-3.5 text-text-lighter" weight="duotone" />
+                  <CornersOut className="size-4 text-text-lighter" weight="duotone" />
                 )}
               </Button>
             </Tooltip>
@@ -317,10 +317,10 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
               <Button
                 onClick={handleClose}
                 variant="danger"
-                size="icon-sm"
+                size="icon-md"
                 className="pointer-events-auto group"
               >
-                <X className="size-3.5 text-text-lighter group-hover:text-white" weight="bold" />
+                <X className="size-4 text-text-lighter group-hover:text-white" weight="bold" />
               </Button>
             </Tooltip>
           </div>
@@ -437,23 +437,23 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
               <Button
                 onClick={handleMinimize}
                 variant="secondary"
-                size="icon-sm"
+                size="icon-md"
                 className="pointer-events-auto"
               >
-                <Minus className="size-3.5 text-text-lighter" weight="bold" />
+                <Minus className="size-4 text-text-lighter" weight="bold" />
               </Button>
             </Tooltip>
             <Tooltip content={isMaximized ? "Restore" : "Maximize"} side="bottom">
               <Button
                 onClick={handleToggleMaximize}
                 variant="secondary"
-                size="icon-sm"
+                size="icon-md"
                 className="pointer-events-auto"
               >
                 {isMaximized ? (
-                  <CornersIn className="size-3.5 text-text-lighter" weight="duotone" />
+                  <CornersIn className="size-4 text-text-lighter" weight="duotone" />
                 ) : (
-                  <CornersOut className="size-3.5 text-text-lighter" weight="duotone" />
+                  <CornersOut className="size-4 text-text-lighter" weight="duotone" />
                 )}
               </Button>
             </Tooltip>
@@ -461,10 +461,10 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
               <Button
                 onClick={handleClose}
                 variant="danger"
-                size="icon-sm"
+                size="icon-md"
                 className="pointer-events-auto group"
               >
-                <X className="size-3.5 text-text-lighter group-hover:text-white" weight="bold" />
+                <X className="size-4 text-text-lighter group-hover:text-white" weight="bold" />
               </Button>
             </Tooltip>
           </div>

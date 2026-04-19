@@ -47,12 +47,12 @@ export const SidebarPaneSelector = ({
   const items: TabsItem[] = [
     {
       id: "files",
-      icon: <Folder weight="duotone" />,
+      icon: <Folder className={compact ? "size-4" : undefined} weight="duotone" />,
       isActive: isFilesActive,
       onClick: () => onViewChange("files"),
       role: "tab",
       ariaLabel: "Files",
-      className: compact ? undefined : "w-8 rounded-md",
+      className: compact ? "min-w-7 [&_svg]:size-4" : "w-8 rounded-md",
       tooltip: {
         content: "Files",
         shortcut: "Mod+Shift+E",
@@ -63,10 +63,10 @@ export const SidebarPaneSelector = ({
       ? [
           {
             id: "search",
-            icon: <MagnifyingGlass weight="duotone" />,
+            icon: <MagnifyingGlass className={compact ? "size-4" : undefined} weight="duotone" />,
             onClick: onSearchClick,
             ariaLabel: "Search",
-            className: compact ? undefined : "w-8 rounded-md",
+            className: compact ? "min-w-7 [&_svg]:size-4" : "w-8 rounded-md",
             tooltip: {
               content: "Search",
               shortcut: "Mod+Shift+F",
@@ -79,12 +79,12 @@ export const SidebarPaneSelector = ({
       ? [
           {
             id: "git",
-            icon: <GitBranch weight="duotone" />,
+            icon: <GitBranch className={compact ? "size-4" : undefined} weight="duotone" />,
             isActive: isGitViewActive,
             onClick: () => onViewChange("git"),
             role: "tab",
             ariaLabel: "Git Source Control",
-            className: compact ? undefined : "w-8 rounded-md",
+            className: compact ? "min-w-7 [&_svg]:size-4" : "w-8 rounded-md",
             tooltip: {
               content: "Source Control",
               shortcut: "Mod+Shift+G",
@@ -97,12 +97,12 @@ export const SidebarPaneSelector = ({
       ? [
           {
             id: "github-prs",
-            icon: <GitPullRequest weight="duotone" />,
+            icon: <GitPullRequest className={compact ? "size-4" : undefined} weight="duotone" />,
             isActive: isGitHubPRsViewActive,
             onClick: () => onViewChange("github-prs"),
             role: "tab",
             ariaLabel: "GitHub Pull Requests",
-            className: compact ? undefined : "w-8 rounded-md",
+            className: compact ? "min-w-7 [&_svg]:size-4" : "w-8 rounded-md",
             tooltip: {
               content: "Pull Requests",
               side: tooltipSide,
@@ -119,7 +119,7 @@ export const SidebarPaneSelector = ({
           onClick: () => onViewChange(view.id),
           role: "tab",
           ariaLabel: view.title,
-          className: compact ? undefined : "w-8 rounded-md",
+          className: compact ? "min-w-7 [&_svg]:size-4" : "w-8 rounded-md",
           tooltip: {
             content: view.title,
             side: tooltipSide,

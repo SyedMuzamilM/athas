@@ -128,7 +128,7 @@ export default function RunActionsButton() {
               className="h-full min-w-9 rounded-none border-0 px-2 text-text-lighter hover:bg-hover/60 hover:text-text focus-visible:rounded-none"
               aria-label={primaryAction ? `Run ${primaryAction.name}` : "Add run action"}
             >
-              <Play className="translate-x-[0.5px]" weight="duotone" />
+              <Play className="size-4 translate-x-[0.5px]" weight="duotone" />
             </Button>
           </Tooltip>
 
@@ -137,13 +137,13 @@ export default function RunActionsButton() {
               type="button"
               onClick={() => setIsMenuOpen((open) => !open)}
               variant="ghost"
-              size="icon-xs"
-              className="h-full w-6 rounded-none border-0 text-text-lighter hover:bg-hover/60 hover:text-text focus-visible:rounded-none"
+              size="icon-sm"
+              className="h-full w-7 rounded-none border-0 text-text-lighter hover:bg-hover/60 hover:text-text focus-visible:rounded-none"
               aria-expanded={isMenuOpen}
               aria-haspopup="menu"
               aria-label="Open run actions"
             >
-              <CaretDown weight="bold" />
+              <CaretDown className="size-4" weight="bold" />
             </Button>
           </Tooltip>
         </TabsList>

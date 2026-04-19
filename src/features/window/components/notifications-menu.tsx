@@ -84,7 +84,7 @@ function NotificationItem({ notification }: { notification: NotificationEntry })
   );
 }
 
-export const NotificationsMenu = ({ iconSize = 14, className }: NotificationsMenuProps) => {
+export const NotificationsMenu = ({ iconSize = 16, className }: NotificationsMenuProps) => {
   const notifications = useToastStore.use.notifications();
   const markAllNotificationsRead = useToastStore((state) => state.actions.markAllNotificationsRead);
   const clearNotifications = useToastStore((state) => state.actions.clearNotifications);
@@ -128,7 +128,7 @@ export const NotificationsMenu = ({ iconSize = 14, className }: NotificationsMen
             onClick={() => setIsOpen((open) => !open)}
             type="button"
             variant="secondary"
-            size="icon-sm"
+            size="icon-md"
             className={className}
             aria-expanded={isOpen}
             aria-haspopup="menu"

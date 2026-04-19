@@ -52,6 +52,11 @@ type FooterItem<T extends string> = {
   content: ReactNode;
 };
 
+const FOOTER_ICON_BUTTON_CLASS_NAME =
+  "rounded-md bg-primary-bg/40 text-text-lighter [&_svg]:size-4";
+const FOOTER_PILL_BUTTON_CLASS_NAME =
+  "rounded-md bg-primary-bg/40 px-2 text-text-lighter [&_svg]:size-4";
+
 function orderFooterItems<T extends string>(items: Array<FooterItem<T>>, orderedIds: T[]) {
   const itemMap = new Map(items.map((item) => [item.id, item]));
   const orderedItems = orderedIds
@@ -386,8 +391,8 @@ const Footer = () => {
                 }
               }}
               variant="secondary"
-              size="icon-sm"
-              className="rounded-md bg-primary-bg/40 text-text-lighter"
+              size="icon-md"
+              className={FOOTER_ICON_BUTTON_CLASS_NAME}
               data-active={
                 uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "terminal"
               }
@@ -413,8 +418,8 @@ const Footer = () => {
                 uiState.setIsBottomPaneVisible(showingBuffers);
               }}
               variant="secondary"
-              size="icon-sm"
-              className="rounded-md bg-primary-bg/40 text-text-lighter"
+              size="icon-md"
+              className={FOOTER_ICON_BUTTON_CLASS_NAME}
               data-active={uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "buffers"}
               style={{ minHeight: 0, minWidth: 0 }}
               tooltip="Toggle Bottom Tabs"
@@ -437,9 +442,9 @@ const Footer = () => {
                 uiState.setIsBottomPaneVisible(showingDiagnostics);
               }}
               variant="secondary"
-              size="xs"
+              size="sm"
               className={cn(
-                "rounded-md bg-primary-bg/40 px-2 text-text-lighter",
+                FOOTER_PILL_BUTTON_CLASS_NAME,
                 !(uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "diagnostics") &&
                   diagnosticsCount > 0 &&
                   "text-warning",
@@ -471,8 +476,8 @@ const Footer = () => {
             <Button
               onClick={() => uiState.openSettingsDialog("extensions")}
               variant="secondary"
-              size="xs"
-              className="rounded-md bg-primary-bg/40 px-2 text-blue-400"
+              size="sm"
+              className={cn(FOOTER_PILL_BUTTON_CLASS_NAME, "text-blue-400")}
               style={{ minHeight: 0, minWidth: 0 }}
               tooltip={`${extensionUpdatesCount} extension update${extensionUpdatesCount === 1 ? "" : "s"} available`}
             >
@@ -491,9 +496,9 @@ const Footer = () => {
               onClick={downloadAndInstall}
               disabled={downloading || installing}
               variant="secondary"
-              size="icon-sm"
+              size="icon-md"
               className={cn(
-                "rounded-md bg-primary-bg/40 text-text-lighter",
+                FOOTER_ICON_BUTTON_CLASS_NAME,
                 downloading || installing
                   ? "cursor-not-allowed opacity-60"
                   : "text-blue-400 hover:text-blue-300",
@@ -537,8 +542,8 @@ const Footer = () => {
             useSettingsStore.getState().toggleAIChatVisible();
           }}
           variant="secondary"
-          size="icon-sm"
-          className="rounded-md bg-primary-bg/40 text-text-lighter"
+          size="icon-md"
+          className={FOOTER_ICON_BUTTON_CLASS_NAME}
           data-active={settings.isAIChatVisible}
           style={{ minHeight: 0, minWidth: 0 }}
           tooltip="Toggle AI Chat"

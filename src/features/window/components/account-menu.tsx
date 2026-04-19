@@ -21,7 +21,7 @@ interface AccountMenuProps {
   className?: string;
 }
 
-export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
+export const AccountMenu = ({ iconSize = 16, className }: AccountMenuProps) => {
   const user = useAuthStore((s) => s.user);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const subscription = useAuthStore((s) => s.subscription);
@@ -173,7 +173,7 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
           onClick={() => setIsOpen((open) => !open)}
           type="button"
           variant="secondary"
-          size="icon-sm"
+          size="icon-md"
           className={className}
           aria-expanded={isOpen}
           aria-haspopup="menu"
