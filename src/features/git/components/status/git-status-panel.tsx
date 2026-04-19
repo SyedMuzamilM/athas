@@ -53,6 +53,10 @@ interface ContextMenuState {
 type StatusGroup = "added" | "modified" | "deleted" | "renamed" | "untracked";
 
 const STATUS_ORDER: StatusGroup[] = ["added", "modified", "deleted", "renamed", "untracked"];
+const SECTION_LABELS = {
+  tracked: "Tracked",
+  untracked: "Untracked",
+} as const;
 
 const createEmptyStatusGroups = (): Record<StatusGroup, GitFile[]> => ({
   added: [],
@@ -350,9 +354,12 @@ const GitStatusPanel = ({
     });
   };
 
-  const renderSectionHeader = (title: string) => (
-    <div className="ui-text-sm mx-1 mb-1 mt-2 flex items-center gap-2 px-2.5 py-1 text-text-lighter">
+  const renderSectionHeader = (title: string, count: number) => (
+    <div className="ui-text-sm mx-1 mb-1 mt-2 flex items-center justify-between gap-2 px-2.5 py-1 text-text-lighter">
       <span>{title}</span>
+      <span className="rounded bg-hover px-1.5 py-0.5 text-[10px] uppercase tracking-[0.08em] text-text-lighter/80">
+        {count}
+      </span>
     </div>
   );
 
@@ -524,7 +531,7 @@ const GitStatusPanel = ({
         <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto px-1 pb-1">
           {trackedFiles.length > 0 && (
             <>
-              {renderSectionHeader("Tracked")}
+              {renderSectionHeader(SECTION_LABELS.tracked, trackedFiles.length)}
               {gitChangesFolderView
                 ? renderFolderTree(trackedFiles, "changes")
                 : renderFlatFileList(groupedTrackedFiles)}
@@ -532,7 +539,7 @@ const GitStatusPanel = ({
           )}
           {untrackedFiles.length > 0 && (
             <>
-              {renderSectionHeader("Untracked")}
+              {renderSectionHeader(SECTION_LABELS.untracked, untrackedFiles.length)}
               {gitChangesFolderView
                 ? renderFolderTree(untrackedFiles, "changes")
                 : renderFlatFileList(groupedUntrackedFiles)}

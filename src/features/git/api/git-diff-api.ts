@@ -7,6 +7,39 @@ import {
   resolveRepositoryPath,
 } from "./git-repo-api";
 
+interface MultiFileDiffCacheEntry {
+  diffs: GitDiff[];
+  timestamp: number;
+}
+
+const MULTI_FILE_DIFF_CACHE_TTL = 30_000;
+const commitDiffCache = new Map<string, MultiFileDiffCacheEntry>();
+const stashDiffCache = new Map<string, MultiFileDiffCacheEntry>();
+
+const getMultiFileDiffCacheEntry = (
+  cache: Map<string, MultiFileDiffCacheEntry>,
+  key: string,
+): GitDiff[] | null => {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.timestamp > MULTI_FILE_DIFF_CACHE_TTL) {
+    cache.delete(key);
+    return null;
+  }
+  return entry.diffs;
+};
+
+const setMultiFileDiffCacheEntry = (
+  cache: Map<string, MultiFileDiffCacheEntry>,
+  key: string,
+  diffs: GitDiff[],
+): void => {
+  cache.set(key, {
+    diffs,
+    timestamp: Date.now(),
+  });
+};
+
 const getErrorMessage = (error: unknown): string => {
   if (error instanceof Error) {
     return error.message;
@@ -120,10 +153,17 @@ export const getCommitDiff = async (
       return null;
     }
 
+    const cacheKey = `${resolvedRepoPath}:${commitHash}`;
+    const cached = getMultiFileDiffCacheEntry(commitDiffCache, cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     const diffs = await tauriInvoke<GitDiff[]>("git_commit_diff", {
       repoPath: resolvedRepoPath,
       commitHash,
     });
+    setMultiFileDiffCacheEntry(commitDiffCache, cacheKey, diffs);
     return diffs;
   } catch (error) {
     if (!isNotGitRepositoryError(error)) {
@@ -143,10 +183,17 @@ export const getStashDiff = async (
       return null;
     }
 
+    const cacheKey = `${resolvedRepoPath}:${stashIndex}`;
+    const cached = getMultiFileDiffCacheEntry(stashDiffCache, cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     const diffs = await tauriInvoke<GitDiff[]>("git_stash_diff", {
       repoPath: resolvedRepoPath,
       stashIndex,
     });
+    setMultiFileDiffCacheEntry(stashDiffCache, cacheKey, diffs);
     return diffs;
   } catch (error) {
     if (!isNotGitRepositoryError(error)) {

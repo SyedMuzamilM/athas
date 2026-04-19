@@ -65,6 +65,9 @@ const statusBadgeClass: Record<string, string> = {
   renamed: "bg-git-renamed/12 text-git-renamed",
 };
 
+const MAX_HUNK_ACTION_DIFF_LINES = 1200;
+const MAX_AUTO_EXPANDED_DIFF_FILES = 8;
+
 function buildGitHubCommitUrl(remoteUrl: string, commitHash: string): string | null {
   const normalized = remoteUrl.trim();
   const httpsMatch = normalized.match(/^https?:\/\/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?\/?$/i);
@@ -318,6 +321,8 @@ const DiffFileSection = memo(function DiffFileSection({
   const handleToggle = useCallback(() => {
     onToggle(sectionKey);
   }, [onToggle, sectionKey]);
+  const shouldUseInlineTextDiff =
+    enableHunkActions && viewMode === "unified" && diff.lines.length <= MAX_HUNK_ACTION_DIFF_LINES;
 
   return (
     <section className="relative isolate rounded-md border border-border/70 bg-primary-bg">
@@ -363,7 +368,7 @@ const DiffFileSection = memo(function DiffFileSection({
           </LazyDiffSectionBody>
         ) : (
           <LazyDiffSectionBody expanded={expanded}>
-            {enableHunkActions && viewMode === "unified" ? (
+            {shouldUseInlineTextDiff ? (
               <TextDiffViewer
                 diff={diff}
                 isStaged={sectionKey.startsWith("staged:")}
@@ -380,6 +385,22 @@ const DiffFileSection = memo(function DiffFileSection({
     </section>
   );
 });
+
+function getInitialExpandedFiles(multiDiff: MultiFileDiff): Set<string> {
+  if (multiDiff.initiallyExpandedFileKey) {
+    return new Set([multiDiff.initiallyExpandedFileKey]);
+  }
+
+  if (multiDiff.files.length > MAX_AUTO_EXPANDED_DIFF_FILES) {
+    return new Set();
+  }
+
+  return new Set(
+    multiDiff.files.map(
+      (diff, index) => multiDiff.fileKeys?.[index] ?? `${diff.file_path}:${index}`,
+    ),
+  );
+}
 
 const GitDiffEditorStack = memo(function GitDiffEditorStack({
   multiDiff,
@@ -398,13 +419,8 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
   const isWorkingTreeBuffer = activeBuffer?.path === "diff://working-tree/all-files";
   const isRefreshingRef = useRef(false);
   const [githubCommitUrl, setGitHubCommitUrl] = useState<string | null>(null);
-  const [expandedFiles, setExpandedFiles] = useState<Set<string>>(
-    () =>
-      new Set(
-        multiDiff.files.map(
-          (diff, index) => multiDiff.fileKeys?.[index] ?? `${diff.file_path}:${index}`,
-        ),
-      ),
+  const [expandedFiles, setExpandedFiles] = useState<Set<string>>(() =>
+    getInitialExpandedFiles(multiDiff),
   );
   const handleToggleSection = useCallback((sectionKey: string) => {
     setExpandedFiles((prev) => {
@@ -416,14 +432,26 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
   }, []);
 
   useEffect(() => {
-    setExpandedFiles(
-      new Set(
-        multiDiff.files.map(
-          (diff, index) => multiDiff.fileKeys?.[index] ?? `${diff.file_path}:${index}`,
-        ),
+    const nextKeys = new Set(
+      multiDiff.files.map(
+        (diff, index) => multiDiff.fileKeys?.[index] ?? `${diff.file_path}:${index}`,
       ),
     );
-  }, [multiDiff]);
+
+    setExpandedFiles((previous) => {
+      const nextExpanded = new Set(Array.from(previous).filter((key) => nextKeys.has(key)));
+
+      if (nextExpanded.size === 0) {
+        return getInitialExpandedFiles(multiDiff);
+      }
+
+      if (multiDiff.initiallyExpandedFileKey && nextKeys.has(multiDiff.initiallyExpandedFileKey)) {
+        nextExpanded.add(multiDiff.initiallyExpandedFileKey);
+      }
+
+      return nextExpanded;
+    });
+  }, [multiDiff.fileKeys, multiDiff.files, multiDiff.initiallyExpandedFileKey]);
 
   const refreshWorkingTreeBuffer = useCallback(async () => {
     if (!isWorkingTree || !isWorkingTreeBuffer || !rootFolderPath || !activeBuffer) return;

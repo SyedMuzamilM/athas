@@ -92,12 +92,12 @@ pub fn git_diff_file_with_content(
 }
 
 #[tauri::command]
-pub fn git_commit_diff(
+pub async fn git_commit_diff(
    repo_path: String,
    commit_hash: String,
    file_path: Option<String>,
 ) -> Result<Vec<git_backend::GitDiff>, String> {
-   git_backend::git_commit_diff(repo_path, commit_hash, file_path)
+   run_blocking(move || git_backend::git_commit_diff(repo_path, commit_hash, file_path)).await
 }
 
 #[tauri::command]

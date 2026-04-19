@@ -2,7 +2,7 @@ use crate::git::{DiffLineType, GitDiff, GitDiffLine, get_blob_base64, is_image_f
 use anyhow::Result;
 use base64::{Engine as _, engine::general_purpose};
 use git2::{Diff, DiffFormat, Oid, Repository};
-use std::path::Path;
+use std::{collections::HashMap, path::Path};
 
 pub fn parse_diff_to_lines(diff: &mut Diff) -> Result<Vec<GitDiffLine>, String> {
    let mut lines: Vec<GitDiffLine> = Vec::new();
@@ -57,6 +57,81 @@ pub fn parse_diff_to_lines(diff: &mut Diff) -> Result<Vec<GitDiffLine>, String> 
       .map_err(|e| e.to_string())?;
 
    Ok(lines)
+}
+
+fn diff_delta_file_path(delta: &git2::DiffDelta<'_>) -> String {
+   if delta.status() == git2::Delta::Deleted {
+      delta
+         .old_file()
+         .path()
+         .map(|path| path.to_string_lossy().into_owned())
+         .unwrap_or_default()
+   } else {
+      delta
+         .new_file()
+         .path()
+         .or_else(|| delta.old_file().path())
+         .map(|path| path.to_string_lossy().into_owned())
+         .unwrap_or_default()
+   }
+}
+
+fn parse_diff_to_file_lines(diff: &mut Diff) -> Result<HashMap<String, Vec<GitDiffLine>>, String> {
+   let mut file_lines: HashMap<String, Vec<GitDiffLine>> = HashMap::new();
+
+   diff
+      .print(DiffFormat::Patch, |delta, _hunk, line| {
+         let file_path = diff_delta_file_path(&delta);
+         let entry = file_lines.entry(file_path).or_default();
+         let origin = line.origin();
+
+         match origin {
+            'F' | 'H' => {
+               entry.push(GitDiffLine {
+                  line_type: DiffLineType::Header,
+                  content: String::from_utf8_lossy(line.content()).to_string(),
+                  old_line_number: None,
+                  new_line_number: None,
+               });
+            }
+            '+' => {
+               entry.push(GitDiffLine {
+                  line_type: DiffLineType::Added,
+                  content: String::from_utf8_lossy(line.content())
+                     .trim_end_matches('\n')
+                     .to_string(),
+                  old_line_number: None,
+                  new_line_number: line.new_lineno(),
+               });
+            }
+            '-' => {
+               entry.push(GitDiffLine {
+                  line_type: DiffLineType::Removed,
+                  content: String::from_utf8_lossy(line.content())
+                     .trim_end_matches('\n')
+                     .to_string(),
+                  old_line_number: line.old_lineno(),
+                  new_line_number: None,
+               });
+            }
+            ' ' => {
+               entry.push(GitDiffLine {
+                  line_type: DiffLineType::Context,
+                  content: String::from_utf8_lossy(line.content())
+                     .trim_end_matches('\n')
+                     .to_string(),
+                  old_line_number: line.old_lineno(),
+                  new_line_number: line.new_lineno(),
+               });
+            }
+            _ => {}
+         }
+
+         true
+      })
+      .map_err(|e| e.to_string())?;
+
+   Ok(file_lines)
 }
 
 pub fn git_diff_file(
@@ -575,6 +650,8 @@ pub fn git_commit_diff(
          Some(&mut diff_opts),
       )
       .map_err(|e| format!("Failed to create commit diff: {e}"))?;
+   let mut diff = diff;
+   let mut diff_lines_by_file = parse_diff_to_file_lines(&mut diff).unwrap_or_default();
    let mut results: Vec<GitDiff> = Vec::new();
    for delta in diff.deltas() {
       let old_path = delta
@@ -646,16 +723,7 @@ pub fn git_commit_diff(
          }
          Vec::new()
       } else {
-         let mut single_file_opts = git2::DiffOptions::new();
-         single_file_opts.pathspec(&file_path);
-         let mut single_file_diff = repo
-            .diff_tree_to_tree(
-               parent_tree.as_ref(),
-               Some(&commit_tree),
-               Some(&mut single_file_opts),
-            )
-            .map_err(|e| format!("Failed to create single-file diff: {e}"))?;
-         parse_diff_to_lines(&mut single_file_diff).unwrap_or_default()
+         diff_lines_by_file.remove(&file_path).unwrap_or_default()
       };
       results.push(GitDiff {
          file_path: file_path.clone(),
