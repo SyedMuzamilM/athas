@@ -132,7 +132,7 @@ const ExtensionRow = ({
       ) : extension.isInstalled ? (
         <div className="flex shrink-0 items-center gap-2">
           {(hasUpdate || hasRuntimeIssue) && onUpdate && (
-            <Button onClick={onUpdate} variant="primary" size="xs" tooltip="Update available">
+            <Button onClick={onUpdate} variant="default" size="xs" tooltip="Update available">
               {hasRuntimeIssue ? "Reinstall" : "Update"}
             </Button>
           )}
@@ -149,9 +149,9 @@ const ExtensionRow = ({
       ) : (
         <Button
           onClick={onToggle}
-          variant="secondary"
+          variant="default"
           size="xs"
-          className="shrink-0 border-border/80 bg-primary-bg/70 text-text hover:border-border hover:bg-hover"
+          className="shrink-0"
           tooltip="Install"
         >
           Install

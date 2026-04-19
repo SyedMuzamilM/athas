@@ -1,13 +1,13 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   BookOpen,
-  CircleUser,
   CreditCard,
-  ExternalLink,
-  LogIn,
-  LogOut,
-  Settings,
-} from "lucide-react";
+  SignIn,
+  SignOut,
+  UserCircle,
+  GearSix,
+  ArrowSquareOut,
+} from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { useAuthStore } from "@/features/window/stores/auth-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
@@ -79,13 +79,13 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
     {
       id: "settings",
       label: "Settings",
-      icon: <Settings />,
+      icon: <GearSix weight="duotone" />,
       onClick: handleOpenSettings,
     },
     {
       id: "docs",
       label: "Docs",
-      icon: <BookOpen />,
+      icon: <BookOpen weight="duotone" />,
       onClick: handleOpenDocs,
     },
     {
@@ -97,7 +97,7 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
     {
       id: "sign-in",
       label: "Sign In",
-      icon: <LogIn />,
+      icon: <SignIn weight="duotone" />,
       onClick: handleSignIn,
     },
   ];
@@ -109,7 +109,7 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
       icon: user?.avatar_url ? (
         <img src={user.avatar_url} alt="" className="size-3 rounded-full" />
       ) : (
-        <CircleUser />
+        <UserCircle weight="duotone" />
       ),
       onClick: () => {},
       disabled: true,
@@ -123,25 +123,25 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
     {
       id: "subscription",
       label: `Plan: ${isEnterprise ? "Enterprise" : subscriptionStatus === "pro" ? "Pro" : "Free"}`,
-      icon: <CreditCard />,
+      icon: <CreditCard weight="duotone" />,
       onClick: handleViewPricing,
     },
     {
       id: "manage-account",
       label: "Manage Account",
-      icon: <ExternalLink />,
+      icon: <ArrowSquareOut weight="duotone" />,
       onClick: handleManageAccount,
     },
     {
       id: "settings",
       label: "Settings",
-      icon: <Settings />,
+      icon: <GearSix weight="duotone" />,
       onClick: handleOpenSettings,
     },
     {
       id: "docs",
       label: "Docs",
-      icon: <BookOpen />,
+      icon: <BookOpen weight="duotone" />,
       onClick: handleOpenDocs,
     },
     {
@@ -153,7 +153,7 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
     {
       id: "sign-out",
       label: "Sign Out",
-      icon: <LogOut />,
+      icon: <SignOut weight="duotone" />,
       onClick: handleSignOut,
     },
   ];
@@ -186,7 +186,7 @@ export const AccountMenu = ({ iconSize = 14, className }: AccountMenuProps) => {
               style={{ width: iconSize, height: iconSize }}
             />
           ) : (
-            <CircleUser size={iconSize} />
+            <UserCircle size={iconSize} weight="duotone" />
           )}
         </Button>
       </Tooltip>

@@ -179,7 +179,7 @@ export const TerminalSettings = () => {
               terminal toolbar profile picker.
             </div>
             <Button
-              variant="secondary"
+              variant="default"
               size="sm"
               onClick={() =>
                 profileActions.addProfile({

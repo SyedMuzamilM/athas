@@ -151,6 +151,10 @@ export const AppearanceSettings = () => {
           canReset={settings.theme !== getDefaultSetting("theme")}
         >
           <div className="flex items-center gap-2">
+            <Button onClick={handleUploadTheme} variant="default" size="xs" className="gap-1">
+              <Upload />
+              Upload
+            </Button>
             <Select
               value={settings.theme}
               options={normalizedThemeOptions}
@@ -162,10 +166,6 @@ export const AppearanceSettings = () => {
               searchableTrigger="input"
               disabled={settings.syncSystemTheme}
             />
-            <Button onClick={handleUploadTheme} variant="secondary" size="xs" className="gap-1">
-              <Upload />
-              Upload
-            </Button>
           </div>
         </SettingRow>
 
@@ -329,7 +329,7 @@ export const AppearanceSettings = () => {
           />
         </SettingRow>
 
-        {IS_MAC && (
+        {!IS_MAC && (
           <SettingRow
             label="Native Menu Bar"
             description="Use the native menu bar or a custom UI menu bar"
@@ -347,19 +347,21 @@ export const AppearanceSettings = () => {
           </SettingRow>
         )}
 
-        <SettingRow
-          label="Compact Menu Bar"
-          description="Requires UI menu bar; compact hamburger or full UI menu"
-          onReset={() => updateSetting("compactMenuBar", getDefaultSetting("compactMenuBar"))}
-          canReset={settings.compactMenuBar !== getDefaultSetting("compactMenuBar")}
-        >
-          <Switch
-            checked={settings.compactMenuBar}
-            disabled={settings.nativeMenuBar}
-            onChange={(checked) => updateSetting("compactMenuBar", checked)}
-            size="sm"
-          />
-        </SettingRow>
+        {!IS_MAC && (
+          <SettingRow
+            label="Compact Menu Bar"
+            description="Requires UI menu bar; compact hamburger or full UI menu"
+            onReset={() => updateSetting("compactMenuBar", getDefaultSetting("compactMenuBar"))}
+            canReset={settings.compactMenuBar !== getDefaultSetting("compactMenuBar")}
+          >
+            <Switch
+              checked={settings.compactMenuBar}
+              disabled={settings.nativeMenuBar}
+              onChange={(checked) => updateSetting("compactMenuBar", checked)}
+              size="sm"
+            />
+          </SettingRow>
+        )}
 
         <SettingRow
           label="Title Bar Project Mode"

@@ -2,15 +2,15 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import {
   Copy,
-  EllipsisVertical,
+  DotsThreeVertical,
   Folder,
   FolderOpen,
+  HardDrives,
   Image,
   Plus,
-  Server,
-  SquareArrowOutUpRight,
   X,
-} from "lucide-react";
+  ArrowSquareOut,
+} from "@phosphor-icons/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
@@ -30,6 +30,10 @@ const DRAG_THRESHOLD = 5;
 
 const isRemoteProjectTab = (tab: ProjectTab) => tab.path.startsWith("remote://");
 
+interface ProjectTabsProps {
+  disableReorder?: boolean;
+}
+
 interface TabPosition {
   index: number;
   left: number;
@@ -38,7 +42,7 @@ interface TabPosition {
   center: number;
 }
 
-const ProjectTabs = () => {
+const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
   const { reorderProjectTabs } = useWorkspaceTabsStore.getState();
   const { switchToProject, closeProject } = useFileSystemStore();
@@ -175,6 +179,9 @@ const ProjectTabs = () => {
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent, index: number, _tab: ProjectTab) => {
+      if (disableReorder) {
+        return;
+      }
       if (e.button !== 0 || (e.target as HTMLElement).closest("button.close-button")) {
         return;
       }
@@ -189,7 +196,7 @@ const ProjectTabs = () => {
         tabPositions: [],
       });
     },
-    [switchToProject],
+    [disableReorder, switchToProject],
   );
 
   const handleTabClick = useCallback(
@@ -257,7 +264,7 @@ const ProjectTabs = () => {
         {
           id: "open-in-new-window",
           label: "Open in New Window",
-          icon: <SquareArrowOutUpRight />,
+          icon: <ArrowSquareOut weight="duotone" />,
           onClick: () => {
             if (isRemoteProjectTab(tab)) {
               const match = tab.path.match(/^remote:\/\/([^/]+)(\/.*)?$/);
@@ -287,7 +294,7 @@ const ProjectTabs = () => {
       items.push({
         id: "close-project",
         label: "Close Project",
-        icon: <X />,
+        icon: <X weight="bold" />,
         onClick: () => {
           closeProject(tab.id);
         },
@@ -337,6 +344,7 @@ const ProjectTabs = () => {
   );
 
   useEffect(() => {
+    if (disableReorder) return;
     if (dragState.draggedIndex === null) return;
 
     const handleGlobalMouseMove = (e: MouseEvent) => {
@@ -379,7 +387,7 @@ const ProjectTabs = () => {
       document.removeEventListener("mousemove", handleGlobalMouseMove);
       document.removeEventListener("mouseup", handleGlobalMouseUp);
     };
-  }, [dragState.draggedIndex, reorderProjectTabs, handleMouseMove]);
+  }, [disableReorder, dragState.draggedIndex, reorderProjectTabs, handleMouseMove]);
 
   if (projectTabs.length === 0) {
     return null;
@@ -413,7 +421,7 @@ const ProjectTabs = () => {
                 ref={(el) => {
                   tabRefs.current[index] = el;
                 }}
-                onMouseDown={(e) => handleMouseDown(e, index, tab)}
+                onMouseDown={disableReorder ? undefined : (e) => handleMouseDown(e, index, tab)}
                 onContextMenu={(e) => contextMenu.open(e, tab)}
                 onKeyDown={(event) => handleTabKeyDown(event, tab)}
                 className={cn(
@@ -441,7 +449,7 @@ const ProjectTabs = () => {
                     tooltip="Project actions"
                     aria-label="Project actions"
                   >
-                    <EllipsisVertical />
+                    <DotsThreeVertical weight="bold" />
                   </Button>
                 }
               >
@@ -456,9 +464,9 @@ const ProjectTabs = () => {
                     }}
                   />
                 ) : isRemote ? (
-                  <Server />
+                  <HardDrives weight="duotone" />
                 ) : (
-                  <Folder />
+                  <Folder weight="duotone" />
                 )}
                 <span className="max-w-32 truncate">{tab.name}</span>
               </Tab>
@@ -480,7 +488,7 @@ const ProjectTabs = () => {
             tooltip="Open folder"
             aria-label="Open folder"
           >
-            <Plus />
+            <Plus weight="bold" />
           </Button>
         </div>
       </TabsList>

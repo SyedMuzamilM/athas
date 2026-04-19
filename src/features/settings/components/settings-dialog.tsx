@@ -1,5 +1,5 @@
-import { ChevronRight, Search } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Search } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useSettingsStore } from "@/features/settings/store";
 import { useAuthStore } from "@/features/window/stores/auth-store";
 import { type SettingsTab, useUIState } from "@/features/window/stores/ui-state-store";
@@ -51,7 +51,6 @@ const SETTINGS_TAB_LABELS: Record<SettingsTab, string> = {
 const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
   const { settingsInitialTab, setSettingsInitialTab } = useUIState();
   const [activeTab, setActiveTab] = useState<SettingsTab>("general");
-  const [activeSection, setActiveSection] = useState<string>("");
   const subscription = useAuthStore((state) => state.subscription);
   const hasEnterpriseAccess = Boolean(subscription?.enterprise?.has_access);
 
@@ -75,7 +74,6 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
   const handleTabChange = (tab: SettingsTab) => {
     setActiveTab(tab);
     setSettingsInitialTab(tab);
-    setActiveSection("");
   };
 
   // Clear search when dialog closes
@@ -84,116 +82,6 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
       clearSearch();
     }
   }, [isOpen, clearSearch]);
-
-  useEffect(() => {
-    const container = contentRef.current;
-    if (!container) return;
-
-    const syncActiveSection = () => {
-      const sections = Array.from(
-        container.querySelectorAll<HTMLElement>("[data-settings-section]"),
-      );
-
-      if (sections.length === 0) {
-        setActiveSection("");
-        return;
-      }
-
-      const containerTop = container.getBoundingClientRect().top;
-      let current = sections[0].dataset.settingsSection || "";
-
-      for (const section of sections) {
-        const sectionTop = section.getBoundingClientRect().top - containerTop;
-        if (sectionTop <= 56) {
-          current = section.dataset.settingsSection || current;
-        } else {
-          break;
-        }
-      }
-
-      setActiveSection(current);
-    };
-
-    syncActiveSection();
-    container.addEventListener("scroll", syncActiveSection, { passive: true });
-    const raf = requestAnimationFrame(syncActiveSection);
-
-    return () => {
-      cancelAnimationFrame(raf);
-      container.removeEventListener("scroll", syncActiveSection);
-    };
-  }, [activeTab, isOpen, searchQuery]);
-
-  const scrollContentToTop = useCallback(() => {
-    contentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
-    setActiveSection("");
-  }, []);
-
-  const scrollToSection = useCallback((sectionTitle: string) => {
-    const container = contentRef.current;
-    if (!container) return;
-
-    const sections = Array.from(container.querySelectorAll<HTMLElement>("[data-settings-section]"));
-    const target = sections.find((section) => section.dataset.settingsSection === sectionTitle);
-    if (!target) return;
-
-    container.scrollTo({ top: target.offsetTop - 8, behavior: "smooth" });
-    setActiveSection(sectionTitle);
-  }, []);
-
-  const dialogTitle = useMemo(() => {
-    const baseCrumbs: Array<{ label: string; onClick: () => void }> = [
-      {
-        label: "Settings",
-        onClick: () => {
-          handleTabChange("general");
-          scrollContentToTop();
-        },
-      },
-      {
-        label: SETTINGS_TAB_LABELS[activeTab],
-        onClick: scrollContentToTop,
-      },
-    ];
-    if (activeSection && activeSection !== SETTINGS_TAB_LABELS[activeTab] && !searchQuery) {
-      baseCrumbs.push({
-        label: activeSection,
-        onClick: () => scrollToSection(activeSection),
-      });
-    }
-
-    const crumbs = baseCrumbs.filter(
-      (crumb, index, entries) => index === 0 || crumb.label !== entries[index - 1]?.label,
-    );
-
-    return (
-      <div className="ui-font flex min-w-0 items-center gap-0.5 overflow-x-auto scrollbar-none text-text-lighter">
-        {crumbs.map((crumb, index) => (
-          <div
-            key={`${index}-${crumb.label}`}
-            className="flex min-w-0 shrink-0 items-center gap-0.5"
-          >
-            {index > 0 ? (
-              <ChevronRight className="mx-0.5 size-3.5 shrink-0 text-text-lighter" />
-            ) : null}
-            <Button
-              onClick={crumb.onClick}
-              variant="ghost"
-              size="xs"
-              className={cn(
-                "ui-text-sm min-w-0 gap-1 whitespace-nowrap rounded px-1 py-0.5",
-                index === crumbs.length - 1
-                  ? "font-medium text-text hover:text-text"
-                  : "text-text-lighter hover:text-text",
-              )}
-            >
-              <span className="truncate">{crumb.label}</span>
-            </Button>
-          </div>
-        ))}
-      </div>
-    );
-  }, [activeSection, activeTab, handleTabChange, scrollContentToTop, scrollToSection, searchQuery]);
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -237,7 +125,7 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
   return (
     <Dialog
       onClose={onClose}
-      title={dialogTitle}
+      title="Settings"
       headerActions={
         <Input
           type="text"
@@ -251,7 +139,7 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
       }
       classNames={{
         modal:
-          "h-[80vh] max-h-[900px] w-[85vw] max-w-[1200px] border-0 [&>div:first-child]:border-b-0",
+          "h-[74vh] max-h-[820px] w-[78vw] max-w-[1040px] border-0 [&>div:first-child]:border-b-0",
         content: "flex p-0",
       }}
     >
@@ -265,7 +153,7 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
         <div
           ref={contentRef}
           data-settings-content=""
-          className="flex-1 overflow-y-auto p-4 [--app-ui-control-font-size:var(--ui-text-sm)] [overscroll-behavior:contain]"
+          className="flex-1 overflow-y-auto p-3 [--app-ui-control-font-size:var(--ui-text-sm)] [overscroll-behavior:contain]"
         >
           {renderTabContent()}
         </div>

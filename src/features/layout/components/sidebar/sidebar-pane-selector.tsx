@@ -1,14 +1,22 @@
-import { Folder, GitBranch, GitPullRequest, Search } from "lucide-react";
-import { useMemo } from "react";
+import { Folder, GitBranch, GitPullRequest, MagnifyingGlass } from "@phosphor-icons/react";
+import { Fragment, useMemo } from "react";
 import type { CoreFeaturesState } from "@/features/settings/types/feature";
 import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
 import { DynamicIcon } from "@/extensions/ui/components/dynamic-icon";
-import { ReorderableItemStrip } from "@/features/layout/components/reorderable-item-strip";
 import { normalizeItemOrder } from "@/features/layout/config/item-order";
 import { useSettingsStore } from "@/features/settings/store";
 import { Tab, TabsList, type TabsItem } from "@/ui/tabs";
 import Tooltip from "@/ui/tooltip";
 import type { SidebarView } from "../../utils/sidebar-pane-utils";
+
+function orderItems<T extends { id: string }>(items: T[], orderedIds: string[]) {
+  const itemMap = new Map(items.map((item) => [item.id, item]));
+  const orderedItems = orderedIds
+    .map((id) => itemMap.get(id))
+    .filter((item): item is T => Boolean(item));
+  const missingItems = items.filter((item) => !orderedIds.includes(item.id));
+  return [...orderedItems, ...missingItems];
+}
 
 interface SidebarPaneSelectorProps {
   activeSidebarView: SidebarView;
@@ -35,12 +43,11 @@ export const SidebarPaneSelector = ({
   const sidebarActivityItemsOrder = useSettingsStore(
     (state) => state.settings.sidebarActivityItemsOrder,
   );
-  const updateSetting = useSettingsStore((state) => state.updateSetting);
 
   const items: TabsItem[] = [
     {
       id: "files",
-      icon: <Folder />,
+      icon: <Folder weight="duotone" />,
       isActive: isFilesActive,
       onClick: () => onViewChange("files"),
       role: "tab",
@@ -56,7 +63,7 @@ export const SidebarPaneSelector = ({
       ? [
           {
             id: "search",
-            icon: <Search />,
+            icon: <MagnifyingGlass weight="duotone" />,
             onClick: onSearchClick,
             ariaLabel: "Search",
             className: compact ? undefined : "w-8 rounded-md",
@@ -72,7 +79,7 @@ export const SidebarPaneSelector = ({
       ? [
           {
             id: "git",
-            icon: <GitBranch />,
+            icon: <GitBranch weight="duotone" />,
             isActive: isGitViewActive,
             onClick: () => onViewChange("git"),
             role: "tab",
@@ -90,7 +97,7 @@ export const SidebarPaneSelector = ({
       ? [
           {
             id: "github-prs",
-            icon: <GitPullRequest />,
+            icon: <GitPullRequest weight="duotone" />,
             isActive: isGitHubPRsViewActive,
             onClick: () => onViewChange("github-prs"),
             role: "tab",
@@ -130,7 +137,9 @@ export const SidebarPaneSelector = ({
     [items, sidebarActivityItemsOrder],
   );
 
-  const reorderableItems = items.map((item) => {
+  const orderedItems = orderItems(items, orderedIds);
+
+  const renderedItems = orderedItems.map((item) => {
     const tabNode = (
       <Tab
         role={item.role}
@@ -174,14 +183,9 @@ export const SidebarPaneSelector = ({
       variant={compact ? "segmented" : "default"}
       className={compact ? undefined : "gap-0.5 p-1"}
     >
-      <ReorderableItemStrip
-        items={reorderableItems}
-        orderedIds={orderedIds}
-        onReorder={(nextOrderedIds) => {
-          void updateSetting("sidebarActivityItemsOrder", nextOrderedIds);
-        }}
-        className="gap-0.5"
-      />
+      {renderedItems.map((item) => (
+        <Fragment key={item.id}>{item.content}</Fragment>
+      ))}
     </TabsList>
   );
 };

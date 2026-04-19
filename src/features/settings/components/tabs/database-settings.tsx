@@ -47,7 +47,7 @@ export const DatabaseSettings = () => {
         >
           <Button
             onClick={() => setIsDatabaseConnectionVisible(true)}
-            variant="secondary"
+            variant="default"
             size="xs"
             className="gap-1.5"
           >

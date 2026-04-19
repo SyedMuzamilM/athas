@@ -63,7 +63,7 @@ textarea::-webkit-scrollbar-track {
 
 textarea::-webkit-scrollbar-thumb {
   background: #ccc;
-  border-radius: 6px;
+  border-radius: var(--radius);
 }
 
 textarea::-webkit-scrollbar-thumb:hover {

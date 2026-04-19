@@ -1,4 +1,12 @@
-import { Bell, Check, ChevronDown, ChevronUp, Info, AlertTriangle, XCircle } from "lucide-react";
+import {
+  Bell,
+  CaretDown,
+  CaretUp,
+  Check,
+  Info,
+  WarningCircle,
+  XCircle,
+} from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { Button } from "@/ui/button";
@@ -15,13 +23,13 @@ interface NotificationsMenuProps {
 function getNotificationIcon(type: NotificationEntry["type"]) {
   switch (type) {
     case "success":
-      return <Check className="size-3.5 text-success" />;
+      return <Check className="size-3.5 text-success" weight="bold" />;
     case "warning":
-      return <AlertTriangle className="size-3.5 text-warning" />;
+      return <WarningCircle className="size-3.5 text-warning" weight="duotone" />;
     case "error":
-      return <XCircle className="size-3.5 text-error" />;
+      return <XCircle className="size-3.5 text-error" weight="duotone" />;
     default:
-      return <Info className="size-3.5 text-accent" />;
+      return <Info className="size-3.5 text-accent" weight="duotone" />;
   }
 }
 
@@ -64,7 +72,11 @@ function NotificationItem({ notification }: { notification: NotificationEntry })
           <div className="ui-font ui-text-sm mt-1 flex items-center gap-1 text-text-lighter">
             <span>{formatNotificationAge(notification.updatedAt)}</span>
             {hasDescription &&
-              (expanded ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />)}
+              (expanded ? (
+                <CaretUp className="size-3" weight="bold" />
+              ) : (
+                <CaretDown className="size-3" weight="bold" />
+              ))}
           </div>
         </div>
       </div>
@@ -122,7 +134,7 @@ export const NotificationsMenu = ({ iconSize = 14, className }: NotificationsMen
             aria-haspopup="menu"
             aria-label="Notifications"
           >
-            <Bell size={iconSize} />
+            <Bell size={iconSize} weight="duotone" />
           </Button>
           {unreadCount > 0 && (
             <span className="absolute -right-0.5 -top-0.5 flex min-w-[14px] items-center justify-center rounded-full bg-accent px-1 text-[10px] leading-4 text-primary-bg">

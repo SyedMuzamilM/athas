@@ -1,10 +1,9 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { Maximize2, MenuIcon, Minimize2, Minus, SquareArrowOutUpRight, X } from "lucide-react";
+import { ArrowSquareOut, CornersIn, CornersOut, List, Minus, X } from "@phosphor-icons/react";
 import { type ReactNode, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { openFolder } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import { ReorderableItemStrip } from "@/features/layout/components/reorderable-item-strip";
 import type { HeaderTrailingItemId } from "@/features/layout/config/item-order";
 import { SidebarPaneSelector } from "@/features/layout/components/sidebar/sidebar-pane-selector";
 import {
@@ -39,9 +38,17 @@ type HeaderItem<T extends string> = {
   content: ReactNode;
 };
 
+function orderHeaderItems<T extends string>(items: Array<HeaderItem<T>>, orderedIds: T[]) {
+  const itemMap = new Map(items.map((item) => [item.id, item]));
+  const orderedItems = orderedIds
+    .map((id) => itemMap.get(id))
+    .filter((item): item is HeaderItem<T> => Boolean(item));
+  const missingItems = items.filter((item) => !orderedIds.includes(item.id));
+  return [...orderedItems, ...missingItems];
+}
+
 const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
   const { settings } = useSettingsStore();
-  const updateSetting = useSettingsStore((state) => state.updateSetting);
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
   const {
@@ -179,7 +186,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     {
       id: "new-window",
       label: "New Window",
-      icon: <SquareArrowOutUpRight />,
+      icon: <ArrowSquareOut weight="duotone" />,
       onClick: () => {
         void createAppWindow();
       },
@@ -239,7 +246,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
             size="icon-sm"
             className="pointer-events-auto"
           >
-            <MenuIcon />
+            <List weight="duotone" />
           </Button>
         </Tooltip>
         <CustomMenuBar
@@ -289,7 +296,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
                 size="icon-sm"
                 className="pointer-events-auto"
               >
-                <Minus className="size-3.5 text-text-lighter" />
+                <Minus className="size-3.5 text-text-lighter" weight="bold" />
               </Button>
             </Tooltip>
             <Tooltip content={isMaximized ? "Restore" : "Maximize"} side="bottom">
@@ -300,9 +307,9 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
                 className="pointer-events-auto"
               >
                 {isMaximized ? (
-                  <Minimize2 className="size-3.5 text-text-lighter" />
+                  <CornersIn className="size-3.5 text-text-lighter" weight="duotone" />
                 ) : (
-                  <Maximize2 className="size-3.5 text-text-lighter" />
+                  <CornersOut className="size-3.5 text-text-lighter" weight="duotone" />
                 )}
               </Button>
             </Tooltip>
@@ -313,7 +320,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
                 size="icon-sm"
                 className="pointer-events-auto group"
               >
-                <X className="size-3.5 text-text-lighter group-hover:text-white" />
+                <X className="size-3.5 text-text-lighter group-hover:text-white" weight="bold" />
               </Button>
             </Tooltip>
           </div>
@@ -353,20 +360,23 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
             data-title-bar-project-tabs="true"
             className="pointer-events-auto flex h-8 items-center"
           >
-            {titleBarProjectMode === "window" ? <WindowTitleDisplay /> : <ProjectTabs />}
+            {titleBarProjectMode === "window" ? (
+              <WindowTitleDisplay />
+            ) : (
+              <ProjectTabs disableReorder />
+            )}
           </div>
         </div>
 
         {/* Account menu */}
         <div className="mr-1 flex h-8 items-center">
-          <ReorderableItemStrip
-            items={headerTrailingItems}
-            orderedIds={settings.headerTrailingItemsOrder}
-            onReorder={(orderedIds) => {
-              void updateSetting("headerTrailingItemsOrder", orderedIds);
-            }}
-            className="gap-1"
-          />
+          <div className="flex items-center gap-1">
+            {orderHeaderItems(headerTrailingItems, settings.headerTrailingItemsOrder).map(
+              (item) => (
+                <div key={item.id}>{item.content}</div>
+              ),
+            )}
+          </div>
         </div>
         {titleBarContextMenuPortal}
       </div>
@@ -404,20 +414,21 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
           data-title-bar-project-tabs="true"
           className="pointer-events-auto flex h-8 items-center"
         >
-          {titleBarProjectMode === "window" ? <WindowTitleDisplay /> : <ProjectTabs />}
+          {titleBarProjectMode === "window" ? (
+            <WindowTitleDisplay />
+          ) : (
+            <ProjectTabs disableReorder />
+          )}
         </div>
       </div>
 
       {/* Right side */}
       <div className="z-20 flex items-center">
-        <ReorderableItemStrip
-          items={headerTrailingItems}
-          orderedIds={settings.headerTrailingItemsOrder}
-          onReorder={(orderedIds) => {
-            void updateSetting("headerTrailingItemsOrder", orderedIds);
-          }}
-          className="gap-1"
-        />
+        <div className="flex items-center gap-1">
+          {orderHeaderItems(headerTrailingItems, settings.headerTrailingItemsOrder).map((item) => (
+            <div key={item.id}>{item.content}</div>
+          ))}
+        </div>
 
         {/* Window controls - only show on Linux */}
         {isLinux && (
@@ -429,7 +440,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
                 size="icon-sm"
                 className="pointer-events-auto"
               >
-                <Minus className="size-3.5 text-text-lighter" />
+                <Minus className="size-3.5 text-text-lighter" weight="bold" />
               </Button>
             </Tooltip>
             <Tooltip content={isMaximized ? "Restore" : "Maximize"} side="bottom">
@@ -440,9 +451,9 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
                 className="pointer-events-auto"
               >
                 {isMaximized ? (
-                  <Minimize2 className="size-3.5 text-text-lighter" />
+                  <CornersIn className="size-3.5 text-text-lighter" weight="duotone" />
                 ) : (
-                  <Maximize2 className="size-3.5 text-text-lighter" />
+                  <CornersOut className="size-3.5 text-text-lighter" weight="duotone" />
                 )}
               </Button>
             </Tooltip>
@@ -453,7 +464,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
                 size="icon-sm"
                 className="pointer-events-auto group"
               >
-                <X className="size-3.5 text-text-lighter group-hover:text-white" />
+                <X className="size-3.5 text-text-lighter group-hover:text-white" weight="bold" />
               </Button>
             </Tooltip>
           </div>

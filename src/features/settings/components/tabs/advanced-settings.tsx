@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useToast } from "@/features/layout/contexts/toast-context";
+import { TypedConfirmAction } from "@/features/settings/components/typed-confirm-action";
 import { useSettingsStore } from "@/features/settings/store";
 import {
   clearTelemetryLogEntries,
@@ -23,14 +24,8 @@ export const AdvancedSettings = () => {
   }, []);
 
   const handleResetSettings = () => {
-    if (
-      window.confirm(
-        "Are you sure you want to reset all settings to their defaults? This cannot be undone.",
-      )
-    ) {
-      resetToDefaults();
-      showToast({ message: "Settings reset to defaults", type: "success" });
-    }
+    resetToDefaults();
+    showToast({ message: "Settings reset to defaults", type: "success" });
   };
 
   const handleClearTelemetryLog = async () => {
@@ -57,57 +52,56 @@ export const AdvancedSettings = () => {
         >
           <div className="flex gap-2">
             <Button
-              variant="secondary"
+              variant="default"
               size="xs"
               onClick={() => setShowTelemetryLog((value) => !value)}
             >
               {showTelemetryLog ? "Hide Log" : "Open Log"}
             </Button>
-            <Button variant="outline" size="xs" onClick={handleClearTelemetryLog}>
+            <Button variant="default" size="xs" onClick={handleClearTelemetryLog}>
               Clear
             </Button>
           </div>
         </SettingRow>
         {showTelemetryLog && (
-          <div className="space-y-2 rounded-xl border border-border bg-primary-bg/70 p-3">
+          <div className="rounded-lg border border-border/70 bg-primary-bg/50">
             {telemetryLog.length === 0 ? (
-              <p className="ui-font ui-text-sm text-text-lighter">No telemetry entries yet.</p>
+              <p className="ui-font ui-text-sm px-3 py-2 text-text-lighter">
+                No telemetry entries yet.
+              </p>
             ) : (
-              <div className="max-h-72 space-y-2 overflow-y-auto">
+              <div className="max-h-72 overflow-y-auto">
                 {[...telemetryLog].reverse().map((entry) => (
                   <div
                     key={entry.id}
-                    className="rounded-lg border border-border/70 bg-secondary-bg/70 p-2"
+                    className="ui-font ui-text-sm flex items-center gap-2 border-border/70 px-3 py-2 text-text not-last:border-b"
                   >
-                    <div className="ui-font ui-text-sm flex items-center justify-between gap-3 text-text">
-                      <span className="font-medium">{entry.eventType}</span>
-                      <span className="uppercase text-text-lighter">{entry.status}</span>
-                    </div>
-                    <p className="ui-font ui-text-sm mt-1 text-text-lighter">{entry.summary}</p>
-                    {entry.error && (
-                      <p className="ui-font ui-text-sm mt-1 text-error">{entry.error}</p>
-                    )}
-                    <p className="ui-font ui-text-xs mt-1 text-text-lightest">
+                    <span className="min-w-0 flex-1 truncate font-medium">{entry.eventType}</span>
+                    <span
+                      className={
+                        entry.status === "failed"
+                          ? "shrink-0 uppercase text-error"
+                          : entry.status === "sent"
+                            ? "shrink-0 uppercase text-success"
+                            : "shrink-0 uppercase text-text-lighter"
+                      }
+                    >
+                      {entry.status}
+                    </span>
+                    <span className="min-w-0 flex-[1.4] truncate text-text-lighter">
+                      {entry.error || entry.summary}
+                    </span>
+                    <span className="shrink-0 text-text-lightest">
                       {new Date(entry.timestamp).toLocaleString()}
-                    </p>
+                    </span>
                   </div>
                 ))}
               </div>
             )}
           </div>
         )}
-      </Section>
-
-      <Section title="Data">
         <SettingRow label="Reset Settings" description="Reset all settings to their default values">
-          <Button
-            variant="outline"
-            size="xs"
-            onClick={handleResetSettings}
-            className="text-error hover:bg-error/10"
-          >
-            Reset
-          </Button>
+          <TypedConfirmAction actionLabel="Reset" onConfirm={handleResetSettings} />
         </SettingRow>
       </Section>
     </div>

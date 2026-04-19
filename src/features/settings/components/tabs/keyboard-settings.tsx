@@ -166,13 +166,13 @@ export const KeyboardSettings = () => {
           {filteredCommands.length} of {commands.length} keybindings
         </div>
         <div className="flex gap-2">
-          <Button variant="secondary" size="xs" onClick={handleResetAll}>
+          <Button variant="default" size="xs" onClick={handleResetAll}>
             Reset to Defaults
           </Button>
-          <Button variant="secondary" size="xs" onClick={handleImport}>
+          <Button variant="default" size="xs" onClick={handleImport}>
             Import
           </Button>
-          <Button variant="secondary" size="xs" onClick={handleExport}>
+          <Button variant="default" size="xs" onClick={handleExport}>
             Export
           </Button>
         </div>

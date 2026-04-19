@@ -1,13 +1,13 @@
 import {
-  AlertCircle,
-  Download,
-  Puzzle,
-  Rows3,
-  Settings2,
-  Sparkles,
-  Terminal as TerminalIcon,
+  DownloadSimple,
+  GearSix,
+  PuzzlePiece,
+  Rows,
+  Sparkle,
+  TerminalWindow,
+  WarningCircle,
   X,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Dropdown } from "@/ui/dropdown";
 import { useAIChatStore } from "@/features/ai/store/store";
@@ -31,7 +31,6 @@ import type {
   FooterLeadingItemId,
   FooterTrailingItemId,
 } from "@/features/layout/config/item-order";
-import { ReorderableItemStrip } from "@/features/layout/components/reorderable-item-strip";
 import { useFileSystemStore } from "../../../file-system/controllers/store";
 
 type AutocompleteUsageSummary = {
@@ -52,6 +51,15 @@ type FooterItem<T extends string> = {
   label: string;
   content: ReactNode;
 };
+
+function orderFooterItems<T extends string>(items: Array<FooterItem<T>>, orderedIds: T[]) {
+  const itemMap = new Map(items.map((item) => [item.id, item]));
+  const orderedItems = orderedIds
+    .map((id) => itemMap.get(id))
+    .filter((item): item is FooterItem<T> => Boolean(item));
+  const missingItems = items.filter((item) => !orderedIds.includes(item.id));
+  return [...orderedItems, ...missingItems];
+}
 
 function extractAutocompleteUsage(subscription: unknown): AutocompleteUsageSummary | null {
   if (!subscription || typeof subscription !== "object") return null;
@@ -245,7 +253,7 @@ const AiUsageStatusIndicator = () => {
               tooltip="AI Settings"
               aria-label="Open AI settings"
             >
-              <Settings2 />
+              <GearSix weight="duotone" />
             </Button>
             <Button
               onClick={() => setIsOpen(false)}
@@ -254,7 +262,7 @@ const AiUsageStatusIndicator = () => {
               className="px-0 text-text-lighter"
               aria-label="Close AI status dropdown"
             >
-              <X />
+              <X weight="bold" />
             </Button>
           </div>
         </div>
@@ -321,7 +329,6 @@ const AiUsageStatusIndicator = () => {
 const Footer = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const settings = useSettingsStore((state) => state.settings);
-  const updateSetting = useSettingsStore((state) => state.updateSetting);
   const uiState = useUIState();
   const bottomRoot = usePaneStore.use.bottomRoot();
   const bottomPaneBufferCount = getAllPaneGroups(bottomRoot).reduce(
@@ -388,7 +395,7 @@ const Footer = () => {
               tooltip="Toggle Terminal"
               commandId="workbench.toggleTerminal"
             >
-              <TerminalIcon />
+              <TerminalWindow weight="duotone" />
             </Button>
           ),
         }
@@ -412,7 +419,7 @@ const Footer = () => {
               style={{ minHeight: 0, minWidth: 0 }}
               tooltip="Toggle Bottom Tabs"
             >
-              <Rows3 />
+              <Rows weight="duotone" />
             </Button>
           ),
         }
@@ -448,7 +455,7 @@ const Footer = () => {
               }
               commandId="workbench.toggleDiagnostics"
             >
-              <AlertCircle />
+              <WarningCircle weight="duotone" />
               {diagnosticsCount > 0 && (
                 <span className="ui-text-sm ml-0.5">{diagnosticsCount}</span>
               )}
@@ -469,7 +476,7 @@ const Footer = () => {
               style={{ minHeight: 0, minWidth: 0 }}
               tooltip={`${extensionUpdatesCount} extension update${extensionUpdatesCount === 1 ? "" : "s"} available`}
             >
-              <Puzzle />
+              <PuzzlePiece weight="duotone" />
               <span className="ui-text-sm ml-0.5">{extensionUpdatesCount}</span>
             </Button>
           ),
@@ -500,7 +507,10 @@ const Footer = () => {
                     : `Update available: ${updateInfo?.version}`
               }
             >
-              <Download className={downloading || installing ? "animate-pulse" : ""} />
+              <DownloadSimple
+                className={downloading || installing ? "animate-pulse" : ""}
+                weight="duotone"
+              />
             </Button>
           ),
         }
@@ -534,7 +544,7 @@ const Footer = () => {
           tooltip="Toggle AI Chat"
           commandId="workbench.toggleAIChat"
         >
-          <Sparkles />
+          <Sparkle weight="duotone" />
         </Button>
       ),
     },
@@ -546,25 +556,15 @@ const Footer = () => {
   return (
     <div className="relative z-20 flex min-h-9 shrink-0 items-center justify-between bg-secondary-bg/70 px-2.5 py-1 backdrop-blur-sm">
       <div className="ui-font ui-text-sm flex items-center gap-1 text-text-lighter">
-        <ReorderableItemStrip
-          items={footerLeadingItems}
-          orderedIds={settings.footerLeadingItemsOrder}
-          onReorder={(orderedIds) => {
-            void updateSetting("footerLeadingItemsOrder", orderedIds);
-          }}
-          className="gap-1"
-        />
+        {orderFooterItems(footerLeadingItems, settings.footerLeadingItemsOrder).map((item) => (
+          <div key={item.id}>{item.content}</div>
+        ))}
       </div>
 
       <div className="ui-font ui-text-sm flex items-center gap-1 text-text-lighter">
-        <ReorderableItemStrip
-          items={footerTrailingItems}
-          orderedIds={settings.footerTrailingItemsOrder}
-          onReorder={(orderedIds) => {
-            void updateSetting("footerTrailingItemsOrder", orderedIds);
-          }}
-          className="gap-1"
-        />
+        {orderFooterItems(footerTrailingItems, settings.footerTrailingItemsOrder).map((item) => (
+          <div key={item.id}>{item.content}</div>
+        ))}
       </div>
     </div>
   );

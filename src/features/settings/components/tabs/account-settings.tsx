@@ -1,5 +1,5 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { CreditCard, ExternalLink, LogIn } from "lucide-react";
+import { CreditCard, ExternalLink, LogIn, LogOut } from "lucide-react";
 import { useProFeature } from "@/extensions/ui/hooks/use-pro-feature";
 import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
 import { useAuthStore } from "@/features/window/stores/auth-store";
@@ -10,6 +10,7 @@ export const AccountSettings = () => {
   const user = useAuthStore((state) => state.user);
   const subscription = useAuthStore((state) => state.subscription);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const logout = useAuthStore((state) => state.logout);
   const { isPro } = useProFeature();
   const { isSigningIn, signIn } = useDesktopSignIn();
 
@@ -41,7 +42,7 @@ export const AccountSettings = () => {
             </span>
           ) : (
             <Button
-              variant="secondary"
+              variant="default"
               size="xs"
               onClick={signIn}
               disabled={isSigningIn}
@@ -71,12 +72,7 @@ export const AccountSettings = () => {
             label="Upgrade to Pro"
             description="Open pricing to compare plans and upgrade your account."
           >
-            <Button
-              variant="secondary"
-              size="xs"
-              onClick={handleViewPricing}
-              className="ui-text-sm"
-            >
+            <Button variant="default" size="xs" onClick={handleViewPricing} className="ui-text-sm">
               <CreditCard />
               {isPro ? "View Pricing" : "Upgrade to Pro"}
             </Button>
@@ -87,13 +83,28 @@ export const AccountSettings = () => {
             description="Open your Athas dashboard to manage billing and subscription details."
           >
             <Button
-              variant="secondary"
+              variant="default"
               size="xs"
               onClick={handleManageAccount}
               className="ui-text-sm"
             >
               <ExternalLink />
               Open Dashboard
+            </Button>
+          </SettingRow>
+
+          <SettingRow
+            label="Sign Out"
+            description="End your current Athas account session on this device."
+          >
+            <Button
+              variant="default"
+              size="xs"
+              onClick={() => void logout()}
+              className="ui-text-sm"
+            >
+              <LogOut />
+              Sign Out
             </Button>
           </SettingRow>
         </Section>

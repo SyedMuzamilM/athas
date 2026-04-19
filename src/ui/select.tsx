@@ -3,11 +3,8 @@ import { cva } from "class-variance-authority";
 import { Check, ChevronDown, Search } from "lucide-react";
 import type { AriaAttributes, ComponentType, KeyboardEvent, ReactNode, RefObject } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  controlFieldIconSizes,
-  controlFieldSizeVariants,
-  controlFieldSurfaceVariants,
-} from "@/ui/control-field";
+import { buttonVariants } from "@/ui/button";
+import { controlFieldIconSizes } from "@/ui/control-field";
 import { Dropdown } from "@/ui/dropdown";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
@@ -40,13 +37,13 @@ export interface SelectProps {
 }
 
 const selectTriggerVariants = cva(
-  "ui-font inline-flex w-fit min-w-0 items-center justify-between gap-2 whitespace-nowrap",
+  "ui-font inline-flex w-fit min-w-0 items-center justify-between gap-2 whitespace-nowrap text-left font-normal",
   {
     variants: {
       size: {
-        xs: "px-2",
-        sm: "px-2",
-        md: "px-3",
+        xs: "",
+        sm: "",
+        md: "",
       },
       withIcon: {
         true: "",
@@ -61,15 +58,15 @@ const selectTriggerVariants = cva(
 );
 
 const selectContentVariants = cva(
-  "z-[10040] max-h-96 min-w-[8rem] overflow-hidden rounded-2xl border border-border bg-secondary-bg/95 shadow-xl backdrop-blur-sm transition-[opacity,transform] duration-150 ease-out",
+  "z-[10040] max-h-96 min-w-[8rem] overflow-hidden rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] transition-[opacity,transform] duration-150 ease-out",
 );
 
 const selectItemVariants = cva(
-  "ui-font ui-text-sm flex min-h-8 w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text outline-none transition-colors",
+  "ui-font ui-text-sm flex min-h-7 w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-text outline-none transition-colors hover:bg-hover",
 );
 
 const selectSearchInputVariants = cva(
-  "ui-font ui-text-sm w-full border-none bg-transparent py-1.5 pr-3 pl-7 text-text placeholder-text-lighter outline-none",
+  "ui-font ui-text-sm w-full border-none bg-transparent py-1 pr-3 pl-7 text-text placeholder-text-lighter outline-none",
 );
 
 const iconSizes = {
@@ -178,8 +175,14 @@ function InputTriggerOptionRow({
     <button
       type="button"
       onMouseEnter={onMouseEnter}
+      onPointerMove={onMouseEnter}
+      onMouseDown={(event) => event.preventDefault()}
       onClick={onSelect}
-      className={cn(selectItemVariants(), (isHovered || isSelected) && "bg-hover")}
+      className={cn(
+        selectItemVariants(),
+        isHovered && "bg-hover",
+        isSelected && "bg-selected/70 text-text",
+      )}
     >
       {option.icon ? (
         <span className="size-3 shrink-0 text-text-lighter">{option.icon}</span>
@@ -243,8 +246,7 @@ export default function Select({
     [open, searchableTrigger, searchQuery, selectedOption, value],
   );
   const resolvedTriggerClassName = cn(
-    controlFieldSurfaceVariants({ variant }),
-    controlFieldSizeVariants({ size }),
+    buttonVariants({ variant, size }),
     selectTriggerVariants({ size, withIcon: Boolean(triggerIcon) }),
     "w-full justify-between text-left",
     className,
@@ -314,7 +316,7 @@ export default function Select({
           size={size}
           variant={variant === "secondary" || variant === "outline" ? "default" : variant}
           containerClassName="min-w-0"
-          className={cn("min-w-0 font-medium text-text-lighter", className)}
+          className={cn("min-w-0 font-normal text-text", className)}
           placeholder={open ? "Search..." : selectedOption?.label || placeholder}
           aria-label={ariaLabel ?? placeholder}
         />
@@ -324,10 +326,10 @@ export default function Select({
           anchorRef={searchInputRef}
           anchorAlign="start"
           onClose={() => handleOpenChange(false)}
-          className={cn("overflow-hidden rounded-2xl p-0", menuClassName)}
+          className={cn("overflow-hidden rounded-xl p-0", menuClassName)}
           menuClassName="flex min-h-0 flex-1 flex-col overflow-hidden"
         >
-          <div className="max-h-80 overflow-y-auto p-2">
+          <div className="max-h-80 overflow-y-auto p-1">
             {filteredOptions.length === 0 ? (
               <SelectEmptyState />
             ) : (
@@ -402,7 +404,7 @@ export default function Select({
               />
             )}
 
-            <SelectPrimitive.Viewport className="max-h-96 p-1.5">
+            <SelectPrimitive.Viewport className="max-h-96 p-0">
               {filteredOptions.length === 0 ? (
                 <SelectEmptyState />
               ) : (
@@ -411,9 +413,10 @@ export default function Select({
                     <SelectPrimitive.Item
                       key={option.value}
                       value={option.value}
+                      textValue={option.label}
                       className={cn(
                         selectItemVariants(),
-                        "data-[highlighted]:bg-hover data-[state=checked]:bg-hover",
+                        "data-[highlighted]:bg-hover data-[state=checked]:bg-selected/70 data-[state=checked]:text-text",
                       )}
                     >
                       {option.icon && (
