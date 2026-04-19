@@ -1,4 +1,5 @@
 import { File } from "lucide-react";
+import { cn } from "@/utils/cn";
 import { Button } from "@/ui/button";
 import type { FileSearchResult, SearchMatch } from "@/features/global-search/lib/rust-api/search";
 
@@ -7,6 +8,8 @@ interface ContentSearchResultProps {
   rootFolderPath: string | null | undefined;
   onFileClick: (filePath: string, lineNumber?: number) => void;
   onFileHover?: (filePath: string | null) => void;
+  selectedMatchKey?: string | null;
+  getMatchIndex?: (lineNumber: number) => number | undefined;
 }
 
 const highlightMatch = (text: string, start: number, end: number) => {
@@ -27,10 +30,14 @@ const MatchLine = ({
   match,
   onClick,
   onHover,
+  isSelected = false,
+  itemIndex,
 }: {
   match: SearchMatch;
   onClick: () => void;
   onHover?: () => void;
+  isSelected?: boolean;
+  itemIndex?: number;
 }) => {
   return (
     <Button
@@ -38,7 +45,11 @@ const MatchLine = ({
       onMouseEnter={onHover}
       variant="ghost"
       size="sm"
-      className="ui-text-sm flex h-auto w-full items-start justify-start gap-2 px-4 py-1 text-left editor-font hover:bg-hover"
+      data-item-index={itemIndex}
+      className={cn(
+        "ui-text-sm editor-font flex h-auto w-full items-start justify-start gap-2 px-4 py-1 text-left hover:bg-hover",
+        isSelected && "bg-hover",
+      )}
     >
       <span className="w-10 shrink-0 text-right text-text-lighter">{match.line_number}</span>
       <span className="flex-1 truncate text-text">
@@ -53,6 +64,8 @@ export const ContentSearchResult = ({
   rootFolderPath,
   onFileClick,
   onFileHover,
+  selectedMatchKey,
+  getMatchIndex,
 }: ContentSearchResultProps) => {
   const displayPath = rootFolderPath
     ? result.file_path.replace(rootFolderPath, "").replace(/^\//, "")
@@ -83,6 +96,8 @@ export const ContentSearchResult = ({
             match={match}
             onClick={() => onFileClick(result.file_path, match.line_number)}
             onHover={onFileHover ? () => onFileHover(result.file_path) : undefined}
+            isSelected={selectedMatchKey === `${result.file_path}:${match.line_number}`}
+            itemIndex={getMatchIndex?.(match.line_number)}
           />
         ))}
         {result.matches.length > 10 && (

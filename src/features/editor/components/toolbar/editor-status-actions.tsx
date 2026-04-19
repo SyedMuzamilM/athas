@@ -5,6 +5,7 @@ import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { setSyntaxHighlightingFilePath } from "@/features/editor/extensions/builtin/syntax-highlighting";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { type LspStatus, useLspStore } from "@/features/editor/lsp/lsp-store";
+import type { Position } from "@/features/editor/types/editor";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import {
@@ -44,7 +45,15 @@ function getLanguageDisplayNameOrNull(languageId: string | null) {
   return getLanguageDisplayName(languageId);
 }
 
-export function EditorStatusActions() {
+interface EditorStatusActionsProps {
+  bufferId?: string;
+  cursorPosition?: Position;
+}
+
+export function EditorStatusActions({
+  bufferId,
+  cursorPosition: cursorPositionOverride,
+}: EditorStatusActionsProps = {}) {
   const { rootFolderPath } = useFileSystemStore();
   const buffers = useBufferStore.use.buffers();
   const activeBufferId = useBufferStore.use.activeBufferId();
@@ -96,7 +105,9 @@ export function EditorStatusActions() {
   const activeServers = lspStatus.supportedLanguages || [];
   const hasActiveServers = lspStatus.status === "connected" && activeServers.length > 0;
   const projectName = rootFolderPath ? getFilenameFromPath(rootFolderPath) : "No Project";
-  const activeBuffer = buffers.find((buffer) => buffer.id === activeBufferId) || null;
+  const resolvedBufferId = bufferId ?? activeBufferId;
+  const activeBuffer = buffers.find((buffer) => buffer.id === resolvedBufferId) || null;
+  const displayedCursorPosition = cursorPositionOverride ?? cursorPosition;
   const lspClient = LspClient.getInstance();
   const activeServerEntries = lspClient.getActiveServerEntries();
   const currentFileLanguageId =
@@ -177,13 +188,13 @@ export function EditorStatusActions() {
 
   const handleLanguageChange = useCallback(
     async (languageId: string) => {
-      if (!activeBuffer || !activeBufferId || !isEditorContent(activeBuffer)) return;
+      if (!activeBuffer || !resolvedBufferId || !isEditorContent(activeBuffer)) return;
       if (languageId === currentFileLanguageId) {
         setIsLanguageOpen(false);
         return;
       }
 
-      useBufferStore.getState().actions.updateBufferLanguage(activeBufferId, languageId);
+      useBufferStore.getState().actions.updateBufferLanguage(resolvedBufferId, languageId);
 
       if (activeBuffer.path) {
         await setSyntaxHighlightingFilePath(activeBuffer.path);
@@ -208,7 +219,7 @@ export function EditorStatusActions() {
       setIsLanguageOpen(false);
       setLanguageSearch("");
     },
-    [activeBuffer, activeBufferId, currentFileLanguageId, rootFolderPath, lspClient],
+    [activeBuffer, resolvedBufferId, currentFileLanguageId, rootFolderPath, lspClient],
   );
 
   const displayOptions = [
@@ -299,7 +310,7 @@ export function EditorStatusActions() {
   return (
     <>
       <span className={statusChipClass}>
-        {cursorPosition.line + 1}:{cursorPosition.column + 1}
+        {displayedCursorPosition.line + 1}:{displayedCursorPosition.column + 1}
       </span>
 
       {activeBuffer && isEditorContent(activeBuffer) && (

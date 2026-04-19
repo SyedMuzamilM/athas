@@ -22,6 +22,9 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTerminalProfilesStore } from "@/features/terminal/stores/profiles-store";
 import { useTerminalShellsStore } from "@/features/terminal/stores/shells-store";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { BOTTOM_PANE_ID } from "@/features/panes/constants/pane";
+import { usePaneStore } from "@/features/panes/stores/pane-store";
 import {
   type TerminalTabLayout,
   type TerminalTabSidebarPosition,
@@ -33,6 +36,15 @@ import { getAllTerminalProfiles } from "@/features/terminal/utils/terminal-profi
 import { Dropdown, MenuItemsList, type MenuItem } from "@/ui/dropdown";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
+import {
+  clearInternalTabDragData,
+  type InternalTabDragHoverTarget,
+  resolveDropTarget,
+  setInternalTabDragHover,
+  setInternalTabDragData,
+  setInternalTabDragHoverTarget,
+} from "@/features/tabs/utils/internal-tab-drag";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import Tooltip from "../../../ui/tooltip";
 import TerminalTabBarItem from "./terminal-tab-bar-item";
 import TerminalTabContextMenu from "./terminal-tab-context-menu";
@@ -298,10 +310,14 @@ const TerminalTabBar = ({
   const sessions = useTerminalStore((state) => state.sessions);
   const customProfiles = useTerminalProfilesStore.use.profiles();
   const availableShells = useTerminalShellsStore.use.shells();
+  const { setActivePane } = usePaneStore.use.actions();
+  const { splitPane } = usePaneStore.use.actions();
+  const { openTerminalBuffer } = useBufferStore.use.actions();
 
   const tabBarRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<(HTMLDivElement | null)[]>([]);
   const profileMenuButtonRef = useRef<HTMLButtonElement>(null);
+  const lastValidExternalDropTargetRef = useRef<InternalTabDragHoverTarget | null>(null);
   const [profileMenu, setProfileMenu] = useState<{
     isOpen: boolean;
     position: { x: number; y: number };
@@ -316,13 +332,23 @@ const TerminalTabBar = ({
       return;
     }
 
+    e.preventDefault();
+    document.body.style.userSelect = "none";
+
     // Click the tab immediately (like project tabs pattern)
     const terminal = sortedTerminals[index];
     if (terminal) {
+      setInternalTabDragData({
+        source: "terminal-panel",
+        terminalId: terminal.id,
+        name: terminal.name,
+        initialCommand: terminal.initialCommand,
+        currentDirectory: terminal.currentDirectory,
+        remoteConnectionId: terminal.remoteConnectionId,
+      });
       onTabClick(terminal.id);
     }
 
-    e.preventDefault();
     setDraggedIndex(index);
     setDragStartPosition({ x: e.clientX, y: e.clientY });
   };
@@ -348,6 +374,19 @@ const TerminalTabBar = ({
       // Check if dragged outside the tab bar
       const isOutside = x < 0 || x > rect.width || y < -50 || y > rect.height + 50;
       setIsDraggedOutside(isOutside);
+
+      if (isOutside) {
+        const resolvedTarget = resolveDropTarget({ x: e.clientX, y: e.clientY });
+        if (resolvedTarget.paneId) {
+          lastValidExternalDropTargetRef.current = resolvedTarget;
+          setInternalTabDragHoverTarget(resolvedTarget);
+        } else if (lastValidExternalDropTargetRef.current) {
+          setInternalTabDragHoverTarget(lastValidExternalDropTargetRef.current);
+        }
+      } else {
+        lastValidExternalDropTargetRef.current = null;
+        setInternalTabDragHover({ x: e.clientX, y: e.clientY });
+      }
 
       if (!isOutside) {
         // Handle internal reordering
@@ -418,7 +457,46 @@ const TerminalTabBar = ({
 
   const handleMouseUp = () => {
     if (draggedIndex !== null) {
-      if (!isDraggedOutside && dropTarget !== null && dropTarget !== draggedIndex && onTabReorder) {
+      const draggedTerminal = sortedTerminals[draggedIndex];
+      const resolvedTarget = dragCurrentPosition ? resolveDropTarget(dragCurrentPosition) : null;
+      const target =
+        resolvedTarget?.paneId || !lastValidExternalDropTargetRef.current
+          ? (resolvedTarget ?? { paneId: null, zone: null })
+          : lastValidExternalDropTargetRef.current;
+
+      if (isDraggedOutside && draggedTerminal && target.paneId) {
+        let destinationPaneId = target.paneId;
+        if (target.zone && target.zone !== "center") {
+          const direction =
+            target.zone === "left" || target.zone === "right" ? "horizontal" : "vertical";
+          const placement = target.zone === "left" || target.zone === "top" ? "before" : "after";
+          destinationPaneId =
+            splitPane(target.paneId, direction, undefined, placement) ?? target.paneId;
+        }
+
+        setActivePane(destinationPaneId);
+        openTerminalBuffer({
+          sessionId: draggedTerminal.id,
+          name: draggedTerminal.name,
+          command: draggedTerminal.initialCommand,
+          workingDirectory: draggedTerminal.currentDirectory,
+          remoteConnectionId: draggedTerminal.remoteConnectionId,
+        });
+        window.dispatchEvent(
+          new CustomEvent("terminal-detach-to-buffer", {
+            detail: { terminalId: draggedTerminal.id },
+          }),
+        );
+        if (destinationPaneId === BOTTOM_PANE_ID) {
+          useUIState.getState().setBottomPaneActiveTab("buffers");
+          useUIState.getState().setIsBottomPaneVisible(true);
+        }
+      } else if (
+        !isDraggedOutside &&
+        dropTarget !== null &&
+        dropTarget !== draggedIndex &&
+        onTabReorder
+      ) {
         // Adjust dropTarget if moving right (forward)
         let adjustedDropTarget = dropTarget;
         if (draggedIndex < dropTarget) {
@@ -440,6 +518,9 @@ const TerminalTabBar = ({
     setDragStartPosition(null);
     setDragCurrentPosition(null);
     setIsDraggedOutside(false);
+    lastValidExternalDropTargetRef.current = null;
+    document.body.style.userSelect = "";
+    clearInternalTabDragData();
   };
 
   const handleContextMenu = (e: React.MouseEvent, terminal: Terminal) => {
@@ -451,13 +532,26 @@ const TerminalTabBar = ({
     });
   };
 
-  const handleDragStart = (e: React.DragEvent) => {
-    // Drag functionality is handled via mouseDown/mouseMove
-    e.preventDefault();
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    const terminal = sortedTerminals[index];
+    if (!terminal) return;
+
+    const dragData = {
+      source: "terminal-panel" as const,
+      terminalId: terminal.id,
+      name: terminal.name,
+      initialCommand: terminal.initialCommand,
+      currentDirectory: terminal.currentDirectory,
+      remoteConnectionId: terminal.remoteConnectionId,
+    };
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("application/tab-data", JSON.stringify(dragData));
+    e.dataTransfer.setData("text/plain", "athas-internal-tab-drag");
+    setInternalTabDragData(dragData);
   };
 
   const handleDragEnd = () => {
-    // Cleanup is handled in handleMouseUp
+    clearInternalTabDragData();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -614,6 +708,12 @@ const TerminalTabBar = ({
   }, [draggedIndex, dragStartPosition, isDragging, dropTarget]);
 
   useEffect(() => {
+    return () => {
+      document.body.style.userSelect = "";
+    };
+  }, []);
+
+  useEffect(() => {
     if (
       editingTerminalId &&
       !sortedTerminals.some((terminal) => terminal.id === editingTerminalId)
@@ -721,7 +821,7 @@ const TerminalTabBar = ({
                     }}
                     onMouseDown={(e) => handleMouseDown(e, index)}
                     onContextMenu={(e) => handleContextMenu(e, terminal)}
-                    onDragStart={handleDragStart}
+                    onDragStart={(e) => handleDragStart(e, index)}
                     onDragEnd={handleDragEnd}
                     onKeyDown={handleKeyDown}
                     handleTabClose={handleTabCloseWrapper}
@@ -780,7 +880,7 @@ const TerminalTabBar = ({
                   }}
                   onMouseDown={(e) => handleMouseDown(e, index)}
                   onContextMenu={(e) => handleContextMenu(e, terminal)}
-                  onDragStart={handleDragStart}
+                  onDragStart={(e) => handleDragStart(e, index)}
                   onDragEnd={handleDragEnd}
                   onKeyDown={handleKeyDown}
                   handleTabClose={handleTabCloseWrapper}

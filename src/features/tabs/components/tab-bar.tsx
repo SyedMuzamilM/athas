@@ -15,6 +15,7 @@ import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { formatDiffBufferLabel } from "@/features/git/utils/diff-buffer-label";
+import { BOTTOM_PANE_ID } from "@/features/panes/constants/pane";
 import { findPaneGroup } from "@/features/panes/utils/pane-tree";
 import { usePaneStore } from "@/features/panes/stores/pane-store";
 import { useSettingsStore } from "@/features/settings/store";
@@ -23,8 +24,16 @@ import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
 import { useSidebarStore } from "@/features/layout/stores/sidebar-store";
 import { useTerminalStore } from "@/features/terminal/stores/terminal-store";
 import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-dialog";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import { Button } from "@/ui/button";
 import { calculateDisplayNames } from "../utils/path-shortener";
+import {
+  clearInternalTabDragData,
+  getInternalTabDragData,
+  resolveDropTarget,
+  setInternalTabDragHover,
+  setInternalTabDragData,
+} from "../utils/internal-tab-drag";
 import { NewTabMenu } from "./new-tab-menu";
 import TabBarItem from "./tab-bar-item";
 import TabContextMenu from "./tab-context-menu";
@@ -33,6 +42,7 @@ import TabDragPreview from "./tab-drag-preview";
 interface TabBarProps {
   paneId?: string;
   onTabClick?: (bufferId: string) => void;
+  disablePaneActions?: boolean;
 }
 
 const DRAG_THRESHOLD = 5;
@@ -45,12 +55,17 @@ interface TabPosition {
   center: number;
 }
 
-const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
+const TabBar = ({
+  paneId,
+  onTabClick: externalTabClick,
+  disablePaneActions = false,
+}: TabBarProps) => {
   // Get everything from stores
   const allBuffers = useBufferStore.use.buffers();
   const globalActiveBufferId = useBufferStore.use.activeBufferId();
   const pendingClose = useBufferStore.use.pendingClose();
   const paneRoot = usePaneStore.use.root();
+  const bottomRoot = usePaneStore.use.bottomRoot();
   const fullscreenPaneId = usePaneStore.use.fullscreenPaneId();
   const {
     moveBufferToPane,
@@ -62,7 +77,11 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
   } = usePaneStore.use.actions();
 
   // Filter buffers by paneId if provided
-  const pane = paneId ? findPaneGroup(paneRoot, paneId) : null;
+  const pane = paneId
+    ? paneId === BOTTOM_PANE_ID
+      ? findPaneGroup(bottomRoot, BOTTOM_PANE_ID)
+      : findPaneGroup(paneRoot, paneId)
+    : null;
   const buffers = pane ? allBuffers.filter((b) => pane.bufferIds.includes(b.id)) : allBuffers;
   const activeBufferId = pane ? pane.activeBufferId : globalActiveBufferId;
   const {
@@ -78,6 +97,7 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
     convertPreviewToDefinite,
   } = useBufferStore.use.actions();
   const { handleSave } = useEditorAppStore.use.actions();
+  const { openTerminalBuffer } = useBufferStore.use.actions();
   const { settings } = useSettingsStore();
   const { updateActivePath } = useSidebarStore();
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.() || undefined;
@@ -86,6 +106,7 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
   const canGoForward = jumpListActions.canGoForward();
   const isPaneFullscreen = paneId ? fullscreenPaneId === paneId : false;
   const isInSplit = paneRoot.type === "split";
+  const isBottomPane = paneId === BOTTOM_PANE_ID;
 
   // Drag state
   const [dragState, setDragState] = useState<{
@@ -429,6 +450,7 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
           };
         }
         if (prev.isDragging) {
+          setInternalTabDragHover(currentPosition);
           const { dropTarget, direction } = calculateDropTarget(
             e.clientX,
             prev.dropTargetIndex,
@@ -470,6 +492,12 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
         return;
       }
       const buffer = sortedBuffers[index];
+      if (!buffer) return;
+      setInternalTabDragData({
+        source: "pane",
+        bufferId: buffer.id,
+        paneId,
+      });
       if (externalTabClick) {
         externalTabClick(buffer.id);
       } else {
@@ -482,7 +510,6 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
         `Switched to ${buffer.name}${buffer.type === "editor" && buffer.isDirty ? ", unsaved changes" : ""}`,
       );
 
-      e.preventDefault();
       setDragState({
         isDragging: false,
         draggedIndex: index,
@@ -534,14 +561,14 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
     (e: React.DragEvent, index: number) => {
       const buffer = sortedBuffers[index];
       if (!buffer) return;
-      e.dataTransfer.setData(
-        "application/tab-data",
-        JSON.stringify({
-          bufferId: buffer.id,
-          paneId: paneId,
-          bufferData: buffer,
-        }),
-      );
+      const dragData = {
+        source: "pane" as const,
+        bufferId: buffer.id,
+        paneId: paneId,
+      };
+      e.dataTransfer.setData("application/tab-data", JSON.stringify(dragData));
+      e.dataTransfer.setData("text/plain", "athas-internal-tab-drag");
+      setInternalTabDragData(dragData);
       e.dataTransfer.effectAllowed = "move";
       const dragImage = document.createElement("div");
       dragImage.className =
@@ -558,13 +585,18 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
     [sortedBuffers, paneId],
   );
 
-  const handleDragEnd = useCallback(() => {}, []);
+  const handleDragEnd = useCallback(() => {
+    clearInternalTabDragData();
+  }, []);
 
   // Handle drag over for cross-pane drops
   const handleTabBarDragOver = useCallback(
     (e: React.DragEvent) => {
-      const tabDataString = e.dataTransfer.types.includes("application/tab-data");
-      if (tabDataString && paneId) {
+      const hasInternalTabDrag =
+        e.dataTransfer.types.includes("application/tab-data") ||
+        e.dataTransfer.types.includes("text/plain") ||
+        !!getInternalTabDragData();
+      if (hasInternalTabDrag && paneId) {
         e.preventDefault();
         e.dataTransfer.dropEffect = "move";
         setIsDropTarget(true);
@@ -586,12 +618,27 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
       if (!paneId) return;
 
       const tabDataString = e.dataTransfer.getData("application/tab-data");
-      if (tabDataString) {
+      const fallbackTabData = getInternalTabDragData();
+      if (tabDataString || fallbackTabData) {
         try {
-          const tabData = JSON.parse(tabDataString);
-          const { bufferId, paneId: sourcePaneId } = tabData;
+          const tabData = tabDataString ? JSON.parse(tabDataString) : fallbackTabData;
+          const { bufferId, paneId: sourcePaneId, source, terminalId } = tabData;
 
-          if (sourcePaneId && sourcePaneId !== paneId) {
+          if (source === "terminal-panel" && terminalId) {
+            setActivePane(paneId);
+            openTerminalBuffer({
+              sessionId: terminalId,
+              name: tabData.name,
+              command: tabData.initialCommand,
+              workingDirectory: tabData.currentDirectory,
+              remoteConnectionId: tabData.remoteConnectionId,
+            });
+            window.dispatchEvent(
+              new CustomEvent("terminal-detach-to-buffer", {
+                detail: { terminalId },
+              }),
+            );
+          } else if (sourcePaneId && sourcePaneId !== paneId) {
             // Move buffer from source pane to this pane
             setActivePane(paneId);
             moveBufferToPane(bufferId, sourcePaneId, paneId);
@@ -601,10 +648,12 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
           }
         } catch {
           // Invalid tab data
+        } finally {
+          clearInternalTabDragData();
         }
       }
     },
-    [paneId, setActivePane, moveBufferToPane, addBufferToPane],
+    [paneId, setActivePane, moveBufferToPane, addBufferToPane, openTerminalBuffer],
   );
 
   const handleCopyPath = useCallback(
@@ -671,8 +720,36 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
 
     const handleGlobalMouseUp = () => {
       const currentState = dragStateRef.current;
+      const draggedBuffer =
+        currentState.draggedIndex !== null ? sortedBuffers[currentState.draggedIndex] : null;
+      const target = currentState.currentPosition
+        ? resolveDropTarget(currentState.currentPosition)
+        : { paneId: null, zone: null };
 
       if (
+        currentState.isDragging &&
+        draggedBuffer &&
+        paneId &&
+        target.paneId &&
+        (target.paneId !== paneId || (target.zone && target.zone !== "center"))
+      ) {
+        let destinationPaneId = target.paneId;
+        const preserveEmptySource = target.paneId === paneId;
+        if (target.zone && target.zone !== "center") {
+          const direction =
+            target.zone === "left" || target.zone === "right" ? "horizontal" : "vertical";
+          const placement = target.zone === "left" || target.zone === "top" ? "before" : "after";
+          destinationPaneId =
+            splitPane(target.paneId, direction, undefined, placement) ?? target.paneId;
+        }
+
+        setActivePane(destinationPaneId);
+        moveBufferToPane(draggedBuffer.id, paneId, destinationPaneId, preserveEmptySource);
+        if (destinationPaneId === BOTTOM_PANE_ID) {
+          useUIState.getState().setBottomPaneActiveTab("buffers");
+          useUIState.getState().setIsBottomPaneVisible(true);
+        }
+      } else if (
         currentState.isDragging &&
         currentState.draggedIndex !== null &&
         currentState.dropTargetIndex !== null &&
@@ -705,6 +782,7 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
         lastValidDropTarget: null,
         dragDirection: null,
       });
+      clearInternalTabDragData();
     };
 
     document.addEventListener("mousemove", handleGlobalMouseMove);
@@ -714,7 +792,17 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
       document.removeEventListener("mousemove", handleGlobalMouseMove);
       document.removeEventListener("mouseup", handleGlobalMouseUp);
     };
-  }, [dragState.draggedIndex, reorderBuffers, handleTabClick, sortedBuffers, handleMouseMove]);
+  }, [
+    dragState.draggedIndex,
+    reorderBuffers,
+    handleTabClick,
+    sortedBuffers,
+    handleMouseMove,
+    moveBufferToPane,
+    paneId,
+    setActivePane,
+    splitPane,
+  ]);
 
   useEffect(() => {
     tabRefs.current = tabRefs.current.slice(0, sortedBuffers.length);
@@ -812,6 +900,7 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
     <>
       <div
         ref={tabBarRef}
+        data-tab-bar-pane-id={paneId ?? ""}
         className={`relative flex shrink-0 items-center gap-1 overflow-hidden bg-primary-bg px-1.5 py-1 ${isDropTarget ? "ring-2 ring-accent ring-inset" : ""}`}
         role="tablist"
         aria-label="Open files"
@@ -892,7 +981,7 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
         </div>
 
         <div className="flex shrink-0 items-center gap-1 pl-0.5">
-          {paneId && isInSplit && (
+          {paneId && !disablePaneActions && !isBottomPane && isInSplit && (
             <Button
               type="button"
               onClick={() => closePane(paneId)}
@@ -906,7 +995,7 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
               <PanelLeftClose />
             </Button>
           )}
-          {paneId && activeBufferId && (
+          {paneId && !disablePaneActions && !isBottomPane && activeBufferId && (
             <Button
               type="button"
               onClick={handleSplitActivePane}
@@ -920,7 +1009,7 @@ const TabBar = ({ paneId, onTabClick: externalTabClick }: TabBarProps) => {
               <SplitSquareHorizontal />
             </Button>
           )}
-          {paneId && (
+          {paneId && !disablePaneActions && !isBottomPane && (
             <Button
               type="button"
               onClick={handleTogglePaneFullscreen}

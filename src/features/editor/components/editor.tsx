@@ -68,6 +68,7 @@ import { Minimap } from "./minimap/minimap";
 
 interface EditorProps {
   bufferId?: string;
+  viewStateKey?: string;
   isActiveSurface?: boolean;
   isPreviewMode?: boolean;
   readOnly?: boolean;
@@ -86,6 +87,7 @@ const LARGE_FILE_SCROLL_TOKENIZE_DEBOUNCE_MS = 120;
 
 export function Editor({
   bufferId: propBufferId,
+  viewStateKey,
   isActiveSurface = true,
   isPreviewMode = false,
   readOnly = false,
@@ -325,6 +327,7 @@ export function Editor({
   const { switchGuardRef } = useBufferSwitch({
     enabled: isActiveSurface,
     bufferId,
+    viewStateKey: viewStateKey ?? bufferId ?? null,
     content: displayContent,
     textareaRef: inputRef,
     forceUpdateViewport,
@@ -672,6 +675,7 @@ export function Editor({
   // Extracted scroll handler with switchGuard
   const { handleScroll, isScrollingRef } = useEditorScroll({
     bufferId,
+    viewStateKey: viewStateKey ?? bufferId ?? null,
     linesCount: lines.length,
     minimapEnabled,
     switchGuardRef,

@@ -7,6 +7,7 @@ import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useCenterCursor } from "@/features/editor/hooks/use-center-cursor";
 import { PREVIEW_DEBOUNCE_DELAY, SEARCH_DEBOUNCE_DELAY } from "../constants/limits";
+import { useFffSearch } from "./use-fff-search";
 import { useFileLoader } from "./use-file-loader";
 import { useFileSearch } from "./use-file-search";
 import { useKeyboardNavigation } from "./use-keyboard-navigation";
@@ -41,9 +42,12 @@ export const useQuickOpen = () => {
     rootFolderPath: loaderRootFolder,
   } = useFileLoader(isQuickOpenVisible);
 
+  const { hits: fffHits } = useFffSearch(debouncedQuery, isQuickOpenVisible && !isSymbolMode);
+
   const { openBufferFiles, recentFilesInResults, otherFiles } = useFileSearch(
     files,
     isSymbolMode ? "" : debouncedQuery,
+    isSymbolMode ? null : fffHits,
   );
 
   // Symbol search (only active in @ mode)

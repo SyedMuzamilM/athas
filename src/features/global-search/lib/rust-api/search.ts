@@ -17,6 +17,8 @@ export interface SearchFilesRequest {
   root_path: string;
   query: string;
   case_sensitive?: boolean;
+  whole_word?: boolean;
+  use_regex?: boolean;
   max_results?: number;
 }
 

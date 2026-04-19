@@ -143,6 +143,7 @@ interface EditorState {
   editorRef: RefObject<HTMLDivElement | null> | null;
   placeholder?: string;
   disabled: boolean;
+  activeEditorViewKey: string | null;
 
   // Actions
   actions: EditorStateActions;
@@ -178,6 +179,7 @@ interface EditorStateActions {
   setFileInfo: (filePath: string) => void;
   setPlaceholder: (placeholder?: string) => void;
   setDisabled: (disabled: boolean) => void;
+  setActiveEditorViewKey: (viewKey: string | null) => void;
 }
 
 export const useEditorStateStore = createSelectors(
@@ -204,14 +206,17 @@ export const useEditorStateStore = createSelectors(
       editorRef: null,
       placeholder: undefined,
       disabled: false,
+      activeEditorViewKey: null,
 
       // Actions
       actions: {
         // Cursor actions
         setCursorPosition: (position) => {
-          const activeBufferId = useBufferStore.getState().activeBufferId;
-          if (activeBufferId) {
-            viewStateCache.setCursor(activeBufferId, position);
+          const { activeBufferId } = useBufferStore.getState();
+          const activeEditorViewKey = useEditorStateStore.getState().activeEditorViewKey;
+          const viewKey = activeEditorViewKey ?? activeBufferId;
+          if (viewKey) {
+            viewStateCache.setCursor(viewKey, position);
           }
           set({ cursorPosition: position });
           ensureCursorVisible(position);
@@ -359,9 +364,11 @@ export const useEditorStateStore = createSelectors(
 
         // Layout actions
         setScroll: (scrollTop, scrollLeft) => {
-          const activeBufferId = useBufferStore.getState().activeBufferId;
-          if (activeBufferId) {
-            viewStateCache.setScroll(activeBufferId, scrollTop, scrollLeft);
+          const { activeBufferId } = useBufferStore.getState();
+          const activeEditorViewKey = useEditorStateStore.getState().activeEditorViewKey;
+          const viewKey = activeEditorViewKey ?? activeBufferId;
+          if (viewKey) {
+            viewStateCache.setScroll(viewKey, scrollTop, scrollLeft);
           }
           set({ scrollTop, scrollLeft });
         },
@@ -384,6 +391,7 @@ export const useEditorStateStore = createSelectors(
         setFileInfo: (filePath) => set({ filePath }),
         setPlaceholder: (placeholder) => set({ placeholder }),
         setDisabled: (disabled) => set({ disabled }),
+        setActiveEditorViewKey: (activeEditorViewKey) => set({ activeEditorViewKey }),
       },
     })),
   ),

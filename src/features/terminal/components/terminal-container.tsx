@@ -12,7 +12,6 @@ import {
   SYSTEM_DEFAULT_PROFILE_ID,
 } from "@/features/terminal/utils/terminal-profiles";
 import { useUIState } from "@/features/window/stores/ui-state-store";
-import { useZoomStore } from "@/features/window/stores/zoom-store";
 import { Button } from "@/ui/button";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
@@ -70,8 +69,6 @@ const TerminalContainer = ({
     },
     [originalCloseTerminal],
   );
-
-  const zoomLevel = useZoomStore.use.terminalZoomLevel();
 
   const hasInitializedRef = useRef(false);
   const wasVisibleRef = useRef(false);
@@ -476,6 +473,14 @@ const TerminalContainer = ({
       handleNewTerminal();
     };
 
+    const handleDetachTerminalToBuffer = (event: Event) => {
+      const terminalId = (event as CustomEvent<{ terminalId?: string }>).detail?.terminalId;
+      if (!terminalId) return;
+      requestAnimationFrame(() => {
+        closeTerminal(terminalId);
+      });
+    };
+
     const handleEnsureTerminalSession = () => {
       if (terminals.length === 0) {
         hasInitializedRef.current = true;
@@ -497,17 +502,26 @@ const TerminalContainer = ({
     };
 
     window.addEventListener("terminal-new", handleNewTerminalEvent);
+    window.addEventListener("terminal-detach-to-buffer", handleDetachTerminalToBuffer);
     window.addEventListener("terminal-ensure-session", handleEnsureTerminalSession);
     window.addEventListener("terminal-split", handleSplitTerminalEvent);
     window.addEventListener("terminal-activate-tab", handleActivateTerminalTab);
 
     return () => {
       window.removeEventListener("terminal-new", handleNewTerminalEvent);
+      window.removeEventListener("terminal-detach-to-buffer", handleDetachTerminalToBuffer);
       window.removeEventListener("terminal-ensure-session", handleEnsureTerminalSession);
       window.removeEventListener("terminal-split", handleSplitTerminalEvent);
       window.removeEventListener("terminal-activate-tab", handleActivateTerminalTab);
     };
-  }, [terminals, focusActiveTerminal, handleNewTerminal, setActiveTerminal, handleSplitView]);
+  }, [
+    terminals,
+    focusActiveTerminal,
+    handleNewTerminal,
+    setActiveTerminal,
+    handleSplitView,
+    closeTerminal,
+  ]);
 
   // Auto-create first terminal when the pane becomes visible
   useEffect(() => {
@@ -564,14 +578,7 @@ const TerminalContainer = ({
   };
 
   const terminalSessions = (
-    <div
-      className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-primary-bg"
-      style={{
-        transform: `scale(${zoomLevel})`,
-        transformOrigin: "top left",
-        width: `${100 / zoomLevel}%`,
-      }}
-    >
+    <div className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-primary-bg">
       {(() => {
         return (
           <div className="flex h-full min-h-0 flex-col">

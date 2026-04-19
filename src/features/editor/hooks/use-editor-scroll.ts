@@ -6,6 +6,7 @@ const SCROLL_STATE_UPDATE_INTERVAL_MS = 33;
 
 interface UseEditorScrollOptions {
   bufferId: string | null;
+  viewStateKey: string | null;
   linesCount: number;
   minimapEnabled: boolean;
   switchGuardRef: RefObject<number>;
@@ -24,6 +25,7 @@ interface UseEditorScrollOptions {
 
 export function useEditorScroll({
   bufferId,
+  viewStateKey,
   linesCount,
   minimapEnabled,
   switchGuardRef,
@@ -110,7 +112,9 @@ export function useEditorScroll({
 
           const now = performance.now();
           if (now - lastStoreScrollUpdateRef.current >= SCROLL_STATE_UPDATE_INTERVAL_MS) {
-            useEditorStateStore.getState().actions.setScrollForBuffer(currentBufferId, top, left);
+            useEditorStateStore
+              .getState()
+              .actions.setScrollForBuffer(viewStateKey ?? currentBufferId, top, left);
             lastStoreScrollUpdateRef.current = now;
           }
 
@@ -123,12 +127,15 @@ export function useEditorScroll({
       scrollTimeoutRef.current = setTimeout(() => {
         isScrollingRef.current = false;
         const { top, left } = lastScrollRef.current;
-        useEditorStateStore.getState().actions.setScrollForBuffer(currentBufferId, top, left);
+        useEditorStateStore
+          .getState()
+          .actions.setScrollForBuffer(viewStateKey ?? currentBufferId, top, left);
         lastStoreScrollUpdateRef.current = performance.now();
       }, 150);
     },
     [
       bufferId,
+      viewStateKey,
       handleViewportScroll,
       linesCount,
       minimapEnabled,

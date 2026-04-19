@@ -49,7 +49,9 @@ const QuickOpen = () => {
       onClose={onClose}
       className={cn(
         "overflow-hidden",
-        showPreview ? "h-[520px] max-h-[520px] w-[980px]" : "max-h-80",
+        showPreview
+          ? "h-[min(520px,calc(100dvh-128px))] w-[min(980px,calc(100vw-32px))]"
+          : "max-h-[min(320px,calc(100dvh-128px))] w-[min(520px,calc(100vw-32px))]",
       )}
     >
       <CommandHeader onClose={onClose}>

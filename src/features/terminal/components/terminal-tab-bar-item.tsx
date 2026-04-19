@@ -109,7 +109,7 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
         onMouseDown={isEditing ? undefined : onMouseDown}
         onContextMenu={onContextMenu}
         onKeyDown={onKeyDown}
-        draggable={!isEditing}
+        draggable={false}
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
         onAuxClick={handleAuxClick}
@@ -184,7 +184,7 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
         ) : (
           <span
             className={cn(
-              "ui-font ui-text-sm max-w-full overflow-hidden text-ellipsis whitespace-nowrap",
+              "ui-font ui-text-sm max-w-full select-none overflow-hidden text-ellipsis whitespace-nowrap",
               "text-left",
               isActive ? "text-text" : "text-text-lighter",
             )}

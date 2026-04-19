@@ -1,5 +1,5 @@
 import type React from "react";
-import { useCallback, useEffect, useRef, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { CsvPreview } from "@/extensions/viewers/csv/csv-preview";
 import { useLspIntegration } from "@/features/editor/hooks/use-lsp-integration";
 import { useEditorScroll } from "@/features/editor/hooks/use-scroll";
@@ -24,6 +24,7 @@ import { useCodeLens } from "../lsp/use-code-lens";
 import { useInlayHints } from "../lsp/use-inlay-hints";
 import { useRename } from "../lsp/use-rename";
 import { MarkdownPreview } from "../markdown/markdown-preview";
+import type { Position } from "../types/editor";
 import { ScrollDebugOverlay } from "./debug/scroll-debug-overlay";
 import { Editor } from "./editor";
 import { HtmlPreview } from "./html/html-preview";
@@ -63,6 +64,7 @@ const SEARCH_DEBOUNCE_MS = 300; // Debounce search regex matching
 
 const CodeEditor = ({
   className,
+  paneId,
   bufferId: propBufferId,
   isActiveSurface = true,
   showToolbar = true,
@@ -78,14 +80,17 @@ const CodeEditor = ({
   const inlayHintsRef = useRef<HTMLDivElement>(null);
   const renameInputRef = useRef<HTMLDivElement>(null);
   const lspScrollRafRef = useRef<number | null>(null);
-  const { setRefs, setContent, setFileInfo } = useEditorStateStore.use.actions();
+  const { setRefs, setContent, setFileInfo, setActiveEditorViewKey } =
+    useEditorStateStore.use.actions();
   const { setDisabled } = useEditorSettingsStore.use.actions();
 
   const buffers = useBufferStore.use.buffers();
   const globalActiveBufferId = useBufferStore.use.activeBufferId();
   const activeBufferId = propBufferId ?? globalActiveBufferId;
+  const activeEditorViewKey = useEditorStateStore.use.activeEditorViewKey();
   const zoomLevel = useZoomStore.use.editorZoomLevel();
   const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
+  const editorViewKey = paneId && activeBufferId ? `${paneId}:${activeBufferId}` : activeBufferId;
   const { handleContentChange } = useEditorAppStore.use.actions();
   const searchQuery = useEditorUIStore.use.searchQuery();
   const searchMatches = useEditorUIStore.use.searchMatches();
@@ -116,6 +121,11 @@ const CodeEditor = ({
       editorRef,
     });
   }, [isActiveSurface, setRefs]);
+
+  useEffect(() => {
+    if (!isActiveSurface) return;
+    setActiveEditorViewKey(editorViewKey ?? null);
+  }, [editorViewKey, isActiveSurface, setActiveEditorViewKey]);
 
   // Focus editor when active buffer changes
   useEffect(() => {
@@ -153,6 +163,17 @@ const CodeEditor = ({
 
   // Get cursor position for LSP integration
   const cursorPosition = useEditorStateStore.use.cursorPosition();
+  const displayCursorPosition = useMemo<Position>(() => {
+    if (activeEditorViewKey === editorViewKey) {
+      return cursorPosition;
+    }
+
+    const cachedCursor = editorViewKey
+      ? useEditorStateStore.getState().actions.getCachedPosition(editorViewKey)
+      : null;
+
+    return cachedCursor ?? { line: 0, column: 0, offset: 0 };
+  }, [activeEditorViewKey, cursorPosition, editorViewKey]);
 
   // Consolidated LSP integration (document lifecycle, completions, hover, go-to-definition)
   const { hoverHandlers, goToDefinitionHandlers, definitionLinkHandlers } = useLspIntegration({
@@ -394,7 +415,14 @@ const CodeEditor = ({
       <EditorStylesheet />
       <div className="absolute inset-0 flex flex-col overflow-hidden">
         {/* Breadcrumbs */}
-        {showToolbar && <Breadcrumb {...breadcrumbProps} />}
+        {showToolbar && (
+          <Breadcrumb
+            {...breadcrumbProps}
+            bufferId={activeBufferId ?? undefined}
+            cursorPosition={displayCursorPosition}
+            filePathOverride={breadcrumbProps?.filePathOverride ?? filePath}
+          />
+        )}
 
         {/* Find Bar */}
         {showToolbar && enableInteractiveServices && <FindBar />}
@@ -468,6 +496,7 @@ const CodeEditor = ({
             ) : (
               <Editor
                 bufferId={activeBufferId ?? undefined}
+                viewStateKey={editorViewKey ?? undefined}
                 isActiveSurface={isActiveSurface}
                 isPreviewMode={isPreviewBuffer}
                 readOnly={readOnly}

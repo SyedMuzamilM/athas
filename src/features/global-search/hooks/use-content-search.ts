@@ -42,22 +42,13 @@ export const useContentSearch = (isVisible: boolean) => {
     setIsSearching(true);
     setError(null);
 
-    let effectiveQuery = debouncedQuery;
-    if (searchOptions.useRegex) {
-      if (searchOptions.wholeWord) {
-        effectiveQuery = `\\b${debouncedQuery}\\b`;
-      }
-    } else {
-      if (searchOptions.wholeWord) {
-        effectiveQuery = `\\b${debouncedQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`;
-      }
-    }
-
     try {
       const searchResults = await searchFilesContent({
         root_path: rootFolderPath,
-        query: effectiveQuery,
+        query: debouncedQuery,
         case_sensitive: searchOptions.caseSensitive,
+        whole_word: searchOptions.wholeWord,
+        use_regex: searchOptions.useRegex,
         max_results: 100,
       });
 

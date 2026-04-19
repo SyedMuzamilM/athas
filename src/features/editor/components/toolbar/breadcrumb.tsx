@@ -3,6 +3,7 @@ import { Eye, Search, Sparkles } from "lucide-react";
 import { EditorStatusActions } from "@/features/editor/components/toolbar/editor-status-actions";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar-store";
+import type { Position } from "@/features/editor/types/editor";
 import { hasTextContent } from "@/features/panes/types/pane-content";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useExtensionActions } from "@/extensions/ui/hooks/use-extension-actions";
@@ -12,6 +13,8 @@ import { Button } from "@/ui/button";
 import { FilePathBreadcrumb } from "./file-path-breadcrumb";
 
 export interface BreadcrumbProps {
+  bufferId?: string;
+  cursorPosition?: Position;
   filePathOverride?: string;
   rightContent?: ReactNode;
   extraLeftContent?: ReactNode;
@@ -20,6 +23,8 @@ export interface BreadcrumbProps {
 }
 
 export default function Breadcrumb({
+  bufferId,
+  cursorPosition,
   filePathOverride,
   rightContent,
   extraLeftContent,
@@ -28,7 +33,8 @@ export default function Breadcrumb({
 }: BreadcrumbProps = {}) {
   const buffers = useBufferStore.use.buffers();
   const activeBufferId = useBufferStore.use.activeBufferId();
-  const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
+  const resolvedBufferId = bufferId ?? activeBufferId;
+  const activeBuffer = buffers.find((b) => b.id === resolvedBufferId) || null;
   const showBreadcrumbPath = useSettingsStore((state) => state.settings.coreFeatures.breadcrumbs);
   const { isFindVisible, setIsFindVisible } = useUIState();
   const inlineEditActions = useInlineEditToolbarStore.use.actions();
@@ -139,7 +145,10 @@ export default function Breadcrumb({
           <Search />
         </Button>
         <div className="mx-1 h-3.5 w-px bg-border/70" />
-        <EditorStatusActions />
+        <EditorStatusActions
+          bufferId={resolvedBufferId ?? undefined}
+          cursorPosition={cursorPosition}
+        />
       </>
     ) : null;
 

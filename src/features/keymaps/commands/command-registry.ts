@@ -352,8 +352,7 @@ const viewCommands: Command[] = [
     category: "View",
     keybinding: "cmd+shift+p",
     execute: () => {
-      const state = useUIState.getState();
-      state.setIsCommandPaletteVisible(!state.isCommandPaletteVisible);
+      useUIState.getState().setIsCommandPaletteVisible(true);
     },
   },
   {

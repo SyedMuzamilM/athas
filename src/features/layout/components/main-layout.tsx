@@ -28,6 +28,7 @@ import { useUIState } from "@/features/window/stores/ui-state-store";
 import { parseDroppedPaths } from "@/features/file-system/utils/file-system-dropped-paths";
 import { ExtensionDialogs } from "@/extensions/ui/components/extension-dialog";
 import { frontendTrace } from "@/utils/frontend-trace";
+import { getInternalTabDragData } from "@/features/tabs/utils/internal-tab-drag";
 import { VimSearchBar } from "../../vim/components/vim-search-bar";
 import CustomTitleBarWithSettings from "../../window/components/custom-title-bar";
 import BottomPane from "./bottom-pane/bottom-pane";
@@ -243,7 +244,7 @@ export function MainLayout() {
   return (
     <div className="relative flex h-full w-full flex-col overflow-hidden bg-secondary-bg">
       {/* Drag-and-drop overlay */}
-      {isDraggingOver && (
+      {isDraggingOver && !getInternalTabDragData() && (
         <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-primary-bg/90 backdrop-blur-sm">
           <div className="rounded-lg border-2 border-accent border-dashed bg-secondary-bg px-8 py-6">
             <p className="font-medium text-text text-xl">

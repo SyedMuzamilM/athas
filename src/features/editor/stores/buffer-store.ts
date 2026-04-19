@@ -155,6 +155,7 @@ interface BufferActions {
     command?: string;
     workingDirectory?: string;
     remoteConnectionId?: string;
+    sessionId?: string;
   }) => string;
   openAgentBuffer: (sessionId?: string) => string;
   closeBuffer: (bufferId: string) => void;
@@ -1163,6 +1164,7 @@ export const useBufferStore = createSelectors(
           command?: string;
           workingDirectory?: string;
           remoteConnectionId?: string;
+          sessionId?: string;
         }): string => {
           return get().actions.openContent({
             type: "terminal",
@@ -1170,6 +1172,7 @@ export const useBufferStore = createSelectors(
             command: options?.command,
             workingDirectory: options?.workingDirectory,
             remoteConnectionId: options?.remoteConnectionId,
+            sessionId: options?.sessionId,
           });
         },
 

@@ -208,7 +208,7 @@ impl FffSearchState {
       Self(std::sync::OnceLock::new())
    }
 
-   fn get_or_init(&self, app: &AppHandle) -> Result<&FffSearch, String> {
+   pub(crate) fn get_or_init(&self, app: &AppHandle) -> Result<&FffSearch, String> {
       if let Some(fff) = self.0.get() {
          return Ok(fff);
       }

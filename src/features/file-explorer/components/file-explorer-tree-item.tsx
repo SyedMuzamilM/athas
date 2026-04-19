@@ -36,7 +36,8 @@ function FileExplorerTreeItemComponent({
 }: FileExplorerTreeItemProps) {
   const isCut = useFileClipboardStore(
     (s) =>
-      s.clipboard?.operation === "cut" && s.clipboard.entries.some((e) => e.path === file.path),
+      s.clipboard?.operation === "cut" &&
+      s.clipboard.entries.some((e) => e.path === file.path),
   );
   const paddingLeft = 14 + depth * 20;
   const treeGuideStyle = {
@@ -45,9 +46,13 @@ function FileExplorerTreeItemComponent({
 
   if (file.isEditing || file.isRenaming) {
     return (
-      <div className="file-tree-item w-full" data-depth={depth} style={treeGuideStyle}>
+      <div
+        className="file-tree-item w-full"
+        data-depth={depth}
+        style={treeGuideStyle}
+      >
         <div
-          className="file-tree-row flex min-h-[22px] w-full items-center gap-1.5 rounded-md px-1.5 py-0.5"
+          className="file-tree-row flex min-h-6 w-full items-center gap-1.5 rounded-md px-1.5 py-1"
           style={{
             paddingLeft: `${paddingLeft}px`,
             paddingRight: "8px",
@@ -85,7 +90,7 @@ function FileExplorerTreeItemComponent({
             onKeyDown={(e) => onKeyDown(e, file)}
             onBlur={() => onBlur(file)}
             variant="ghost"
-            className="ui-font relative z-[1] flex-1 border-text border-b px-0 focus:border-text-lighter"
+            className="ui-font relative z-1 flex-1 border-text border-b px-0 focus:border-text-lighter"
             placeholder={file.isDir ? "folder name" : "file name"}
           />
         </div>
@@ -94,7 +99,11 @@ function FileExplorerTreeItemComponent({
   }
 
   return (
-    <div className="file-tree-item w-full" data-depth={depth} style={treeGuideStyle}>
+    <div
+      className="file-tree-item w-full"
+      data-depth={depth}
+      style={treeGuideStyle}
+    >
       <button
         type="button"
         data-file-path={file.path}
@@ -102,11 +111,13 @@ function FileExplorerTreeItemComponent({
         data-path={file.path}
         data-depth={depth}
         title={
-          file.isSymlink && file.symlinkTarget ? `Symlink to: ${file.symlinkTarget}` : undefined
+          file.isSymlink && file.symlinkTarget
+            ? `Symlink to: ${file.symlinkTarget}`
+            : undefined
         }
         className={cn(
-          "file-tree-row ui-font flex min-h-[22px] w-full min-w-max cursor-pointer select-none items-center gap-1.5",
-          "whitespace-nowrap border-none bg-transparent px-1.5 py-0.5 text-left text-text text-xs",
+          "file-tree-row ui-font flex min-h-6 w-full min-w-max cursor-pointer select-none items-center gap-1.5",
+          "whitespace-nowrap border-none bg-transparent px-1.5 py-1 text-left text-text text-xs",
           "outline-none transition-colors duration-150",
           "rounded-md hover:bg-hover focus:outline-none",
           isActive && "bg-selected",
@@ -120,7 +131,7 @@ function FileExplorerTreeItemComponent({
           {
             paddingLeft: `${paddingLeft}px`,
             paddingRight: "8px",
-            height: "22px",
+            height: "24px",
           } as React.CSSProperties
         }
       >
@@ -132,7 +143,10 @@ function FileExplorerTreeItemComponent({
           className="relative z-[1] shrink-0 text-text-lighter"
         />
         <span
-          className={cn("relative z-[1] select-none whitespace-nowrap", getGitStatusClass(file))}
+          className={cn(
+            "relative z-[1] select-none whitespace-nowrap",
+            getGitStatusClass(file),
+          )}
         >
           {file.name}
         </span>
