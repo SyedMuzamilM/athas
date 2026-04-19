@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import { AlertCircle, Check, ChevronDown, Lock, RefreshCw, Search, X } from "lucide-react";
 import {
   type KeyboardEvent as ReactKeyboardEvent,
@@ -12,11 +11,7 @@ import {
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import ProviderApiKeyModal from "@/features/ai/components/provider-api-key-modal";
 import { useAIChatStore } from "@/features/ai/store/store";
-import {
-  getAvailableProviders,
-  getModelById,
-  getProviderById,
-} from "@/features/ai/types/providers";
+import { getAvailableProviders, getProviderById } from "@/features/ai/types/providers";
 import { useProFeature } from "@/extensions/ui/hooks/use-pro-feature";
 import { ProBadge } from "@/extensions/ui/components/pro-badge";
 import { getProviderApiToken } from "@/features/ai/services/ai-token-service";
@@ -89,7 +84,6 @@ export function ProviderModelSelector({
 
   const providers = getAvailableProviders();
   const currentProvider = getProviderById(providerId);
-  const currentModel = getModelById(providerId, modelId);
   const providerInstance = getProvider(providerId);
   const supportsDynamicModels = !!providerInstance?.getModels;
 
