@@ -863,8 +863,8 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     id: "advanced-telemetry",
     tab: "advanced",
     section: "Telemetry",
-    label: "Usage Analytics",
-    description: "Send anonymous usage data to help improve Athas",
-    keywords: ["telemetry", "analytics", "tracking", "privacy", "usage", "data"],
+    label: "Anonymous Usage Telemetry",
+    description: "Send anonymous heartbeat, extension, and crash-report metadata",
+    keywords: ["telemetry", "analytics", "tracking", "privacy", "crash", "updates", "extensions"],
   },
 ];

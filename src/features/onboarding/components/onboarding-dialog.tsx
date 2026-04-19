@@ -34,19 +34,19 @@ function getModeCopy(mode: OnboardingMode, currentVersion: string, previousVersi
   if (mode === "updated") {
     return {
       privacyDescription: previousVersion
-        ? `Updated from ${previousVersion}. Anonymous telemetry is off by default.`
-        : "Anonymous telemetry is off by default.",
+        ? `Updated from ${previousVersion}. Anonymous usage telemetry is off by default.`
+        : "Anonymous usage telemetry is off by default.",
     };
   }
 
   if (mode === "preview") {
     return {
-      privacyDescription: "Anonymous telemetry is off by default.",
+      privacyDescription: "Anonymous usage telemetry is off by default.",
     };
   }
 
   return {
-    privacyDescription: "Anonymous telemetry is off by default.",
+    privacyDescription: "Anonymous usage telemetry is off by default.",
   };
 }
 
@@ -123,7 +123,8 @@ export default function OnboardingDialog({ context, onClose, onComplete }: Onboa
                 Share anonymous telemetry
               </div>
               <p className="ui-font ui-text-sm mt-1 text-text-light">
-                Version, platform, architecture, and anonymous device ID only.
+                Heartbeats, extension metadata, and crash reports. Minimal update-check metadata is
+                always sent.
               </p>
             </div>
             <Switch checked={telemetry} onChange={setTelemetry} />

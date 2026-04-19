@@ -24,6 +24,11 @@ import {
 import { resolveInstalledExtensionId } from "./extension-store-runtime";
 import type { AvailableExtension, ExtensionInstallationMetadata } from "./extension-store-types";
 import type { ExtensionManifest } from "../types/extension-manifest";
+import {
+  recordExtensionLifecycleTelemetry,
+  recordExtensionRegistrySync,
+  recordExtensionUpdateCheck,
+} from "@/features/telemetry/services/telemetry";
 
 interface ExtensionStoreState {
   availableExtensions: Map<string, AvailableExtension>;
@@ -129,6 +134,15 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
               ext.runtimeIssues = runtimeIssues.get(id) || [];
             }
           });
+
+          void recordExtensionRegistrySync({
+            installedExtensions: Array.from(installedExtensions.entries()).map(
+              ([id, extension]) => ({
+                id,
+                version: extension.version,
+              }),
+            ),
+          });
         } catch (error) {
           console.error("Failed to load installed extensions:", error);
           set((state) => {
@@ -214,6 +228,12 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
               },
               reloadInstalledExtensions: get().actions.loadInstalledExtensions,
             });
+
+            void recordExtensionLifecycleTelemetry({
+              type: "extension_install",
+              extensionId,
+              version: extension.manifest.version,
+            });
           }
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
@@ -263,6 +283,12 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
             },
             reloadInstalledExtensions: get().actions.loadInstalledExtensions,
           });
+
+          void recordExtensionLifecycleTelemetry({
+            type: "extension_uninstall",
+            extensionId,
+            version: extension.manifest.version,
+          });
         } catch (error) {
           console.error(`Failed to uninstall extension ${extensionId}:`, error);
           throw error;
@@ -304,6 +330,14 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
             state.isCheckingUpdates = false;
           });
 
+          void recordExtensionUpdateCheck({
+            installedExtensions: installed.map((extension) => ({
+              id: resolveInstalledExtensionId(extension, get().availableExtensions),
+              version: extension.version,
+            })),
+            updates,
+          });
+
           return updates;
         } catch (error) {
           console.error("Failed to check for extension updates:", error);
@@ -340,6 +374,12 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
             });
           },
           reinstall: () => get().actions.installExtension(extensionId),
+        });
+
+        void recordExtensionLifecycleTelemetry({
+          type: "extension_update",
+          extensionId,
+          version: extension.manifest.version,
         });
       },
     },
