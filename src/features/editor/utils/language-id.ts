@@ -51,6 +51,7 @@ const EXTENSION_TO_LANGUAGE: Record<string, string> = {
   kts: "kotlin",
   scala: "scala",
   lua: "lua",
+  scm: "scheme",
   dart: "dart",
   ex: "elixir",
   exs: "elixir",

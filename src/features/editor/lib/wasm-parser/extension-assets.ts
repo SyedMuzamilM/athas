@@ -5,6 +5,7 @@ const QUERY_FOLDER_BY_LANGUAGE: Record<string, string> = {
   typescriptreact: "tsx",
   mdx: "markdown",
   csharp: "c_sharp",
+  scheme: "elisp",
 };
 
 function getQueryFolder(languageId: string): string {
