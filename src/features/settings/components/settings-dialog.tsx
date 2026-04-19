@@ -50,6 +50,7 @@ const SETTINGS_TAB_LABELS: Record<SettingsTab, string> = {
 
 const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
   const { settingsInitialTab, setSettingsInitialTab } = useUIState();
+  const settings = useSettingsStore((state) => state.settings);
   const [activeTab, setActiveTab] = useState<SettingsTab>("general");
   const subscription = useAuthStore((state) => state.subscription);
   const hasEnterpriseAccess = Boolean(subscription?.enterprise?.has_access);
@@ -122,6 +123,8 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
 
   if (!isOpen) return null;
 
+  const isTopNavigation = settings.settingsNavigationPosition === "top";
+
   return (
     <Dialog
       onClose={onClose}
@@ -143,13 +146,17 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
         content: "flex p-0",
       }}
     >
-      <div className="flex h-full w-full overflow-hidden">
-        {/* Sidebar */}
-        <div className="w-52">
-          <SettingsVerticalTabs activeTab={activeTab} onTabChange={handleTabChange} />
+      <div
+        className={cn("h-full w-full overflow-hidden", isTopNavigation ? "flex flex-col" : "flex")}
+      >
+        <div className={cn(isTopNavigation ? "border-border/70 border-b px-3 py-2" : "w-52")}>
+          <SettingsVerticalTabs
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+            orientation={isTopNavigation ? "horizontal" : "vertical"}
+          />
         </div>
 
-        {/* Main content area */}
         <div
           ref={contentRef}
           data-settings-content=""

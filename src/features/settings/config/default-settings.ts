@@ -45,6 +45,7 @@ export const defaultSettings: Settings = {
   autoThemeDark: "athas-dark",
   nativeMenuBar: false,
   compactMenuBar: true,
+  settingsNavigationPosition: "top",
   titleBarProjectMode: "tabs",
   headerTrailingItemsOrder: [...HEADER_TRAILING_ITEM_IDS],
   sidebarActivityItemsOrder: [...SIDEBAR_ACTIVITY_ITEM_IDS],

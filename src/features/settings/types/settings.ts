@@ -42,6 +42,7 @@ export interface Settings {
   autoThemeDark: Theme;
   nativeMenuBar: boolean;
   compactMenuBar: boolean;
+  settingsNavigationPosition: "top" | "left";
   titleBarProjectMode: "tabs" | "window";
   headerTrailingItemsOrder: HeaderTrailingItemId[];
   sidebarActivityItemsOrder: Array<SidebarActivityItemId | string>;

@@ -346,6 +346,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     description: "Choose where to position the sidebar",
     keywords: ["sidebar", "position", "left", "right", "layout"],
   },
+  {
+    id: "appearance-settings-navigation-position",
+    tab: "appearance",
+    section: "Layout",
+    label: "Settings Navigation",
+    description: "Show settings tabs across the top or in the left sidebar",
+    keywords: ["settings", "navigation", "tabs", "top", "left", "sidebar", "layout"],
+  },
   ...(IS_MAC
     ? [
         {

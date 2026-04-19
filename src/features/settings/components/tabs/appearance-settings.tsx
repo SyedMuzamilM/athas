@@ -34,6 +34,10 @@ export const AppearanceSettings = () => {
     { value: "tabs", label: "Tabs" },
     { value: "window", label: "Window" },
   ];
+  const settingsNavigationPositionOptions = [
+    { value: "top", label: "Top" },
+    { value: "left", label: "Left" },
+  ];
 
   // Load themes from theme registry
   useEffect(() => {
@@ -282,6 +286,31 @@ export const AppearanceSettings = () => {
             value={settings.sidebarPosition}
             options={sidebarOptions}
             onChange={(value) => updateSetting("sidebarPosition", value as "left" | "right")}
+            className={SETTINGS_CONTROL_WIDTHS.compact}
+            size="xs"
+            variant="secondary"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Settings Navigation"
+          description="Show settings tabs across the top or in the left sidebar"
+          onReset={() =>
+            updateSetting(
+              "settingsNavigationPosition",
+              getDefaultSetting("settingsNavigationPosition"),
+            )
+          }
+          canReset={
+            settings.settingsNavigationPosition !== getDefaultSetting("settingsNavigationPosition")
+          }
+        >
+          <Select
+            value={settings.settingsNavigationPosition}
+            options={settingsNavigationPositionOptions}
+            onChange={(value) =>
+              updateSetting("settingsNavigationPosition", value as "top" | "left")
+            }
             className={SETTINGS_CONTROL_WIDTHS.compact}
             size="xs"
             variant="secondary"
