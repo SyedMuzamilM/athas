@@ -643,14 +643,6 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["lint", "linter", "save", "eslint", "check"],
   },
   {
-    id: "language-formatter",
-    tab: "language",
-    section: "Code Formatting",
-    label: "Default Formatter",
-    description: "Choose default code formatter",
-    keywords: ["format", "formatter", "prettier", "eslint"],
-  },
-  {
     id: "language-auto-completion",
     tab: "language",
     section: "IntelliSense",

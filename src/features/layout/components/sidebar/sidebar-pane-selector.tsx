@@ -185,7 +185,10 @@ export const SidebarPaneSelector = ({
   return (
     <TabsList
       variant={compact ? "segmented" : "default"}
-      className={cn(compact ? undefined : "gap-0.5 p-1", isVertical && "flex-col items-stretch")}
+      className={cn(
+        compact ? undefined : "gap-0.5 p-1",
+        isVertical && "flex-col items-stretch rounded-none border-0 bg-transparent p-0",
+      )}
     >
       {renderedItems.map((item) => (
         <Fragment key={item.id}>{item.content}</Fragment>

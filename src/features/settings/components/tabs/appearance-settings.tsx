@@ -186,41 +186,45 @@ export const AppearanceSettings = () => {
           />
         </SettingRow>
 
-        <SettingRow
-          label="Preferred Light Theme"
-          description="Used when Sync With OS is enabled and the system appearance is light"
-          onReset={() => updateSetting("autoThemeLight", getDefaultSetting("autoThemeLight"))}
-          canReset={settings.autoThemeLight !== getDefaultSetting("autoThemeLight")}
-        >
-          <Select
-            value={settings.autoThemeLight}
-            options={lightThemeOptions}
-            onChange={(value) => updateSetting("autoThemeLight", value)}
-            className={SETTINGS_CONTROL_WIDTHS.wide}
-            size="xs"
-            variant="secondary"
-            searchable
-            searchableTrigger="input"
-          />
-        </SettingRow>
+        {settings.syncSystemTheme ? (
+          <>
+            <SettingRow
+              label="Preferred Light Theme"
+              description="Used when Sync With OS is enabled and the system appearance is light"
+              onReset={() => updateSetting("autoThemeLight", getDefaultSetting("autoThemeLight"))}
+              canReset={settings.autoThemeLight !== getDefaultSetting("autoThemeLight")}
+            >
+              <Select
+                value={settings.autoThemeLight}
+                options={lightThemeOptions}
+                onChange={(value) => updateSetting("autoThemeLight", value)}
+                className={SETTINGS_CONTROL_WIDTHS.wide}
+                size="xs"
+                variant="secondary"
+                searchable
+                searchableTrigger="input"
+              />
+            </SettingRow>
 
-        <SettingRow
-          label="Preferred Dark Theme"
-          description="Used when Sync With OS is enabled and the system appearance is dark"
-          onReset={() => updateSetting("autoThemeDark", getDefaultSetting("autoThemeDark"))}
-          canReset={settings.autoThemeDark !== getDefaultSetting("autoThemeDark")}
-        >
-          <Select
-            value={settings.autoThemeDark}
-            options={darkThemeOptions}
-            onChange={(value) => updateSetting("autoThemeDark", value)}
-            className={SETTINGS_CONTROL_WIDTHS.wide}
-            size="xs"
-            variant="secondary"
-            searchable
-            searchableTrigger="input"
-          />
-        </SettingRow>
+            <SettingRow
+              label="Preferred Dark Theme"
+              description="Used when Sync With OS is enabled and the system appearance is dark"
+              onReset={() => updateSetting("autoThemeDark", getDefaultSetting("autoThemeDark"))}
+              canReset={settings.autoThemeDark !== getDefaultSetting("autoThemeDark")}
+            >
+              <Select
+                value={settings.autoThemeDark}
+                options={darkThemeOptions}
+                onChange={(value) => updateSetting("autoThemeDark", value)}
+                className={SETTINGS_CONTROL_WIDTHS.wide}
+                size="xs"
+                variant="secondary"
+                searchable
+                searchableTrigger="input"
+              />
+            </SettingRow>
+          </>
+        ) : null}
 
         <SettingRow
           label="Icon Theme"
