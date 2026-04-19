@@ -66,7 +66,6 @@ export const AISettings = () => {
   const managedPolicy = enterprisePolicy?.managedMode ? enterprisePolicy : null;
   const aiCompletionAllowedByPolicy = managedPolicy ? managedPolicy.aiCompletionEnabled : true;
   const byokAllowedByPolicy = managedPolicy ? managedPolicy.allowByok : true;
-  const isPro = subscription?.status === "pro";
 
   const [sessionConfigOptions, setSessionConfigOptions] = useState<SessionConfigOption[]>([]);
   const [isClearingChats, setIsClearingChats] = useState(false);
@@ -235,13 +234,6 @@ export const AISettings = () => {
   return (
     <div className="space-y-4">
       <Section title="Athas Agent">
-        {isPro ? (
-          <div className="ui-font ui-text-sm rounded-xl border border-border bg-secondary-bg/60 px-3 py-2 text-text-lighter">
-            <span className="text-text">Athas Pro detected.</span> Chat provider routing is
-            currently configured through the model selection below; autocomplete already uses
-            Athas-hosted credit on Pro.
-          </div>
-        ) : null}
         <SettingRow
           label="Provider & Model"
           description="Choose the provider and model used by Athas Agent"
@@ -444,74 +436,70 @@ export const AISettings = () => {
         </Section>
       )}
 
-      <Section title="Autocomplete">
-        <SettingRow
-          label="AI Completion"
-          description="Enable AI autocomplete while typing"
-          onReset={() => updateSetting("aiCompletion", getDefaultSetting("aiCompletion"))}
-          canReset={settings.aiCompletion !== getDefaultSetting("aiCompletion")}
-        >
-          <Switch
-            checked={aiCompletionAllowedByPolicy ? settings.aiCompletion : false}
-            onChange={(checked) => updateSetting("aiCompletion", checked)}
-            disabled={!aiCompletionAllowedByPolicy}
-            size="sm"
-          />
-        </SettingRow>
-        {settings.aiCompletion && (
-          <>
-            <SettingRow
-              label="Autocomplete Model"
-              description="Choose any OpenRouter model for autocomplete"
-              onReset={() =>
-                updateSetting("aiAutocompleteModelId", getDefaultSetting("aiAutocompleteModelId"))
-              }
-              canReset={
-                settings.aiAutocompleteModelId !== getDefaultSetting("aiAutocompleteModelId")
-              }
-            >
-              <div className="flex items-center gap-2">
-                <Select
-                  value={settings.aiAutocompleteModelId}
-                  options={autocompleteModels.map((model) => ({
-                    value: model.id,
-                    label: model.name,
-                  }))}
-                  onChange={(value) => updateSetting("aiAutocompleteModelId", value)}
-                  size="xs"
-                  variant="default"
-                  searchable
-                  searchableTrigger="input"
-                  className={SETTINGS_CONTROL_WIDTHS.xwide}
-                  disabled={!aiCompletionAllowedByPolicy}
-                />
-                <Button
-                  variant="default"
-                  size="xs"
-                  onClick={loadAutocompleteModels}
-                  disabled={isLoadingAutocompleteModels || !aiCompletionAllowedByPolicy}
-                  title="Refresh model list"
-                >
-                  <RefreshCw className={cn(isLoadingAutocompleteModels && "animate-spin")} />
-                </Button>
-              </div>
-            </SettingRow>
-            {autocompleteModelError && (
-              <div className="ui-font ui-text-sm mt-1 flex items-center gap-1.5 px-1 text-error">
-                <AlertCircle />
-                <span>{autocompleteModelError}</span>
-              </div>
-            )}
-          </>
-        )}
-        {managedPolicy ? (
-          <div className="ui-font ui-text-sm px-1 text-text-lighter">
-            Enterprise policy:{" "}
-            {aiCompletionAllowedByPolicy ? "AI completion enabled." : "AI completion disabled."}{" "}
-            {byokAllowedByPolicy ? "BYOK allowed." : "BYOK blocked."}
-          </div>
-        ) : null}
-      </Section>
+      <SettingRow
+        label="AI Autocomplete"
+        description="Enable AI autocomplete while typing"
+        onReset={() => updateSetting("aiCompletion", getDefaultSetting("aiCompletion"))}
+        canReset={settings.aiCompletion !== getDefaultSetting("aiCompletion")}
+      >
+        <Switch
+          checked={aiCompletionAllowedByPolicy ? settings.aiCompletion : false}
+          onChange={(checked) => updateSetting("aiCompletion", checked)}
+          disabled={!aiCompletionAllowedByPolicy}
+          size="sm"
+        />
+      </SettingRow>
+      {settings.aiCompletion && (
+        <>
+          <SettingRow
+            label="Autocomplete Model"
+            description="Choose any OpenRouter model for autocomplete"
+            onReset={() =>
+              updateSetting("aiAutocompleteModelId", getDefaultSetting("aiAutocompleteModelId"))
+            }
+            canReset={settings.aiAutocompleteModelId !== getDefaultSetting("aiAutocompleteModelId")}
+          >
+            <div className="flex items-center gap-2">
+              <Select
+                value={settings.aiAutocompleteModelId}
+                options={autocompleteModels.map((model) => ({
+                  value: model.id,
+                  label: model.name,
+                }))}
+                onChange={(value) => updateSetting("aiAutocompleteModelId", value)}
+                size="xs"
+                variant="default"
+                searchable
+                searchableTrigger="input"
+                className={SETTINGS_CONTROL_WIDTHS.xwide}
+                disabled={!aiCompletionAllowedByPolicy}
+              />
+              <Button
+                variant="default"
+                size="xs"
+                onClick={loadAutocompleteModels}
+                disabled={isLoadingAutocompleteModels || !aiCompletionAllowedByPolicy}
+                title="Refresh model list"
+              >
+                <RefreshCw className={cn(isLoadingAutocompleteModels && "animate-spin")} />
+              </Button>
+            </div>
+          </SettingRow>
+          {autocompleteModelError && (
+            <div className="ui-font ui-text-sm mt-1 flex items-center gap-1.5 px-1 text-error">
+              <AlertCircle />
+              <span>{autocompleteModelError}</span>
+            </div>
+          )}
+        </>
+      )}
+      {managedPolicy ? (
+        <div className="ui-font ui-text-sm px-1 text-text-lighter">
+          Enterprise policy:{" "}
+          {aiCompletionAllowedByPolicy ? "AI completion enabled." : "AI completion disabled."}{" "}
+          {byokAllowedByPolicy ? "BYOK allowed." : "BYOK blocked."}
+        </div>
+      ) : null}
 
       <SettingRow label="Clear All Chats" description="Permanently delete all chat history">
         <TypedConfirmAction
