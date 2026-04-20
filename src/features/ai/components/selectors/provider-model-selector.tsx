@@ -1,4 +1,4 @@
-import { AlertCircle, Check, ChevronDown, Lock, RefreshCw, Search, X } from "lucide-react";
+import { AlertCircle, Check, ChevronDown, Lock, RefreshCw, X } from "lucide-react";
 import {
   type KeyboardEvent as ReactKeyboardEvent,
   useCallback,
@@ -327,12 +327,11 @@ export function ProviderModelSelector({
         onKeyDown={handleKeyDown}
         disabled={disabled}
         readOnly={!isOpen}
-        leftIcon={Search}
         rightIcon={ChevronDown}
         size="sm"
         variant="default"
         containerClassName="w-[min(420px,100%)] min-w-0"
-        className={cn("min-w-0 pr-7", !isOpen && "cursor-pointer")}
+        className={cn("min-w-0", !isOpen && "cursor-pointer")}
         placeholder={
           activePanel === "provider"
             ? "Search providers..."
