@@ -2,6 +2,7 @@ import { editorAPI } from "@/features/editor/extensions/api";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
 import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar-store";
+import { useEditorUIStore } from "@/features/editor/stores/ui-store";
 import { useJumpListStore } from "@/features/editor/stores/jump-list-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
@@ -377,6 +378,17 @@ const viewCommands: Command[] = [
       }
       const state = useUIState.getState();
       state.setIsFindVisible(!state.isFindVisible);
+    },
+  },
+  {
+    id: "workbench.showFindReplace",
+    title: "Find and Replace",
+    category: "View",
+    keybinding: "cmd+alt+f",
+    execute: () => {
+      const state = useUIState.getState();
+      state.setIsFindVisible(true);
+      useEditorUIStore.getState().actions.setIsReplaceVisible(true);
     },
   },
   {

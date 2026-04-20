@@ -10,6 +10,7 @@ import { useEditorUIStore } from "../stores/ui-store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useKeymapStore } from "@/features/keymaps/stores/store";
 import { evaluateWhenClause } from "@/features/keymaps/utils/context";
+import { getEffectiveKeybindings } from "@/features/keymaps/utils/effective-keymaps";
 import { matchKeybinding } from "@/features/keymaps/utils/matcher";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import type { Decoration, MultiCursorState, Position, Range } from "../types/editor";
@@ -225,11 +226,11 @@ export function useEditorKeyDown({
         const contexts = useKeymapStore.getState().contexts;
         const registryKeybindings = keymapRegistry.getAllKeybindings();
         const userKeybindings = useKeymapStore.getState().keybindings;
-        const userCommandIds = new Set(userKeybindings.map((kb) => kb.command));
-        const allKeybindings = [
-          ...userKeybindings,
-          ...registryKeybindings.filter((kb) => !userCommandIds.has(kb.command)),
-        ];
+        const allKeybindings = getEffectiveKeybindings({
+          preset: useSettingsStore.getState().settings.keybindingPreset,
+          registryKeybindings,
+          userKeybindings,
+        });
 
         for (const keybinding of allKeybindings) {
           if (!keybinding.enabled && keybinding.enabled !== undefined) {

@@ -64,6 +64,7 @@ export interface Settings {
   showGitHubIssues: boolean;
   showGitHubActions: boolean;
   // Keyboard
+  keybindingPreset: "none" | "vscode";
   vimMode: boolean;
   vimRelativeLineNumbers: boolean;
   // Language

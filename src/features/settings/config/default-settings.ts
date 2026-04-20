@@ -67,6 +67,7 @@ export const defaultSettings: Settings = {
   showGitHubIssues: true,
   showGitHubActions: true,
   // Keyboard
+  keybindingPreset: "none",
   vimMode: false,
   vimRelativeLineNumbers: false,
   // Language

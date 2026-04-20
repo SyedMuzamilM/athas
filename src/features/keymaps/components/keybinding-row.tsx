@@ -52,6 +52,14 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
 
   const source = keybinding?.source || "default";
   const isUserOverride = source === "user";
+  const sourceLabel =
+    source === "preset"
+      ? "Preset"
+      : source === "default"
+        ? "Default"
+        : source === "extension"
+          ? "Extension"
+          : "User";
 
   return (
     <div
@@ -99,7 +107,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
 
       <div className="flex items-center">
         <Badge variant={isUserOverride ? "accent" : "default"} shape="pill" size="compact">
-          {source}
+          {sourceLabel}
         </Badge>
       </div>
 

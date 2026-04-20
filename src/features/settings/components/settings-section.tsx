@@ -11,10 +11,10 @@ interface SectionProps {
 }
 
 export const SETTINGS_CONTROL_WIDTHS = {
-  compact: "w-fit min-w-0 max-w-20",
-  default: "w-fit min-w-0 max-w-32",
-  wide: "w-fit min-w-0 max-w-40",
-  xwide: "w-fit min-w-0 max-w-56",
+  compact: "w-28",
+  default: "w-36",
+  wide: "w-44",
+  xwide: "w-56",
   number: "w-28",
   numberCompact: "w-24",
   text: "w-48",
@@ -71,9 +71,19 @@ export function SettingRow({
     const controlRoot = controlRef.current;
     if (!controlRoot) return;
 
-    const firstInteractive = controlRoot.querySelector<HTMLElement>(
+    const primaryInteractive =
+      controlRoot.querySelector<HTMLElement>("[data-setting-primary-control='true']") ??
+      controlRoot.querySelector<HTMLElement>(
+        "button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [role='button'], [role='switch'], [tabindex]:not([tabindex='-1'])",
+      );
+
+    if (!primaryInteractive) return;
+
+    const firstInteractive = primaryInteractive.matches(
       "button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [role='button'], [role='switch'], [tabindex]:not([tabindex='-1'])",
-    );
+    )
+      ? primaryInteractive
+      : null;
 
     if (!firstInteractive) return;
 
