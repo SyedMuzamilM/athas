@@ -349,39 +349,6 @@ export function ProviderModelSelector({
         menuClassName="flex min-h-0 flex-1 flex-col overflow-hidden"
         style={{ maxHeight: "480px" }}
       >
-        <div className="flex items-center justify-between gap-1 border-border/60 border-b px-1.5 py-1.5">
-          <div className="min-w-0 text-text-lighter text-xs">
-            {activePanel === "provider"
-              ? "Select provider"
-              : `${currentProvider?.name || providerId} models`}
-          </div>
-          <div className="flex items-center gap-1">
-            {activePanel === "model" && supportsDynamicModels && (
-              <Button
-                type="button"
-                onClick={() => void fetchDynamicModels()}
-                disabled={isLoadingModels}
-                variant="ghost"
-                size="icon-sm"
-                className="rounded-md text-text-lighter"
-                aria-label="Refresh models"
-              >
-                <RefreshCw className={cn(isLoadingModels && "animate-spin")} />
-              </Button>
-            )}
-            <Button
-              type="button"
-              onClick={() => setIsOpen(false)}
-              variant="ghost"
-              size="icon-sm"
-              className="rounded-md text-text-lighter"
-              aria-label="Close model selector"
-            >
-              <X />
-            </Button>
-          </div>
-        </div>
-
         <div
           className="min-h-0 flex-1 overflow-y-auto p-1.5 [overscroll-behavior:contain]"
           onWheelCapture={(event) => event.stopPropagation()}
@@ -428,20 +395,45 @@ export function ProviderModelSelector({
             })
           ) : (
             <>
-              <Button
-                type="button"
-                onClick={() => {
-                  setActivePanel("provider");
-                  setSearch("");
-                  setSelectedIndex(0);
-                  inputRef.current?.focus();
-                }}
-                variant="ghost"
-                size="sm"
-                className="sticky top-0 z-10 mb-1 h-auto w-full justify-start rounded-lg border border-border/70 bg-secondary-bg px-2.5 py-2 text-left text-xs text-text-lighter"
-              >
-                Back to providers
-              </Button>
+              <div className="sticky top-0 z-10 mb-1 flex items-center gap-1 rounded-lg border border-border/70 bg-secondary-bg p-1">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setActivePanel("provider");
+                    setSearch("");
+                    setSelectedIndex(0);
+                    inputRef.current?.focus();
+                  }}
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto flex-1 justify-start rounded-md px-2 py-1.5 text-left text-xs text-text-lighter"
+                >
+                  Back to providers
+                </Button>
+                {supportsDynamicModels && (
+                  <Button
+                    type="button"
+                    onClick={() => void fetchDynamicModels()}
+                    disabled={isLoadingModels}
+                    variant="ghost"
+                    size="icon-sm"
+                    className="rounded-md text-text-lighter"
+                    aria-label="Refresh models"
+                  >
+                    <RefreshCw className={cn(isLoadingModels && "animate-spin")} />
+                  </Button>
+                )}
+                <Button
+                  type="button"
+                  onClick={() => setIsOpen(false)}
+                  variant="ghost"
+                  size="icon-sm"
+                  className="rounded-md text-text-lighter"
+                  aria-label="Close model selector"
+                >
+                  <X />
+                </Button>
+              </div>
               {filteredModels.map((item) => {
                 selectableIndex += 1;
                 const itemIndex = selectableIndex;
