@@ -68,6 +68,7 @@ export function ProviderModelSelector({
   const setApiKeyModalState = useAIChatStore((state) => state.setApiKeyModalState);
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
 
   const providers = getAvailableProviders();
   const currentProvider = getProviderById(providerId);
@@ -253,6 +254,11 @@ export function ProviderModelSelector({
     [onModelChange],
   );
 
+  const openProviderPanel = useCallback(() => {
+    setActivePanel("provider");
+    setIsOpen(true);
+  }, []);
+
   const handleKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLInputElement>) => {
       switch (event.key) {
@@ -306,27 +312,29 @@ export function ProviderModelSelector({
     : `${currentProvider?.name || providerId} / ${currentModelName}`;
 
   return (
-    <div>
+    <div ref={triggerRef}>
       <Input
         ref={inputRef}
         type="text"
         value={triggerValue}
         onFocus={() => {
-          if (disabled) return;
-          setActivePanel("provider");
-          setIsOpen(true);
+          if (disabled || isOpen) return;
+          openProviderPanel();
         }}
         onClick={() => {
           if (disabled) return;
-          if (!isOpen) {
-            setActivePanel("provider");
-            setIsOpen(true);
+          if (isOpen) {
+            setIsOpen(false);
+          } else {
+            openProviderPanel();
           }
         }}
         onChange={(event) => setSearch(event.target.value)}
         onKeyDown={handleKeyDown}
         disabled={disabled}
         readOnly={!isOpen}
+        aria-expanded={isOpen}
+        aria-haspopup="menu"
         rightIcon={ChevronDown}
         size="sm"
         variant="default"
@@ -342,7 +350,7 @@ export function ProviderModelSelector({
 
       <Dropdown
         isOpen={isOpen}
-        anchorRef={inputRef}
+        anchorRef={triggerRef}
         anchorSide="bottom"
         onClose={() => setIsOpen(false)}
         className="flex w-[min(420px,calc(100vw-16px))] flex-col overflow-hidden rounded-2xl p-0"

@@ -77,6 +77,12 @@ export function SettingRow({
 
     if (!firstInteractive) return;
 
+    if (firstInteractive.getAttribute("aria-expanded") != null) {
+      firstInteractive.focus();
+      firstInteractive.click();
+      return;
+    }
+
     if (
       firstInteractive instanceof HTMLInputElement &&
       firstInteractive.type !== "checkbox" &&
