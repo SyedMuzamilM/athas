@@ -24,7 +24,6 @@ import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
 import { SegmentedControl } from "@/ui/segmented-control";
-import { cn } from "@/utils/cn";
 import { ProActionButton } from "../pro-action-button";
 
 interface UnifiedExtension {
