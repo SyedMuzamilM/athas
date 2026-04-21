@@ -7,6 +7,7 @@ import { SidebarPaneSelector } from "@/features/layout/components/sidebar/sideba
 import { resolveSidebarPaneClick } from "@/features/layout/utils/sidebar-pane-utils";
 import { useSettingsStore } from "@/features/settings/store";
 import { useSidebarStore } from "@/features/layout/stores/sidebar-store";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
 import { ExtensionErrorBoundary } from "@/extensions/ui/components/extension-error-boundary";
@@ -21,10 +22,11 @@ export const MainSidebar = memo(() => {
     isSidebarVisible,
     setActiveView,
     setIsSidebarVisible,
-    setIsGlobalSearchVisible,
-    isGlobalSearchVisible,
   } = useUIState();
   const extensionViews = useExtensionViews();
+  const buffers = useBufferStore.use.buffers();
+  const activeBufferId = useBufferStore.use.activeBufferId();
+  const openGlobalSearchBuffer = useBufferStore.use.actions().openGlobalSearchBuffer;
 
   // file system store
   const setFiles = useFileSystemStore.use.setFiles?.();
@@ -53,6 +55,9 @@ export const MainSidebar = memo(() => {
   const isFilesViewActive =
     !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "files";
   const showLeftSidebarTabs = settings.sidebarTabsPosition === "left";
+  const isGlobalSearchActive = buffers.some(
+    (buffer) => buffer.id === activeBufferId && buffer.type === "globalSearch",
+  );
 
   const handleSidebarViewChange = (view: typeof activeSidebarView) => {
     const { nextIsSidebarVisible, nextView } = resolveSidebarPaneClick(
@@ -78,7 +83,8 @@ export const MainSidebar = memo(() => {
             isGitHubPRsViewActive={isGitHubPRsViewActive}
             coreFeatures={settings.coreFeatures}
             onViewChange={handleSidebarViewChange}
-            onSearchClick={() => setIsGlobalSearchVisible(!isGlobalSearchVisible)}
+            isSearchActive={isGlobalSearchActive}
+            onSearchClick={() => openGlobalSearchBuffer()}
             orientation="vertical"
           />
         </div>

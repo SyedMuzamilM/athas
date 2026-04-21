@@ -49,6 +49,9 @@ const ExternalEditorTerminal = lazy(() =>
   })),
 );
 const DiffViewer = lazy(() => import("@/features/git/components/diff/git-diff-viewer"));
+const GlobalSearchBuffer = lazy(
+  () => import("@/features/global-search/components/global-search-buffer"),
+);
 const PRViewer = lazy(() => import("@/features/github/components/pr-viewer"));
 const GitHubIssueViewer = lazy(() => import("@/features/github/components/github-issue-viewer"));
 const GitHubActionViewer = lazy(() => import("@/features/github/components/github-action-viewer"));
@@ -835,6 +838,9 @@ export function PaneContainer({ pane }: PaneContainerProps) {
               bufferId={buffer.id}
             />
           );
+
+        case "globalSearch":
+          return <GlobalSearchBuffer />;
 
         case "image":
           return <ImageViewer filePath={buffer.path} fileName={buffer.name} bufferId={buffer.id} />;

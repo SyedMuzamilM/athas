@@ -2,6 +2,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { ArrowSquareOut, CornersIn, CornersOut, List, Minus, X } from "@phosphor-icons/react";
 import { type ReactNode, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { openFolder } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { HeaderTrailingItemId } from "@/features/layout/config/item-order";
@@ -60,10 +61,11 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     isSidebarVisible,
     setActiveView,
     setIsSidebarVisible,
-    setIsGlobalSearchVisible,
-    isGlobalSearchVisible,
     setIsProjectPickerVisible,
   } = useUIState();
+  const buffers = useBufferStore.use.buffers();
+  const activeBufferId = useBufferStore.use.activeBufferId();
+  const openGlobalSearchBuffer = useBufferStore.use.actions().openGlobalSearchBuffer;
 
   const [menuBarActiveMenu, setMenuBarActiveMenu] = useState<string | null>(null);
   const [isMaximized, setIsMaximized] = useState(false);
@@ -75,6 +77,9 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
   const isLinux = IS_LINUX;
   const titleBarProjectMode = settings.titleBarProjectMode;
   const showTopSidebarTabs = settings.sidebarTabsPosition === "top";
+  const isGlobalSearchActive = buffers.some(
+    (buffer) => buffer.id === activeBufferId && buffer.type === "globalSearch",
+  );
 
   useEffect(() => {
     const initWindow = async () => {
@@ -351,7 +356,8 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
               isGitHubPRsViewActive={isGitHubPRsViewActive}
               coreFeatures={settings.coreFeatures}
               onViewChange={handleSidebarViewChange}
-              onSearchClick={() => setIsGlobalSearchVisible(!isGlobalSearchVisible)}
+              isSearchActive={isGlobalSearchActive}
+              onSearchClick={() => openGlobalSearchBuffer()}
               compact
             />
           ) : null}
@@ -405,7 +411,8 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
                 isGitHubPRsViewActive={isGitHubPRsViewActive}
                 coreFeatures={settings.coreFeatures}
                 onViewChange={handleSidebarViewChange}
-                onSearchClick={() => setIsGlobalSearchVisible(!isGlobalSearchVisible)}
+                isSearchActive={isGlobalSearchActive}
+                onSearchClick={() => openGlobalSearchBuffer()}
                 compact
               />
             ) : null}

@@ -26,6 +26,7 @@ interface SidebarPaneSelectorProps {
   coreFeatures: CoreFeaturesState;
   onViewChange: (view: SidebarView) => void;
   onSearchClick?: () => void;
+  isSearchActive?: boolean;
   compact?: boolean;
   orientation?: "horizontal" | "vertical";
 }
@@ -37,6 +38,7 @@ export const SidebarPaneSelector = ({
   coreFeatures,
   onViewChange,
   onSearchClick,
+  isSearchActive = false,
   compact = false,
   orientation = "horizontal",
 }: SidebarPaneSelectorProps) => {
@@ -68,6 +70,7 @@ export const SidebarPaneSelector = ({
           {
             id: "search",
             icon: <MagnifyingGlass className={compact ? "size-4" : undefined} weight="duotone" />,
+            isActive: isSearchActive,
             onClick: onSearchClick,
             ariaLabel: "Search",
             className: compact ? "min-w-7 [&_svg]:size-4" : "w-8 rounded-md",

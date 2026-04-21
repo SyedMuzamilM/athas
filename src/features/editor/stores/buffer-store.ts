@@ -158,6 +158,7 @@ interface BufferActions {
     sessionId?: string;
   }) => string;
   openAgentBuffer: (sessionId?: string) => string;
+  openGlobalSearchBuffer: () => string;
   closeBuffer: (bufferId: string) => void;
   closeBufferForce: (bufferId: string) => void;
   closeBuffersBatch: (bufferIds: string[], skipSessionSave?: boolean) => void;
@@ -469,6 +470,14 @@ const createPaneContent = (id: string, spec: OpenContentSpec): PaneContent => {
         name: spec.name,
         isPreview: false,
         terminalConnectionId: spec.terminalConnectionId,
+      };
+    case "globalSearch":
+      return {
+        ...base,
+        type: "globalSearch",
+        path: "search://global",
+        name: "Search",
+        isPreview: false,
       };
   }
 };
@@ -955,6 +964,39 @@ export const useBufferStore = createSelectors(
               return newBuffer.id;
             }
 
+            case "globalSearch": {
+              const existing = buffers.find((b) => b.type === "globalSearch");
+              if (existing) {
+                set((state) => {
+                  state.activeBufferId = existing.id;
+                  state.buffers = state.buffers.map((b) => ({
+                    ...b,
+                    isActive: b.id === existing.id,
+                  }));
+                });
+                syncAndFocusBufferInPane(existing.id);
+                return existing.id;
+              }
+
+              let newBuffers = closeNewTabInActivePane([...buffers]);
+              if (newBuffers.filter((b) => !b.isPinned).length >= maxOpenTabs) {
+                const unpinnedBuffers = newBuffers.filter((b) => !b.isPinned);
+                const lruBuffer = unpinnedBuffers[0];
+                newBuffers = newBuffers.filter((b) => b.id !== lruBuffer.id);
+              }
+
+              const id = generateBufferId("search://global");
+              const newBuffer = createPaneContent(id, spec);
+
+              set((state) => {
+                state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
+                state.activeBufferId = newBuffer.id;
+              });
+
+              syncBufferToPane(newBuffer.id);
+              return newBuffer.id;
+            }
+
             case "diff":
             case "image":
             case "pdf":
@@ -1178,6 +1220,10 @@ export const useBufferStore = createSelectors(
 
         openAgentBuffer: (sessionId?: string): string => {
           return get().actions.openContent({ type: "agent", sessionId });
+        },
+
+        openGlobalSearchBuffer: (): string => {
+          return get().actions.openContent({ type: "globalSearch" });
         },
 
         closeBuffer: (bufferId: string) => {

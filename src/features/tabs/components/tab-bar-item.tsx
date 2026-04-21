@@ -4,6 +4,7 @@ import {
   GitBranch,
   GitPullRequest,
   Globe,
+  Search,
   MessageSquare,
   Package,
   Pin,
@@ -184,6 +185,8 @@ const TabBarItem = memo(function TabBarItem({
             )
           ) : buffer.type === "githubAction" ? (
             <Activity className="text-text-lighter" />
+          ) : buffer.type === "globalSearch" ? (
+            <Search className="text-text-lighter" />
           ) : (
             <FileExplorerIcon
               fileName={getDiffIconName() ?? buffer.name}

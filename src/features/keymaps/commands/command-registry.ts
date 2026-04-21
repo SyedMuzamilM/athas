@@ -397,8 +397,7 @@ const viewCommands: Command[] = [
     category: "View",
     keybinding: "cmd+shift+f",
     execute: () => {
-      const state = useUIState.getState();
-      state.setIsGlobalSearchVisible(!state.isGlobalSearchVisible);
+      useBufferStore.getState().actions.openGlobalSearchBuffer();
     },
   },
   {
@@ -407,8 +406,7 @@ const viewCommands: Command[] = [
     category: "View",
     keybinding: "cmd+shift+h",
     execute: () => {
-      const state = useUIState.getState();
-      state.setIsGlobalSearchVisible(!state.isGlobalSearchVisible);
+      useBufferStore.getState().actions.openGlobalSearchBuffer();
     },
   },
   {

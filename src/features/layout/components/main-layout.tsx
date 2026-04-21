@@ -13,7 +13,6 @@ import { getSymlinkInfo } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useFileSystemFolderDrop } from "@/features/file-system/hooks/use-file-system-folder-drop";
 import { useGitStore } from "@/features/git/stores/git-store";
-import ContentGlobalSearch from "@/features/global-search/components/content-global-search";
 import { SplitViewRoot } from "@/features/panes/components/split-view-root";
 import { usePaneKeyboard } from "@/features/panes/hooks/use-pane-keyboard";
 import QuickOpen from "@/features/quick-open/components/quick-open";
@@ -334,7 +333,6 @@ export function MainLayout() {
 
       {/* Global modals and overlays */}
       <QuickOpen />
-      <ContentGlobalSearch />
       <VimCommandBar />
       <VimSearchBar />
       <CommandPalette />

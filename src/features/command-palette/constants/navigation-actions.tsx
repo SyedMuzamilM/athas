@@ -7,6 +7,7 @@ import {
   Package,
   Search,
 } from "lucide-react";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import type { SettingsTab } from "@/features/window/stores/ui-state/types";
 import type { Action } from "../models/action.types";
 
@@ -14,20 +15,13 @@ interface NavigationActionsParams {
   setIsSidebarVisible: (v: boolean) => void;
   setActiveView: (view: "files" | "git" | "github-prs") => void;
   setIsQuickOpenVisible: (v: boolean) => void;
-  setIsGlobalSearchVisible: (v: boolean) => void;
   openSettingsDialog: (tab?: SettingsTab) => void;
   onClose: () => void;
 }
 
 export const createNavigationActions = (params: NavigationActionsParams): Action[] => {
-  const {
-    setIsSidebarVisible,
-    setActiveView,
-    setIsQuickOpenVisible,
-    setIsGlobalSearchVisible,
-    openSettingsDialog,
-    onClose,
-  } = params;
+  const { setIsSidebarVisible, setActiveView, setIsQuickOpenVisible, openSettingsDialog, onClose } =
+    params;
 
   return [
     {
@@ -77,7 +71,7 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       commandId: "workbench.showGlobalSearch",
       action: () => {
         onClose();
-        setIsGlobalSearchVisible(true);
+        useBufferStore.getState().actions.openGlobalSearchBuffer();
       },
     },
     {

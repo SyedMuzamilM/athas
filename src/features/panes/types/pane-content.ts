@@ -30,7 +30,8 @@ export type PaneContentType =
   | "markdownPreview"
   | "htmlPreview"
   | "csvPreview"
-  | "externalEditor";
+  | "externalEditor"
+  | "globalSearch";
 
 // ── Base fields shared by every content type ────────────────────────
 
@@ -151,6 +152,10 @@ export interface ExternalEditorContent extends PaneContentBase {
   terminalConnectionId: string;
 }
 
+export interface GlobalSearchContent extends PaneContentBase {
+  type: "globalSearch";
+}
+
 // ── Discriminated union ─────────────────────────────────────────────
 
 export type PaneContent =
@@ -170,7 +175,8 @@ export type PaneContent =
   | MarkdownPreviewContent
   | HtmlPreviewContent
   | CsvPreviewContent
-  | ExternalEditorContent;
+  | ExternalEditorContent
+  | GlobalSearchContent;
 
 // ── Type guards ─────────────────────────────────────────────────────
 
@@ -234,6 +240,7 @@ const VIRTUAL_TYPES: ReadonlySet<PaneContentType> = new Set([
   "pullRequest",
   "githubIssue",
   "githubAction",
+  "globalSearch",
 ]);
 
 export function isVirtualContent(c: PaneContent): boolean {
@@ -359,4 +366,7 @@ export type OpenContentSpec =
       path: string;
       name: string;
       terminalConnectionId: string;
+    }
+  | {
+      type: "globalSearch";
     };

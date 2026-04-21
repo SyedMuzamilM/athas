@@ -158,7 +158,6 @@ const CommandPalette = () => {
       setIsSidebarVisible,
       setActiveView,
       setIsQuickOpenVisible,
-      setIsGlobalSearchVisible,
       openSettingsDialog,
       onClose,
     }),
