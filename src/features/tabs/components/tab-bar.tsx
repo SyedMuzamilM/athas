@@ -33,7 +33,12 @@ import {
   setInternalTabDragHover,
   setInternalTabDragData,
 } from "../utils/internal-tab-drag";
-import { constrainHorizontalTabDrag } from "../utils/horizontal-tab-drag";
+import {
+  HORIZONTAL_TAB_DRAG_THRESHOLD,
+  type HorizontalTabPosition,
+  calculateHorizontalTabDropTarget,
+  constrainHorizontalTabDrag,
+} from "../utils/horizontal-tab-drag";
 import { NewTabMenu } from "./new-tab-menu";
 import TabBarItem from "./tab-bar-item";
 import TabContextMenu from "./tab-context-menu";
@@ -43,16 +48,6 @@ interface TabBarProps {
   paneId?: string;
   onTabClick?: (bufferId: string) => void;
   disablePaneActions?: boolean;
-}
-
-const DRAG_THRESHOLD = 5;
-
-interface TabPosition {
-  index: number;
-  left: number;
-  right: number;
-  width: number;
-  center: number;
 }
 
 const TabBar = ({
@@ -109,7 +104,7 @@ const TabBar = ({
     startPosition: { x: number; y: number } | null;
     currentPosition: { x: number; y: number } | null;
     isOutsideRail: boolean;
-    tabPositions: TabPosition[];
+    tabPositions: HorizontalTabPosition[];
     lastValidDropTarget: number | null;
     dragDirection: "left" | "right" | null;
   }>({
@@ -336,10 +331,10 @@ const TabBar = ({
     }
   }, [activeBufferId, sortedBuffers]);
 
-  const cacheTabPositions = useCallback((): TabPosition[] => {
+  const cacheTabPositions = useCallback((): HorizontalTabPosition[] => {
     if (!tabBarRef.current) return [];
     const containerRect = tabBarRef.current.getBoundingClientRect();
-    const positions: TabPosition[] = [];
+    const positions: HorizontalTabPosition[] = [];
     tabRefs.current.forEach((tab, index) => {
       if (tab) {
         const rect = tab.getBoundingClientRect();
@@ -357,64 +352,6 @@ const TabBar = ({
     return positions;
   }, []);
 
-  const calculateDropTarget = (
-    mouseX: number,
-    currentDropTarget: number | null,
-    draggedIndex: number,
-    tabPositions: TabPosition[],
-    dragDirection: "left" | "right" | null,
-  ): { dropTarget: number; direction: "left" | "right" | null } => {
-    if (!tabBarRef.current || tabPositions.length === 0) {
-      return {
-        dropTarget: currentDropTarget ?? draggedIndex,
-        direction: dragDirection,
-      };
-    }
-
-    const containerRect = tabBarRef.current.getBoundingClientRect();
-    const relativeX = mouseX - containerRect.left;
-
-    let newDropTarget = draggedIndex;
-
-    // before first tab
-    if (relativeX < tabPositions[0]?.left) {
-      newDropTarget = 0;
-    }
-    // after last tab
-    else if (relativeX > tabPositions[tabPositions.length - 1]?.right) {
-      newDropTarget = tabPositions.length;
-    }
-    // we over yo lets do some magic
-    else {
-      for (let i = 0; i < tabPositions.length; i++) {
-        const pos = tabPositions[i];
-
-        if (relativeX >= pos.left && relativeX <= pos.right) {
-          const relativePositionInTab = (relativeX - pos.left) / pos.width;
-          if (currentDropTarget !== null && Math.abs(currentDropTarget - i) <= 1) {
-            const threshold = 0.25;
-
-            if (relativePositionInTab < 0.5 - threshold) {
-              newDropTarget = i;
-            } else if (relativePositionInTab > 0.5 + threshold) {
-              newDropTarget = i + 1;
-            } else {
-              newDropTarget = currentDropTarget;
-            }
-          } else {
-            newDropTarget = relativePositionInTab < 0.5 ? i : i + 1;
-          }
-          break;
-        }
-      }
-    }
-
-    return {
-      dropTarget: newDropTarget,
-      direction: relativeX > (tabPositions[draggedIndex]?.center ?? 0) ? "right" : "left",
-    };
-  };
-
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {
       setDragState((prev) => {
@@ -424,7 +361,7 @@ const TabBar = ({
           (pointerPosition.x - prev.startPosition.x) ** 2 +
             (pointerPosition.y - prev.startPosition.y) ** 2,
         );
-        if (!prev.isDragging && distance > DRAG_THRESHOLD) {
+        if (!prev.isDragging && distance > HORIZONTAL_TAB_DRAG_THRESHOLD) {
           const tabPositions = cacheTabPositions();
           const currentPosition = tabBarRef.current
             ? constrainHorizontalTabDrag(
@@ -451,23 +388,27 @@ const TabBar = ({
           };
         }
         if (prev.isDragging) {
+          const tabBar = tabBarRef.current;
+          if (!tabBar) {
+            return prev;
+          }
           const constrainedDrag = tabBarRef.current
             ? constrainHorizontalTabDrag(
                 pointerPosition,
                 prev.startPosition.y,
-                tabBarRef.current.getBoundingClientRect(),
+                tabBar.getBoundingClientRect(),
               )
             : { position: pointerPosition, isOutsideRail: false };
           const currentPosition = constrainedDrag.position;
           if (constrainedDrag.isOutsideRail) {
             setInternalTabDragHover(pointerPosition);
           }
-          const { dropTarget, direction } = calculateDropTarget(
+          const { dropTarget, direction } = calculateHorizontalTabDropTarget(
             currentPosition.x,
-            prev.dropTargetIndex,
+            tabBar.getBoundingClientRect(),
             prev.draggedIndex,
             prev.tabPositions,
-            prev.dragDirection,
+            prev.dropTargetIndex,
           );
           if (
             prev.currentPosition?.x === currentPosition.x &&

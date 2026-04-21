@@ -23,23 +23,19 @@ import { Button } from "@/ui/button";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import { Tab, TabsList } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
+import {
+  HORIZONTAL_TAB_DRAG_THRESHOLD,
+  type HorizontalTabPosition,
+  calculateHorizontalTabDropTarget,
+  constrainHorizontalTabDrag,
+} from "@/features/tabs/utils/horizontal-tab-drag";
 import ProjectIconPicker from "./project-icon-picker";
 import ProjectPickerDialog from "./project-picker-dialog";
-
-const DRAG_THRESHOLD = 5;
 
 const isRemoteProjectTab = (tab: ProjectTab) => tab.path.startsWith("remote://");
 
 interface ProjectTabsProps {
   disableReorder?: boolean;
-}
-
-interface TabPosition {
-  index: number;
-  left: number;
-  right: number;
-  width: number;
-  center: number;
 }
 
 const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
@@ -63,7 +59,7 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
     dropTargetIndex: number | null;
     startPosition: { x: number; y: number } | null;
     currentPosition: { x: number; y: number } | null;
-    tabPositions: TabPosition[];
+    tabPositions: HorizontalTabPosition[];
   }>({
     isDragging: false,
     draggedIndex: null,
@@ -89,10 +85,10 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
     tabRefs.current = tabRefs.current.slice(0, projectTabs.length);
   }, [projectTabs.length]);
 
-  const cacheTabPositions = useCallback((): TabPosition[] => {
+  const cacheTabPositions = useCallback((): HorizontalTabPosition[] => {
     if (!tabBarRef.current) return [];
     const containerRect = tabBarRef.current.getBoundingClientRect();
-    const positions: TabPosition[] = [];
+    const positions: HorizontalTabPosition[] = [];
     tabRefs.current.forEach((tab, index) => {
       if (tab) {
         const rect = tab.getBoundingClientRect();
@@ -110,48 +106,21 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
     return positions;
   }, []);
 
-  const calculateDropTarget = (
-    mouseX: number,
-    draggedIndex: number,
-    tabPositions: TabPosition[],
-  ): number => {
-    if (!tabBarRef.current || tabPositions.length === 0) {
-      return draggedIndex;
-    }
-
-    const containerRect = tabBarRef.current.getBoundingClientRect();
-    const relativeX = mouseX - containerRect.left;
-
-    if (relativeX < tabPositions[0]?.left) {
-      return 0;
-    }
-    if (relativeX > tabPositions[tabPositions.length - 1]?.right) {
-      return tabPositions.length;
-    }
-
-    for (let i = 0; i < tabPositions.length; i++) {
-      const pos = tabPositions[i];
-      if (relativeX >= pos.left && relativeX <= pos.right) {
-        const relativePositionInTab = (relativeX - pos.left) / pos.width;
-        return relativePositionInTab < 0.5 ? i : i + 1;
-      }
-    }
-
-    return draggedIndex;
-  };
-
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {
       setDragState((prev) => {
         if (prev.draggedIndex === null || !prev.startPosition) return prev;
 
-        const currentPosition = { x: e.clientX, y: e.clientY };
+        const currentPosition = constrainHorizontalTabDrag(
+          { x: e.clientX, y: e.clientY },
+          prev.startPosition.y,
+          tabBarRef.current!.getBoundingClientRect(),
+        ).position;
         const distance = Math.sqrt(
-          (currentPosition.x - prev.startPosition.x) ** 2 +
-            (currentPosition.y - prev.startPosition.y) ** 2,
+          (e.clientX - prev.startPosition.x) ** 2 + (e.clientY - prev.startPosition.y) ** 2,
         );
 
-        if (!prev.isDragging && distance > DRAG_THRESHOLD) {
+        if (!prev.isDragging && distance > HORIZONTAL_TAB_DRAG_THRESHOLD) {
           const tabPositions = cacheTabPositions();
           return {
             ...prev,
@@ -163,7 +132,13 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
         }
 
         if (prev.isDragging) {
-          const dropTarget = calculateDropTarget(e.clientX, prev.draggedIndex, prev.tabPositions);
+          const { dropTarget } = calculateHorizontalTabDropTarget(
+            currentPosition.x,
+            tabBarRef.current!.getBoundingClientRect(),
+            prev.draggedIndex,
+            prev.tabPositions,
+            prev.dropTargetIndex,
+          );
           return {
             ...prev,
             currentPosition,

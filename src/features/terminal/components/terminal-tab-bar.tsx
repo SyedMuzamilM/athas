@@ -44,7 +44,12 @@ import {
   setInternalTabDragData,
   setInternalTabDragHoverTarget,
 } from "@/features/tabs/utils/internal-tab-drag";
-import { constrainHorizontalTabDrag } from "@/features/tabs/utils/horizontal-tab-drag";
+import {
+  HORIZONTAL_TAB_DRAG_THRESHOLD,
+  type HorizontalTabPosition,
+  calculateHorizontalTabDropTarget,
+  constrainHorizontalTabDrag,
+} from "@/features/tabs/utils/horizontal-tab-drag";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import Tooltip from "../../../ui/tooltip";
 import TerminalTabBarItem from "./terminal-tab-bar-item";
@@ -372,7 +377,7 @@ const TerminalTabBar = ({
       (e.clientX - dragStartPosition.x) ** 2 + (e.clientY - dragStartPosition.y) ** 2,
     );
 
-    if (distance > 5 && !isDragging) {
+    if (distance > HORIZONTAL_TAB_DRAG_THRESHOLD && !isDragging) {
       setIsDragging(true);
     }
 
@@ -408,6 +413,20 @@ const TerminalTabBar = ({
         const tabContainer = tabBarRef.current.querySelector("[data-tab-container]");
         if (tabContainer) {
           const tabElements = Array.from(tabContainer.children) as HTMLElement[];
+          const horizontalTabPositions: HorizontalTabPosition[] =
+            orientation === "vertical"
+              ? []
+              : tabElements.map((element, elementIndex) => {
+                  const elementRect = element.getBoundingClientRect();
+                  const left = elementRect.left - rect.left;
+                  return {
+                    index: elementIndex,
+                    left,
+                    right: elementRect.right - rect.left,
+                    width: elementRect.width,
+                    center: left + elementRect.width / 2,
+                  };
+                });
 
           let newDropTarget: number | null = null;
           for (let i = 0; i < tabElements.length; i++) {
@@ -426,16 +445,17 @@ const TerminalTabBar = ({
               }
             } else {
               const tabX = tabRect.left - rect.left;
-              const tabWidth = tabRect.width;
 
               // Determine if cursor is in left or right half of the tab
-              if (x >= tabX && x <= tabX + tabWidth) {
-                const relativeX = x - tabX;
-                if (relativeX < tabWidth / 2) {
-                  newDropTarget = i;
-                } else {
-                  newDropTarget = i + 1;
-                }
+              if (x >= tabX && x <= tabRect.right - rect.left) {
+                const result = calculateHorizontalTabDropTarget(
+                  constrainedPosition.position.x,
+                  rect,
+                  draggedIndex,
+                  horizontalTabPositions,
+                  dropTarget,
+                );
+                newDropTarget = result.dropTarget;
                 break;
               }
             }
