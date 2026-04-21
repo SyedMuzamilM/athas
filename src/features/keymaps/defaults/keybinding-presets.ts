@@ -18,6 +18,11 @@ export interface KeybindingPresetCoverageReport {
   isComplete: boolean;
 }
 
+export interface KeybindingPresetDiffReport {
+  changedCommandIds: string[];
+  unchangedCommandIds: string[];
+}
+
 const defaultPresetBindings = new Map<string, Keybinding>();
 
 for (const binding of defaultKeymaps) {
@@ -196,6 +201,43 @@ export function getKeybindingPresetCoverageReport(
     missingCommandIds,
     totalCommandCount: defaultPresetCommandIds.length,
     isComplete: missingCommandIds.length === 0,
+  };
+}
+
+export function getKeybindingPresetDiffReport(
+  preset: KeybindingPreset,
+): KeybindingPresetDiffReport {
+  if (preset === "none") {
+    return {
+      changedCommandIds: [],
+      unchangedCommandIds: [...defaultPresetCommandIds],
+    };
+  }
+
+  const definition = keybindingPresetDefinitions[preset];
+  const changedCommandIds = defaultPresetCommandIds.filter((commandId) => {
+    if (definition.disabledCommands.includes(commandId)) {
+      return true;
+    }
+
+    const defaultBinding = defaultPresetBindings.get(commandId);
+    const presetBinding = definition.overrides.find((binding) => binding.command === commandId);
+    if (!defaultBinding || !presetBinding) {
+      return false;
+    }
+
+    return (
+      defaultBinding.key !== presetBinding.key ||
+      defaultBinding.when !== presetBinding.when ||
+      JSON.stringify(defaultBinding.args) !== JSON.stringify(presetBinding.args)
+    );
+  });
+
+  return {
+    changedCommandIds,
+    unchangedCommandIds: defaultPresetCommandIds.filter(
+      (commandId) => !changedCommandIds.includes(commandId),
+    ),
   };
 }
 

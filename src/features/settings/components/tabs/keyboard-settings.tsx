@@ -16,6 +16,7 @@ import {
 import {
   type KeybindingPreset,
   getKeybindingPresetCoverageReport,
+  getKeybindingPresetDiffReport,
   keybindingPresetDefinitions,
   keybindingPresetOptions,
 } from "@/features/keymaps/defaults/keybinding-presets";
@@ -34,7 +35,7 @@ import { TableHeadCell, TableHeader } from "@/ui/table";
 import { TypedConfirmAction } from "../typed-confirm-action";
 import { SettingRow } from "../settings-section";
 
-type FilterType = "all" | "user" | "default" | "preset" | "extension";
+type FilterType = "all" | "user" | "default" | "preset" | "preset-changes" | "extension";
 
 const editorStepTransition = {
   initial: { opacity: 0, x: 14 },
@@ -71,6 +72,15 @@ export const KeyboardSettings = () => {
       userKeybindings,
     });
 
+  const selectedPresetCoverage = useMemo(
+    () => getKeybindingPresetCoverageReport(settings.keybindingPreset),
+    [settings.keybindingPreset],
+  );
+  const selectedPresetDiff = useMemo(
+    () => getKeybindingPresetDiffReport(settings.keybindingPreset),
+    [settings.keybindingPreset],
+  );
+
   const filteredCommands = useMemo(() => {
     const query = searchQuery.toLowerCase();
 
@@ -89,6 +99,9 @@ export const KeyboardSettings = () => {
       if (filterType === "user") return binding?.source === "user";
       if (filterType === "default") return !binding || binding.source === "default";
       if (filterType === "preset") return binding?.source === "preset";
+      if (filterType === "preset-changes") {
+        return selectedPresetDiff.changedCommandIds.includes(command.id);
+      }
       if (filterType === "extension") return binding?.source === "extension";
 
       return true;
@@ -97,6 +110,7 @@ export const KeyboardSettings = () => {
     commands,
     searchQuery,
     filterType,
+    selectedPresetDiff.changedCommandIds,
     settings.keybindingPreset,
     userKeybindings,
     registryKeybindings,
@@ -105,10 +119,6 @@ export const KeyboardSettings = () => {
   const userOverrideCount = useMemo(
     () => userKeybindings.filter((binding) => binding.source === "user").length,
     [userKeybindings],
-  );
-  const selectedPresetCoverage = useMemo(
-    () => getKeybindingPresetCoverageReport(settings.keybindingPreset),
-    [settings.keybindingPreset],
   );
 
   const handleResetAll = () => {
@@ -216,6 +226,11 @@ export const KeyboardSettings = () => {
                     value: "preset",
                     label: "Preset",
                     icon: <DownloadSimple size={14} weight="duotone" />,
+                  },
+                  {
+                    value: "preset-changes",
+                    label: "Preset Changes",
+                    icon: <DownloadSimple size={14} weight="fill" />,
                   },
                   {
                     value: "extension",
