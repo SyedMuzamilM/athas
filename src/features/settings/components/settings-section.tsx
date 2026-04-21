@@ -62,7 +62,7 @@ export function SettingRow({
 
     if (
       target.closest(
-        "button, input, select, textarea, a, [role='button'], [role='switch'], [data-slot='button']",
+        "button, input, select, textarea, a, label, [role='button'], [role='switch'], [data-slot='button'], [data-setting-interactive-root='true']",
       )
     ) {
       return;
@@ -72,7 +72,9 @@ export function SettingRow({
     if (!controlRoot) return;
 
     const primaryInteractive =
-      controlRoot.querySelector<HTMLElement>("[data-setting-primary-control='true']") ??
+      controlRoot.querySelector<HTMLElement>(
+        "[data-setting-primary-control='true'], [data-setting-interactive-root='true']",
+      ) ??
       controlRoot.querySelector<HTMLElement>(
         "button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [role='button'], [role='switch'], [tabindex]:not([tabindex='-1'])",
       );

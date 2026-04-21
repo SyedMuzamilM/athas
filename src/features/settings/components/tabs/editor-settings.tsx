@@ -11,7 +11,7 @@ export const EditorSettings = () => {
 
   return (
     <div className="space-y-4">
-      <Section title="Typography">
+      <Section title="Editor">
         <SettingRow
           label="Editor Font Family"
           description="Font family for code editor"
@@ -57,9 +57,6 @@ export const EditorSettings = () => {
             size="xs"
           />
         </SettingRow>
-      </Section>
-
-      <Section title="Display">
         <SettingRow
           label="Word Wrap"
           description="Wrap lines that exceed viewport width"
@@ -114,24 +111,6 @@ export const EditorSettings = () => {
             size="sm"
           />
         </SettingRow>
-      </Section>
-
-      <Section title="Input">
-        <SettingRow
-          label="Vim Mode"
-          description="Enable vim keybindings and commands"
-          onReset={() => updateSetting("vimMode", getDefaultSetting("vimMode"))}
-          canReset={settings.vimMode !== getDefaultSetting("vimMode")}
-        >
-          <Switch
-            checked={settings.vimMode}
-            onChange={(checked) => updateSetting("vimMode", checked)}
-            size="sm"
-          />
-        </SettingRow>
-      </Section>
-
-      <Section title="Tabs">
         <SettingRow
           label="Max Open Tabs"
           description="Maximum number of tabs before oldest closes"
@@ -162,9 +141,6 @@ export const EditorSettings = () => {
             size="sm"
           />
         </SettingRow>
-      </Section>
-
-      <Section title="Saving">
         <SettingRow
           label="Auto Save"
           description="Automatically save files when editing"
@@ -177,9 +153,6 @@ export const EditorSettings = () => {
             size="sm"
           />
         </SettingRow>
-      </Section>
-
-      <Section title="External Editor">
         <SettingRow
           label="Default Editor"
           description="Open files in an external terminal editor instead of the built-in editor"
@@ -206,6 +179,8 @@ export const EditorSettings = () => {
             className={SETTINGS_CONTROL_WIDTHS.text}
             size="xs"
             variant="secondary"
+            searchable
+            searchableTrigger="input"
           />
         </SettingRow>
 

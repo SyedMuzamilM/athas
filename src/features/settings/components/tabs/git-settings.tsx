@@ -180,6 +180,8 @@ export const GitSettings = () => {
             className={SETTINGS_CONTROL_WIDTHS.default}
             size="xs"
             variant="secondary"
+            searchable
+            searchableTrigger="input"
           />
         </SettingRow>
       </Section>

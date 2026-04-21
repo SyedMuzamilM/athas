@@ -23,6 +23,7 @@ import { useAuthStore } from "@/features/window/stores/auth-store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
+import { SegmentedControl } from "@/ui/segmented-control";
 import Section, { SETTINGS_CONTROL_WIDTHS, SettingRow } from "../settings-section";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
@@ -258,28 +259,20 @@ export const AISettings = () => {
       {(isOllamaSelected || settings.ollamaBaseUrl !== DEFAULT_OLLAMA_BASE_URL) && (
         <Section title="Ollama">
           <SettingRow label="Mode" description="Run Ollama locally or use Ollama Cloud">
-            <div className="flex items-center gap-1.5">
-              <Button
-                type="button"
-                variant={isOllamaCloud ? "secondary" : "default"}
-                size="xs"
-                onClick={handleResetOllamaUrl}
-                className="gap-1.5"
-              >
-                <Laptop />
-                Local
-              </Button>
-              <Button
-                type="button"
-                variant={isOllamaCloud ? "default" : "secondary"}
-                size="xs"
-                onClick={handleUseOllamaCloud}
-                className="gap-1.5"
-              >
-                <Cloud />
-                Cloud
-              </Button>
-            </div>
+            <SegmentedControl
+              value={isOllamaCloud ? "cloud" : "local"}
+              onChange={(nextValue) => {
+                if (nextValue === "local") {
+                  handleResetOllamaUrl();
+                  return;
+                }
+                handleUseOllamaCloud();
+              }}
+              options={[
+                { value: "local", label: "Local", icon: <Laptop /> },
+                { value: "cloud", label: "Cloud", icon: <Cloud /> },
+              ]}
+            />
           </SettingRow>
           <SettingRow
             label="Endpoint"
@@ -429,6 +422,8 @@ export const AISettings = () => {
                   }
                   size="xs"
                   variant="secondary"
+                  searchable
+                  searchableTrigger="input"
                 />
               </SettingRow>
             );

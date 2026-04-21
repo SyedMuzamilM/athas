@@ -1,4 +1,13 @@
+import { AnimatePresence, motion } from "framer-motion";
 import { Search } from "lucide-react";
+import {
+  ArrowLeft,
+  CirclesThree,
+  Cube,
+  DownloadSimple,
+  Sliders,
+  User,
+} from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
 import { KeybindingRow } from "@/features/keymaps/components/keybinding-row";
 import { keybindingPresetDefinitions } from "@/features/keymaps/defaults/keybinding-presets";
@@ -10,14 +19,28 @@ import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
+import { SegmentedControl } from "@/ui/segmented-control";
 import Select from "@/ui/select";
-import { TypedConfirmAction } from "../typed-confirm-action";
-import { SettingRow } from "../settings-section";
 import Switch from "@/ui/switch";
 import { TableHeadCell, TableHeader } from "@/ui/table";
-import { cn } from "@/utils/cn";
+import { TypedConfirmAction } from "../typed-confirm-action";
+import { SettingRow } from "../settings-section";
 
 type FilterType = "all" | "user" | "default" | "preset" | "extension";
+
+const editorStepTransition = {
+  initial: { opacity: 0, x: 14 },
+  animate: { opacity: 1, x: 0 },
+  exit: { opacity: 0, x: -14 },
+  transition: { duration: 0.16, ease: "easeOut" as const },
+};
+
+const summaryStepTransition = {
+  initial: { opacity: 0, x: -14 },
+  animate: { opacity: 1, x: 0 },
+  exit: { opacity: 0, x: 14 },
+  transition: { duration: 0.16, ease: "easeOut" as const },
+};
 
 export const KeyboardSettings = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -32,14 +55,13 @@ export const KeyboardSettings = () => {
   const commands = useMemo(() => keymapRegistry.getAllCommands(), []);
   const registryKeybindings = useMemo(() => keymapRegistry.getAllKeybindings(), []);
 
-  const getKeybindingForCommand = (commandId: string): Keybinding | undefined => {
-    return getEffectiveKeybindingForCommand({
+  const getKeybindingForCommand = (commandId: string): Keybinding | undefined =>
+    getEffectiveKeybindingForCommand({
       commandId,
       preset: settings.keybindingPreset,
       registryKeybindings,
       userKeybindings,
     });
-  };
 
   const filteredCommands = useMemo(() => {
     const query = searchQuery.toLowerCase();
@@ -126,43 +148,148 @@ export const KeyboardSettings = () => {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="mb-3 space-y-2">
-        <SettingRow
-          label="Vim Mode"
-          description="Enable vim keybindings and commands"
-          onReset={() => updateSetting("vimMode", getDefaultSetting("vimMode"))}
-          canReset={settings.vimMode !== getDefaultSetting("vimMode")}
-        >
-          <Switch
-            checked={settings.vimMode}
-            onChange={(checked) => updateSetting("vimMode", checked)}
-            size="sm"
-          />
-        </SettingRow>
+      <AnimatePresence mode="wait" initial={false}>
+        {isEditingKeybindings ? (
+          <motion.div
+            key="keyboard-editor"
+            className="flex h-full flex-col"
+            {...editorStepTransition}
+          >
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <Button
+                variant="secondary"
+                size="xs"
+                onClick={() => setIsEditingKeybindings(false)}
+                className="gap-1.5"
+              >
+                <ArrowLeft size={14} weight="duotone" />
+                Back
+              </Button>
+              <div className="ui-font ui-text-sm text-text-lighter">Keybindings Editor</div>
+            </div>
 
-        <SettingRow
-          label="Keybinding Preset"
-          description="Apply a base shortcut style before your custom overrides."
-          onReset={() => updateSetting("keybindingPreset", getDefaultSetting("keybindingPreset"))}
-          canReset={settings.keybindingPreset !== getDefaultSetting("keybindingPreset")}
-        >
-          <Select
-            value={settings.keybindingPreset}
-            onChange={(value) => updateSetting("keybindingPreset", value as "none" | "vscode")}
-            options={Object.entries(keybindingPresetDefinitions).map(([value, definition]) => ({
-              value,
-              label: definition.label,
-            }))}
-            size="sm"
-            variant="outline"
-            searchable
-            searchableTrigger="input"
-            aria-label="Keybinding preset"
-          />
-        </SettingRow>
+            <div className="mb-3 flex items-center gap-2">
+              <Input
+                placeholder="Search keybindings..."
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                leftIcon={Search}
+                size="sm"
+                containerClassName="w-full"
+              />
+            </div>
 
-        {!isEditingKeybindings ? (
-          <>
+            <div className="mb-3">
+              <SegmentedControl
+                value={filterType}
+                onChange={(value) => setFilterType(value as FilterType)}
+                options={[
+                  {
+                    value: "all",
+                    label: "All",
+                    icon: <CirclesThree size={14} weight="duotone" />,
+                  },
+                  {
+                    value: "user",
+                    label: "User",
+                    icon: <User size={14} weight="duotone" />,
+                  },
+                  {
+                    value: "default",
+                    label: "Default",
+                    icon: <Sliders size={14} weight="duotone" />,
+                  },
+                  {
+                    value: "preset",
+                    label: "Preset",
+                    icon: <DownloadSimple size={14} weight="duotone" />,
+                  },
+                  {
+                    value: "extension",
+                    label: "Extension",
+                    icon: <Cube size={14} weight="duotone" />,
+                  },
+                ]}
+              />
+            </div>
+
+            <div className="flex-1 overflow-y-auto">
+              <TableHeader
+                gridCols="minmax(0,2.2fr) minmax(180px,1.1fr) minmax(0,1.6fr) 88px 108px"
+                className="px-2 py-1.5"
+              >
+                <TableHeadCell>Command</TableHeadCell>
+                <TableHeadCell>Keybinding</TableHeadCell>
+                <TableHeadCell>When</TableHeadCell>
+                <TableHeadCell>Source</TableHeadCell>
+                <TableHeadCell>Actions</TableHeadCell>
+              </TableHeader>
+
+              {filteredCommands.length === 0 ? (
+                <div className="ui-font ui-text-md flex items-center justify-center py-12 text-text-lighter">
+                  No keybindings found
+                </div>
+              ) : (
+                filteredCommands.map((command) => {
+                  const binding = getKeybindingForCommand(command.id);
+                  return <KeybindingRow key={command.id} command={command} keybinding={binding} />;
+                })
+              )}
+            </div>
+
+            <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
+              <div className="ui-font ui-text-sm text-text-lighter">
+                {filteredCommands.length} of {commands.length} keybindings
+              </div>
+              <div className="flex gap-2">
+                <TypedConfirmAction actionLabel="Reset to Defaults" onConfirm={handleResetAll} />
+                <Button variant="default" size="xs" onClick={handleImport}>
+                  Import
+                </Button>
+                <Button variant="default" size="xs" onClick={handleExport}>
+                  Export
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div key="keyboard-summary" className="space-y-2" {...summaryStepTransition}>
+            <SettingRow
+              label="Vim Mode"
+              description="Enable vim keybindings and commands"
+              onReset={() => updateSetting("vimMode", getDefaultSetting("vimMode"))}
+              canReset={settings.vimMode !== getDefaultSetting("vimMode")}
+            >
+              <Switch
+                checked={settings.vimMode}
+                onChange={(checked) => updateSetting("vimMode", checked)}
+                size="sm"
+              />
+            </SettingRow>
+
+            <SettingRow
+              label="Keybinding Preset"
+              description="Apply a base shortcut style before your custom overrides."
+              onReset={() =>
+                updateSetting("keybindingPreset", getDefaultSetting("keybindingPreset"))
+              }
+              canReset={settings.keybindingPreset !== getDefaultSetting("keybindingPreset")}
+            >
+              <Select
+                value={settings.keybindingPreset}
+                onChange={(value) => updateSetting("keybindingPreset", value as "none" | "vscode")}
+                options={Object.entries(keybindingPresetDefinitions).map(([value, definition]) => ({
+                  value,
+                  label: definition.label,
+                }))}
+                size="sm"
+                variant="outline"
+                searchable
+                searchableTrigger="input"
+                aria-label="Keybinding preset"
+              />
+            </SettingRow>
+
             <SettingRow
               label="Edit Keybindings"
               description={`Customize shortcuts individually. ${userOverrideCount} user override${userOverrideCount === 1 ? "" : "s"} currently saved.`}
@@ -171,93 +298,9 @@ export const KeyboardSettings = () => {
                 Open Editor
               </Button>
             </SettingRow>
-          </>
-        ) : (
-          <>
-            <div className="flex items-center justify-between gap-2">
-              <Input
-                placeholder="Search keybindings..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                leftIcon={Search}
-                size="sm"
-                containerClassName="w-full"
-              />
-              <Button variant="secondary" size="xs" onClick={() => setIsEditingKeybindings(false)}>
-                Done
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {(["all", "user", "default", "preset", "extension"] as const).map((filter) => (
-                <button
-                  key={filter}
-                  type="button"
-                  onClick={() => setFilterType(filter)}
-                  className={cn(
-                    "ui-font ui-text-sm inline-flex h-7 items-center rounded-lg px-2.5 transition-colors",
-                    filterType === filter
-                      ? "bg-primary-bg text-text shadow-sm"
-                      : "text-text-lighter hover:bg-hover hover:text-text",
-                  )}
-                >
-                  {filter === "all"
-                    ? "All"
-                    : filter === "user"
-                      ? "User"
-                      : filter === "default"
-                        ? "Default"
-                        : filter === "preset"
-                          ? "Preset"
-                          : "Extension"}
-                </button>
-              ))}
-            </div>
-          </>
+          </motion.div>
         )}
-      </div>
-
-      {isEditingKeybindings ? (
-        <>
-          <div className="flex-1 overflow-y-auto">
-            <TableHeader
-              gridCols="minmax(0,2.2fr) minmax(180px,1.1fr) minmax(0,1.6fr) 88px 108px"
-              className="px-2 py-1.5"
-            >
-              <TableHeadCell>Command</TableHeadCell>
-              <TableHeadCell>Keybinding</TableHeadCell>
-              <TableHeadCell>When</TableHeadCell>
-              <TableHeadCell>Source</TableHeadCell>
-              <TableHeadCell>Actions</TableHeadCell>
-            </TableHeader>
-
-            {filteredCommands.length === 0 ? (
-              <div className="ui-font ui-text-md flex items-center justify-center py-12 text-text-lighter">
-                No keybindings found
-              </div>
-            ) : (
-              filteredCommands.map((command) => {
-                const binding = getKeybindingForCommand(command.id);
-                return <KeybindingRow key={command.id} command={command} keybinding={binding} />;
-              })
-            )}
-          </div>
-
-          <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
-            <div className="ui-font ui-text-sm text-text-lighter">
-              {filteredCommands.length} of {commands.length} keybindings
-            </div>
-            <div className="flex gap-2">
-              <TypedConfirmAction actionLabel="Reset to Defaults" onConfirm={handleResetAll} />
-              <Button variant="default" size="xs" onClick={handleImport}>
-                Import
-              </Button>
-              <Button variant="default" size="xs" onClick={handleExport}>
-                Export
-              </Button>
-            </div>
-          </div>
-        </>
-      ) : null}
+      </AnimatePresence>
     </div>
   );
 };

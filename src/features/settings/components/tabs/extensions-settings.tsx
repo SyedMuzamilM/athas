@@ -1,14 +1,12 @@
+import { Blocks, Plus, RefreshCw, Search } from "lucide-react";
 import {
-  AlertCircle,
-  Blocks,
   Database,
-  Languages,
   Package,
-  Palette,
-  Plus,
-  RefreshCw,
-  Search,
-} from "lucide-react";
+  PaintBrush,
+  PuzzlePiece,
+  TextT,
+  WarningCircle,
+} from "@phosphor-icons/react";
 import { useCallback, useEffect, useState } from "react";
 import { CreateExtensionWizard } from "@/extensions/ui/components/create-extension-wizard";
 import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
@@ -25,6 +23,7 @@ import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
+import { SegmentedControl } from "@/ui/segmented-control";
 import { cn } from "@/utils/cn";
 import { ProActionButton } from "../pro-action-button";
 
@@ -44,11 +43,11 @@ interface UnifiedExtension {
 
 const FILTER_TABS = [
   { id: "all", label: "All" },
-  { id: "language", label: "Languages", icon: Languages },
-  { id: "theme", label: "Themes", icon: Palette },
+  { id: "language", label: "Languages", icon: TextT },
+  { id: "theme", label: "Themes", icon: PaintBrush },
   { id: "icon-theme", label: "Icon Themes", icon: Package },
   { id: "database", label: "Databases", icon: Database },
-  { id: "ui", label: "Custom", icon: Blocks },
+  { id: "ui", label: "Custom", icon: PuzzlePiece },
 ] as const;
 
 const getCategoryLabel = (category: UnifiedExtension["category"]) => {
@@ -99,7 +98,7 @@ const ExtensionRow = ({
         {extension.runtimeIssues && extension.runtimeIssues.length > 0 && (
           <div className="mt-1 rounded-lg border border-error/20 bg-error/8 px-2 py-1.5">
             <div className="ui-font ui-text-sm flex items-start gap-1.5 text-error">
-              <AlertCircle className="mt-0.5 shrink-0" />
+              <WarningCircle className="mt-0.5 shrink-0" size={14} weight="duotone" />
               <span>{extension.runtimeIssues[0].message}</span>
             </div>
           </div>
@@ -406,30 +405,21 @@ export const ExtensionsSettings = () => {
         />
       </div>
 
-      <div className="mb-3 flex flex-wrap gap-1.5">
-        {FILTER_TABS.map((tab) => {
-          const Icon = "icon" in tab ? tab.icon : undefined;
-          const isActive = settings.extensionsActiveTab === tab.id;
-
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() =>
-                updateSetting("extensionsActiveTab", tab.id as typeof settings.extensionsActiveTab)
-              }
-              className={cn(
-                "ui-font ui-text-sm inline-flex h-7 items-center gap-1.5 rounded-lg px-2.5 transition-colors",
-                isActive
-                  ? "bg-primary-bg text-text shadow-sm"
-                  : "text-text-lighter hover:bg-hover hover:text-text",
-              )}
-            >
-              {Icon ? <Icon className="size-3.5" /> : null}
-              {tab.label}
-            </button>
-          );
-        })}
+      <div className="mb-3">
+        <SegmentedControl
+          value={settings.extensionsActiveTab}
+          onChange={(value) =>
+            updateSetting("extensionsActiveTab", value as typeof settings.extensionsActiveTab)
+          }
+          options={FILTER_TABS.map((tab) => {
+            const Icon = "icon" in tab ? tab.icon : undefined;
+            return {
+              value: tab.id,
+              label: tab.label,
+              icon: Icon ? <Icon size={14} weight="duotone" /> : undefined,
+            };
+          })}
+        />
       </div>
 
       {(settings.extensionsActiveTab === "ui" || settings.extensionsActiveTab === "all") && (

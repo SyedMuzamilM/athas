@@ -137,6 +137,8 @@ export const TerminalSettings = () => {
             className={SETTINGS_CONTROL_WIDTHS.xwide}
             size="xs"
             variant="secondary"
+            searchable
+            searchableTrigger="input"
           />
         </SettingRow>
 
@@ -248,6 +250,8 @@ export const TerminalSettings = () => {
                       className="w-full"
                       size="sm"
                       variant="secondary"
+                      searchable
+                      searchableTrigger="input"
                     />
                   </div>
                 </div>
@@ -412,6 +416,8 @@ export const TerminalSettings = () => {
             className={SETTINGS_CONTROL_WIDTHS.default}
             size="xs"
             variant="secondary"
+            searchable
+            searchableTrigger="input"
           />
         </SettingRow>
 
