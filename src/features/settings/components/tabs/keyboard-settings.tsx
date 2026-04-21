@@ -15,6 +15,8 @@ import {
 } from "@/features/keymaps/components/keybinding-row";
 import {
   type KeybindingPreset,
+  getKeybindingPresetCoverageReport,
+  keybindingPresetDefinitions,
   keybindingPresetOptions,
 } from "@/features/keymaps/defaults/keybinding-presets";
 import { useKeymapStore } from "@/features/keymaps/stores/store";
@@ -104,6 +106,10 @@ export const KeyboardSettings = () => {
     () => userKeybindings.filter((binding) => binding.source === "user").length,
     [userKeybindings],
   );
+  const selectedPresetCoverage = useMemo(
+    () => getKeybindingPresetCoverageReport(settings.keybindingPreset),
+    [settings.keybindingPreset],
+  );
 
   const handleResetAll = () => {
     resetToDefaults();
@@ -185,11 +191,11 @@ export const KeyboardSettings = () => {
               />
             </div>
 
-            <div className="mb-3">
+            <div className="mb-3 overflow-x-auto">
               <SegmentedControl
                 value={filterType}
                 onChange={(value) => setFilterType(value as FilterType)}
-                className="inline-flex h-auto max-w-full flex-wrap items-stretch gap-1 overflow-visible self-start rounded-xl border border-border/60 bg-secondary-bg/40 p-1"
+                className="inline-flex h-auto min-w-max max-w-full flex-wrap items-stretch gap-1 overflow-visible self-start rounded-xl border border-border/60 bg-secondary-bg/40 p-1"
                 options={[
                   {
                     value: "all",
@@ -224,8 +230,8 @@ export const KeyboardSettings = () => {
               <div className="h-full overflow-x-auto overflow-y-auto">
                 <div className={KEYBINDING_TABLE_MIN_WIDTH_CLASS_NAME}>
                   <TableHeader
-                    gridCols="minmax(240px,2.2fr) minmax(180px,1.1fr) minmax(160px,1.6fr) 88px 108px"
-                    className="px-2 py-1.5"
+                    gridCols="minmax(220px,2fr) minmax(156px,1fr) minmax(128px,1.25fr) 72px 92px"
+                    className="gap-3 px-1.5 py-1"
                   >
                     <TableHeadCell>Command</TableHeadCell>
                     <TableHeadCell>Keybinding</TableHeadCell>
@@ -282,7 +288,11 @@ export const KeyboardSettings = () => {
 
             <SettingRow
               label="Keybinding Preset"
-              description="Apply a base shortcut style before your custom overrides."
+              description={
+                settings.keybindingPreset === "none"
+                  ? "Apply a base shortcut style before your custom overrides."
+                  : `${keybindingPresetDefinitions[settings.keybindingPreset].description} Covers ${selectedPresetCoverage.coveredCommandIds.length}/${selectedPresetCoverage.totalCommandCount} built-in commands.`
+              }
               onReset={() =>
                 updateSetting("keybindingPreset", getDefaultSetting("keybindingPreset"))
               }
@@ -299,6 +309,15 @@ export const KeyboardSettings = () => {
                 aria-label="Keybinding preset"
               />
             </SettingRow>
+
+            {settings.keybindingPreset !== "none" && !selectedPresetCoverage.isComplete ? (
+              <div className="ui-font ui-text-sm rounded-lg border border-warning/30 bg-warning/8 px-3 py-2 text-warning">
+                This preset is incomplete. {selectedPresetCoverage.missingCommandIds.length}{" "}
+                built-in command
+                {selectedPresetCoverage.missingCommandIds.length === 1 ? " is" : "s are"} still
+                missing preset coverage.
+              </div>
+            ) : null}
 
             <SettingRow
               label="Edit Keybindings"

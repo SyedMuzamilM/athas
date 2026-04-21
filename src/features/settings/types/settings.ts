@@ -64,7 +64,15 @@ export interface Settings {
   showGitHubIssues: boolean;
   showGitHubActions: boolean;
   // Keyboard
-  keybindingPreset: "none" | "vscode" | "jetbrains" | "sublime";
+  keybindingPreset:
+    | "none"
+    | "vscode"
+    | "jetbrains"
+    | "sublime"
+    | "xcode"
+    | "atom"
+    | "emacs"
+    | "zed";
   vimMode: boolean;
   vimRelativeLineNumbers: boolean;
   // Language

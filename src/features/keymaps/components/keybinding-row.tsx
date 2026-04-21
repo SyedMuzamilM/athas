@@ -9,8 +9,8 @@ import type { Command, Keybinding } from "../types";
 import { KeybindingInput } from "./keybinding-input";
 
 export const KEYBINDING_TABLE_GRID_COLS_CLASS_NAME =
-  "grid-cols-[minmax(240px,2.2fr)_minmax(180px,1.1fr)_minmax(160px,1.6fr)_88px_108px]";
-export const KEYBINDING_TABLE_MIN_WIDTH_CLASS_NAME = "min-w-[820px]";
+  "grid-cols-[minmax(220px,2fr)_minmax(156px,1fr)_minmax(128px,1.25fr)_72px_92px]";
+export const KEYBINDING_TABLE_MIN_WIDTH_CLASS_NAME = "min-w-[700px]";
 
 interface KeybindingRowProps {
   command: Command;
@@ -69,14 +69,15 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
     <div
       className={cn(
         "grid gap-4 border-b border-border px-2 py-2 transition-colors hover:bg-hover",
+        "gap-3 px-1.5 py-1.5",
         KEYBINDING_TABLE_GRID_COLS_CLASS_NAME,
         KEYBINDING_TABLE_MIN_WIDTH_CLASS_NAME,
         hasConflict && "bg-error/5 hover:bg-error/10",
       )}
     >
       <div className="min-w-0">
-        <div className="ui-font ui-text-sm truncate text-text">{command.title}</div>
-        <div className="ui-font mt-0.5 truncate text-[11px] text-text-lighter">
+        <div className="ui-font text-[12px] truncate text-text">{command.title}</div>
+        <div className="ui-font mt-0.5 truncate text-[10px] text-text-lighter">
           {command.category} • {command.id}
         </div>
       </div>
@@ -95,7 +96,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
             onClick={() => setIsEditing(true)}
             variant="outline"
             size="xs"
-            className="flex w-full items-center justify-start px-2 text-xs hover:border-accent"
+            className="flex h-7 w-full items-center justify-start px-1.5 text-[11px] hover:border-accent"
             aria-label={`Edit keybinding for ${command.title}`}
           >
             {keybinding?.key ? (
@@ -107,7 +108,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
         )}
       </div>
 
-      <div className="ui-font flex items-center truncate text-[11px] text-text-lighter">
+      <div className="ui-font flex items-center truncate text-[10px] text-text-lighter">
         {keybinding?.when || command.keybinding ? keybinding?.when || "-" : "-"}
       </div>
 
@@ -124,7 +125,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
             onClick={handleReset}
             variant="ghost"
             size="xs"
-            className="text-[11px] text-text-lighter hover:text-text"
+            className="text-[10px] text-text-lighter hover:text-text"
             tooltip="Reset to default"
             aria-label="Reset to default keybinding"
           >
@@ -137,7 +138,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
             onClick={handleRemove}
             variant="ghost"
             size="xs"
-            className="text-[11px] text-text-lighter hover:text-error"
+            className="text-[10px] text-text-lighter hover:text-error"
             tooltip="Remove keybinding"
             aria-label="Remove keybinding"
           >
@@ -147,7 +148,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
       </div>
 
       {hasConflict && (
-        <div className="ui-font col-span-5 rounded-lg border border-error/20 bg-error/5 px-2.5 py-2 text-[11px] text-error">
+        <div className="ui-font col-span-5 rounded-lg border border-error/20 bg-error/5 px-2.5 py-2 text-[10px] text-error">
           ⚠ Conflicts with: {conflictingCommands.map((c) => c.title).join(", ")}
         </div>
       )}
