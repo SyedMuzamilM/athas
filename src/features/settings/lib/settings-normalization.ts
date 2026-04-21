@@ -84,8 +84,7 @@ export function normalizeSettings(settings: Settings): Settings {
 
   if (
     persistedGitPanelMode === "none" ||
-    (persistedGitPanelMode &&
-      !["changes", "stash", "history", "worktrees"].includes(persistedGitPanelMode))
+    (persistedGitPanelMode && !["changes", "history", "worktrees"].includes(persistedGitPanelMode))
   ) {
     normalizedSettings.gitLastPanelMode = "changes";
   }

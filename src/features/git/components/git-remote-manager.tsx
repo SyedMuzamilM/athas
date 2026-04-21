@@ -1,10 +1,11 @@
 import { Globe, Plus, Server, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/ui/button";
-import Dialog from "@/ui/dialog";
+import { CommandEmpty, CommandItem, CommandList } from "@/ui/command";
 import Input from "@/ui/input";
 import { addRemote, getRemotes, removeRemote } from "../api/git-remotes-api";
 import type { GitRemote } from "../types/git-types";
+import GitCommandSurface from "./git-command-surface";
 
 interface GitRemoteManagerProps {
   isOpen: boolean;
@@ -14,6 +15,7 @@ interface GitRemoteManagerProps {
 }
 
 const GitRemoteManager = ({ isOpen, onClose, repoPath, onRefresh }: GitRemoteManagerProps) => {
+  const [query, setQuery] = useState("");
   const [remotes, setRemotes] = useState<GitRemote[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [newRemoteName, setNewRemoteName] = useState("");
@@ -21,20 +23,27 @@ const GitRemoteManager = ({ isOpen, onClose, repoPath, onRefresh }: GitRemoteMan
   const [actionLoading, setActionLoading] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    if (isOpen) {
-      void loadRemotes();
-    }
+    if (!isOpen) return;
+    setQuery("");
+    void loadRemotes();
   }, [isOpen, repoPath]);
+
+  const filteredRemotes = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) return remotes;
+    return remotes.filter(
+      (remote) =>
+        remote.name.toLowerCase().includes(normalizedQuery) ||
+        remote.url.toLowerCase().includes(normalizedQuery),
+    );
+  }, [query, remotes]);
 
   const loadRemotes = async () => {
     if (!repoPath) return;
 
     setIsLoading(true);
     try {
-      const remoteList = await getRemotes(repoPath);
-      setRemotes(remoteList);
-    } catch (error) {
-      console.error("Failed to load remotes:", error);
+      setRemotes(await getRemotes(repoPath));
     } finally {
       setIsLoading(false);
     }
@@ -46,14 +55,11 @@ const GitRemoteManager = ({ isOpen, onClose, repoPath, onRefresh }: GitRemoteMan
     setIsLoading(true);
     try {
       const success = await addRemote(repoPath, newRemoteName.trim(), newRemoteUrl.trim());
-      if (success) {
-        setNewRemoteName("");
-        setNewRemoteUrl("");
-        await loadRemotes();
-        onRefresh?.();
-      }
-    } catch (error) {
-      console.error("Failed to add remote:", error);
+      if (!success) return;
+      setNewRemoteName("");
+      setNewRemoteUrl("");
+      await loadRemotes();
+      onRefresh?.();
     } finally {
       setIsLoading(false);
     }
@@ -62,122 +68,105 @@ const GitRemoteManager = ({ isOpen, onClose, repoPath, onRefresh }: GitRemoteMan
   const handleRemoveRemote = async (remoteName: string) => {
     if (!repoPath) return;
 
-    const confirmed = confirm(`Are you sure you want to remove remote '${remoteName}'?`);
-    if (!confirmed) return;
-
     setActionLoading((prev) => new Set(prev).add(remoteName));
     try {
       const success = await removeRemote(repoPath, remoteName);
-      if (success) {
-        await loadRemotes();
-        onRefresh?.();
-      }
-    } catch (error) {
-      console.error("Failed to remove remote:", error);
+      if (!success) return;
+      await loadRemotes();
+      onRefresh?.();
     } finally {
       setActionLoading((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(remoteName);
-        return newSet;
+        const next = new Set(prev);
+        next.delete(remoteName);
+        return next;
       });
     }
   };
 
-  if (!isOpen) {
-    return null;
-  }
-
   return (
-    <Dialog
+    <GitCommandSurface
+      isOpen={isOpen}
       onClose={onClose}
-      title="Remotes"
-      icon={Server}
-      size="md"
-      classNames={{ content: "p-0" }}
+      query={query}
+      onQueryChange={setQuery}
+      placeholder="Search remotes..."
+      meta={`${remotes.length} remote${remotes.length === 1 ? "" : "s"}`}
     >
-      <div className="ui-font flex max-h-[70vh] flex-col">
-        <div className="border-border/70 border-b p-4">
-          <div className="mb-3 flex items-center gap-2 text-text text-xs">
-            <Plus className="text-text-lighter" />
-            <span className="font-medium">Add remote</span>
-          </div>
-
-          <div className="space-y-2">
-            <Input
-              type="text"
-              placeholder="Remote name"
-              value={newRemoteName}
-              onChange={(e) => setNewRemoteName(e.target.value)}
-              className="w-full bg-primary-bg"
-            />
-            <Input
-              type="text"
-              placeholder="Remote URL"
-              value={newRemoteUrl}
-              onChange={(e) => setNewRemoteUrl(e.target.value)}
-              className="w-full bg-primary-bg"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  void handleAddRemote();
-                }
-              }}
-            />
-            <div className="flex justify-end">
-              <Button
-                onClick={() => void handleAddRemote()}
-                disabled={isLoading || !newRemoteName.trim() || !newRemoteUrl.trim()}
-                size="sm"
-              >
-                {isLoading ? "Adding..." : "Add Remote"}
-              </Button>
-            </div>
-          </div>
+      <div className="border-border/70 border-b px-3 py-3">
+        <div className="mb-2 flex items-center gap-2 text-text">
+          <Plus className="size-4 text-text-lighter" />
+          <span className="ui-text-sm font-medium">Add Remote</span>
         </div>
-
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          {isLoading && remotes.length === 0 ? (
-            <div className="p-4 text-center text-text-lighter text-xs">Loading remotes...</div>
-          ) : remotes.length === 0 ? (
-            <div className="p-4 text-center text-text-lighter text-xs">No remotes configured</div>
-          ) : (
-            remotes.map((remote) => {
-              const isActionLoading = actionLoading.has(remote.name);
-
-              return (
-                <div
-                  key={remote.name}
-                  className="border-border/70 border-b px-4 py-3 last:border-b-0"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="mb-1 flex items-center gap-2">
-                        <Globe className="text-text-lighter" />
-                        <span className="font-medium text-text text-xs">{remote.name}</span>
-                      </div>
-                      <div className="break-all text-[10px] text-text-lighter">{remote.url}</div>
-                    </div>
-                    <Button
-                      onClick={() => void handleRemoveRemote(remote.name)}
-                      disabled={isActionLoading}
-                      variant="ghost"
-                      size="xs"
-                      className="text-red-400 hover:bg-red-500/10 hover:text-red-300"
-                      tooltip="Remove remote"
-                    >
-                      <Trash2 />
-                    </Button>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-
-        <div className="border-border/70 border-t bg-secondary-bg/40 px-4 py-2 text-[10px] text-text-lighter">
-          {remotes.length} remote{remotes.length !== 1 ? "s" : ""} configured
+        <div className="space-y-2">
+          <Input
+            type="text"
+            placeholder="Remote name"
+            value={newRemoteName}
+            onChange={(e) => setNewRemoteName(e.target.value)}
+            className="w-full"
+          />
+          <Input
+            type="text"
+            placeholder="Remote URL"
+            value={newRemoteUrl}
+            onChange={(e) => setNewRemoteUrl(e.target.value)}
+            className="w-full"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                void handleAddRemote();
+              }
+            }}
+          />
+          <div className="flex justify-end">
+            <Button
+              onClick={() => void handleAddRemote()}
+              disabled={isLoading || !newRemoteName.trim() || !newRemoteUrl.trim()}
+              size="sm"
+              variant="secondary"
+            >
+              {isLoading ? "Adding..." : "Add Remote"}
+            </Button>
+          </div>
         </div>
       </div>
-    </Dialog>
+
+      <CommandList>
+        {isLoading && remotes.length === 0 ? (
+          <CommandEmpty>Loading remotes...</CommandEmpty>
+        ) : filteredRemotes.length === 0 ? (
+          <CommandEmpty>
+            {query.trim() ? "No matching remotes" : "No remotes configured"}
+          </CommandEmpty>
+        ) : (
+          filteredRemotes.map((remote) => {
+            const isActionLoading = actionLoading.has(remote.name);
+
+            return (
+              <CommandItem key={remote.name} className="ui-font items-start">
+                <Globe className="mt-0.5 size-4 shrink-0 text-text-lighter" />
+                <div className="min-w-0 flex-1">
+                  <div className="ui-text-sm text-text">{remote.name}</div>
+                  <div className="ui-text-sm mt-0.5 break-all text-text-lighter">{remote.url}</div>
+                </div>
+                <Button
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void handleRemoveRemote(remote.name);
+                  }}
+                  disabled={isActionLoading}
+                  variant="ghost"
+                  size="icon-xs"
+                  className="shrink-0 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                  aria-label={`Remove ${remote.name}`}
+                >
+                  <Trash2 className="size-3.5" />
+                </Button>
+              </CommandItem>
+            );
+          })
+        )}
+      </CommandList>
+    </GitCommandSurface>
   );
 };
 

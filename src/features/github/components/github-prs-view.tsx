@@ -1,20 +1,20 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { GitHubCliStatusMessage } from "./github-cli-status";
 import {
-  AlertCircle,
-  Activity,
+  ArrowSquareOut,
+  ChatCircleText,
   Check,
-  ChevronDown,
+  ClockCounterClockwise,
   Copy,
-  ExternalLink,
   FolderOpen,
   GitBranch,
   GitPullRequest,
-  MessageSquare,
-  RefreshCw,
-} from "lucide-react";
+  Lightning,
+} from "@phosphor-icons/react";
+import { AlertCircle, ChevronDown, RefreshCw } from "lucide-react";
 import {
   memo,
+  type ReactNode,
   startTransition,
   useCallback,
   useDeferredValue,
@@ -33,7 +33,11 @@ import { Button, buttonVariants } from "@/ui/button";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import { Dropdown, dropdownItemClassName, dropdownTriggerClassName } from "@/ui/dropdown";
 import { PaneIconButton, paneHeaderClassName } from "@/ui/pane";
-import { Tab, TabsList } from "@/ui/tabs";
+import {
+  Tabs,
+  EQUAL_WIDTH_SEGMENTED_TAB_ITEM_CLASS_NAME,
+  EQUAL_WIDTH_SEGMENTED_TABS_CLASS_NAME,
+} from "@/ui/tabs";
 import { cn } from "@/utils/cn";
 import { getFolderName } from "@/utils/path-helpers";
 import { useGitHubStore } from "../stores/github-store";
@@ -133,6 +137,7 @@ const GitHubPRsView = memo(() => {
   const activeBufferId = useBufferStore.use.activeBufferId();
   const { openPRBuffer } = useBufferStore.use.actions();
   const settings = useSettingsStore((state) => state.settings);
+  const updateSetting = useSettingsStore((state) => state.updateSetting);
   const isGitHubPRsViewActive = useUIState((state) => state.isGitHubPRsViewActive);
   const effectiveRepoPath = activeRepoPath ?? rootFolderPath ?? null;
 
@@ -317,7 +322,7 @@ const GitHubPRsView = memo(() => {
         {
           id: "open-on-github",
           label: "Open on GitHub",
-          icon: <ExternalLink />,
+          icon: <ArrowSquareOut />,
           onClick: () => {
             if (effectiveRepoPath) {
               void openPRInBrowser(effectiveRepoPath, selectedPR.number);
@@ -345,30 +350,32 @@ const GitHubPRsView = memo(() => {
       ]
     : [];
 
-  const allSectionTabs: Array<{
-    id: GitHubSidebarSection;
-    label: string;
-    icon: typeof GitPullRequest;
-  }> = [
-    {
-      id: "pull-requests",
-      label: "Pull Requests",
-      icon: GitPullRequest,
-    },
-    {
-      id: "issues",
-      label: "Issues",
-      icon: MessageSquare,
-    },
-    {
-      id: "actions",
-      label: "Actions",
-      icon: Activity,
-    },
-  ];
-  const sectionTabs = allSectionTabs.filter((tab) =>
-    availableSections.includes(tab.id),
-  ) as typeof allSectionTabs;
+  const allSectionTabs = useMemo(() => {
+    const tabMap: Record<
+      GitHubSidebarSection,
+      { id: GitHubSidebarSection; label: string; icon: ReactNode }
+    > = {
+      "pull-requests": {
+        id: "pull-requests",
+        label: "Pull Requests",
+        icon: <GitPullRequest size={16} weight="duotone" />,
+      },
+      issues: {
+        id: "issues",
+        label: "Issues",
+        icon: <ChatCircleText size={16} weight="duotone" />,
+      },
+      actions: {
+        id: "actions",
+        label: "Actions",
+        icon: <Lightning size={16} weight="duotone" />,
+      },
+    };
+
+    return settings.githubSidebarSectionOrder.map((id) => tabMap[id]).filter(Boolean);
+  }, [settings.githubSidebarSectionOrder]);
+
+  const sectionTabs = allSectionTabs.filter((tab) => availableSections.includes(tab.id));
 
   const renderRepoOption = (
     repoPath: string,
@@ -415,41 +422,32 @@ const GitHubPRsView = memo(() => {
         </div>
       ) : (
         <>
-          <TabsList
+          <Tabs
             variant="segmented"
-            className={cn(
-              "grid h-auto shrink-0 border-border/60 bg-secondary-bg/40",
-              sectionTabs.length === 1
-                ? "grid-cols-1"
-                : sectionTabs.length === 2
-                  ? "grid-cols-2"
-                  : "grid-cols-3",
-            )}
-          >
-            {sectionTabs.map((tab) => {
-              const Icon = tab.icon;
-              const isSelected = activeSection === tab.id;
-
-              return (
-                <Tab
-                  key={tab.id}
-                  role="tab"
-                  aria-selected={isSelected}
-                  onClick={() => setActiveSection(tab.id)}
-                  isActive={isSelected}
-                  size="md"
-                  variant="segmented"
-                  contentLayout="stacked"
-                  className="h-auto min-h-12 min-w-0 px-1 py-1.5 whitespace-normal transition-colors"
-                >
-                  <div className="relative flex items-center justify-center">
-                    <Icon strokeWidth={2.2} />
-                  </div>
-                  <span className="ui-text-sm text-center leading-none">{tab.label}</span>
-                </Tab>
-              );
-            })}
-          </TabsList>
+            size="md"
+            contentLayout="stacked"
+            reorderable
+            onReorder={(orderedIds) =>
+              updateSetting(
+                "githubSidebarSectionOrder",
+                orderedIds as typeof settings.githubSidebarSectionOrder,
+              )
+            }
+            className={EQUAL_WIDTH_SEGMENTED_TABS_CLASS_NAME}
+            items={sectionTabs.map((tab) => ({
+              id: tab.id,
+              isActive: activeSection === tab.id,
+              onClick: () => setActiveSection(tab.id),
+              role: "tab",
+              tabIndex: 0,
+              icon: <div className="relative flex items-center justify-center">{tab.icon}</div>,
+              label: <span className="ui-text-sm text-center leading-none">{tab.label}</span>,
+              className: cn(
+                EQUAL_WIDTH_SEGMENTED_TAB_ITEM_CLASS_NAME,
+                "h-10 whitespace-normal px-2.5 py-2",
+              ),
+            }))}
+          />
 
           <div className={paneHeaderClassName("justify-between rounded-lg")}>
             <div>
@@ -463,7 +461,7 @@ const GitHubPRsView = memo(() => {
                 tooltip="Filter pull requests"
                 tooltipSide="bottom"
               >
-                <GitPullRequest className="shrink-0" />
+                <GitPullRequest className="shrink-0" size={16} weight="duotone" />
                 <span className="truncate">
                   {activeSection === "pull-requests"
                     ? filterLabels[currentFilter]

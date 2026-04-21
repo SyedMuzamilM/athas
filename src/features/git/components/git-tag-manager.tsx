@@ -1,11 +1,12 @@
 import { Calendar, GitCommit, Plus, Tag, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/ui/button";
-import Dialog from "@/ui/dialog";
+import { CommandEmpty, CommandItem, CommandList } from "@/ui/command";
 import Input from "@/ui/input";
 import { formatShortDate } from "@/utils/date";
 import { createTag, deleteTag, getTags } from "../api/git-tags-api";
 import type { GitTag } from "../types/git-types";
+import GitCommandSurface from "./git-command-surface";
 
 interface GitTagManagerProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ interface GitTagManagerProps {
 }
 
 const GitTagManager = ({ isOpen, onClose, repoPath, onRefresh }: GitTagManagerProps) => {
+  const [query, setQuery] = useState("");
   const [tags, setTags] = useState<GitTag[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [newTagName, setNewTagName] = useState("");
@@ -23,20 +25,28 @@ const GitTagManager = ({ isOpen, onClose, repoPath, onRefresh }: GitTagManagerPr
   const [actionLoading, setActionLoading] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    if (isOpen) {
-      void loadTags();
-    }
+    if (!isOpen) return;
+    setQuery("");
+    void loadTags();
   }, [isOpen, repoPath]);
+
+  const filteredTags = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) return tags;
+    return tags.filter(
+      (tag) =>
+        tag.name.toLowerCase().includes(normalizedQuery) ||
+        tag.commit.toLowerCase().includes(normalizedQuery) ||
+        tag.message?.toLowerCase().includes(normalizedQuery),
+    );
+  }, [query, tags]);
 
   const loadTags = async () => {
     if (!repoPath) return;
 
     setIsLoading(true);
     try {
-      const tagList = await getTags(repoPath);
-      setTags(tagList);
-    } catch (error) {
-      console.error("Failed to load tags:", error);
+      setTags(await getTags(repoPath));
     } finally {
       setIsLoading(false);
     }
@@ -53,15 +63,12 @@ const GitTagManager = ({ isOpen, onClose, repoPath, onRefresh }: GitTagManagerPr
         newTagMessage.trim() || undefined,
         newTagCommit.trim() || undefined,
       );
-      if (success) {
-        setNewTagName("");
-        setNewTagMessage("");
-        setNewTagCommit("");
-        await loadTags();
-        onRefresh?.();
-      }
-    } catch (error) {
-      console.error("Failed to create tag:", error);
+      if (!success) return;
+      setNewTagName("");
+      setNewTagMessage("");
+      setNewTagCommit("");
+      await loadTags();
+      onRefresh?.();
     } finally {
       setIsLoading(false);
     }
@@ -73,129 +80,119 @@ const GitTagManager = ({ isOpen, onClose, repoPath, onRefresh }: GitTagManagerPr
     setActionLoading((prev) => new Set(prev).add(tagName));
     try {
       const success = await deleteTag(repoPath, tagName);
-      if (success) {
-        await loadTags();
-        onRefresh?.();
-      }
-    } catch (error) {
-      console.error("Failed to delete tag:", error);
+      if (!success) return;
+      await loadTags();
+      onRefresh?.();
     } finally {
       setActionLoading((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(tagName);
-        return newSet;
+        const next = new Set(prev);
+        next.delete(tagName);
+        return next;
       });
     }
   };
 
-  if (!isOpen) {
-    return null;
-  }
-
   return (
-    <Dialog onClose={onClose} title="Tags" icon={Tag} size="lg" classNames={{ content: "p-0" }}>
-      <div className="ui-font flex max-h-[70vh] flex-col">
-        <div className="border-border/70 border-b p-4">
-          <div className="mb-3 flex items-center gap-2 text-text text-xs">
-            <Plus className="text-text-lighter" />
-            <span className="font-medium">Create tag</span>
-          </div>
-
-          <div className="space-y-2">
-            <Input
-              type="text"
-              placeholder="Tag name"
-              value={newTagName}
-              onChange={(e) => setNewTagName(e.target.value)}
-              className="w-full bg-primary-bg"
-            />
-            <Input
-              type="text"
-              placeholder="Tag message (optional)"
-              value={newTagMessage}
-              onChange={(e) => setNewTagMessage(e.target.value)}
-              className="w-full bg-primary-bg"
-            />
-            <Input
-              type="text"
-              placeholder="Commit SHA (optional)"
-              value={newTagCommit}
-              onChange={(e) => setNewTagCommit(e.target.value)}
-              className="w-full bg-primary-bg"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  void handleCreateTag();
-                }
-              }}
-            />
-            <div className="flex justify-end">
-              <Button
-                onClick={() => void handleCreateTag()}
-                disabled={isLoading || !newTagName.trim()}
-                size="sm"
-              >
-                {isLoading ? "Creating..." : "Create Tag"}
-              </Button>
-            </div>
-          </div>
+    <GitCommandSurface
+      isOpen={isOpen}
+      onClose={onClose}
+      query={query}
+      onQueryChange={setQuery}
+      placeholder="Search tags..."
+      meta={`${tags.length} tag${tags.length === 1 ? "" : "s"}`}
+    >
+      <div className="border-border/70 border-b px-3 py-3">
+        <div className="mb-2 flex items-center gap-2 text-text">
+          <Plus className="size-4 text-text-lighter" />
+          <span className="ui-text-sm font-medium">Create Tag</span>
         </div>
-
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          {isLoading && tags.length === 0 ? (
-            <div className="p-4 text-center text-text-lighter text-xs">Loading tags...</div>
-          ) : tags.length === 0 ? (
-            <div className="p-4 text-center text-text-lighter text-xs">No tags found</div>
-          ) : (
-            tags.map((tag) => {
-              const isActionLoading = actionLoading.has(tag.name);
-
-              return (
-                <div key={tag.name} className="border-border/70 border-b px-4 py-3 last:border-b-0">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="mb-1 flex items-center gap-2">
-                        <Tag className="text-text-lighter" />
-                        <span className="font-medium text-text text-xs">{tag.name}</span>
-                      </div>
-
-                      {tag.message && (
-                        <div className="mb-1 text-[11px] text-text-lighter">{tag.message}</div>
-                      )}
-
-                      <div className="flex items-center gap-3 text-[10px] text-text-lighter">
-                        <div className="flex items-center gap-1">
-                          <GitCommit />
-                          <span className="ui-font">{tag.commit.substring(0, 7)}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Calendar />
-                          {formatShortDate(tag.date)}
-                        </div>
-                      </div>
-                    </div>
-
-                    <Button
-                      onClick={() => void handleDeleteTag(tag.name)}
-                      disabled={isActionLoading}
-                      variant="ghost"
-                      size="xs"
-                      className="text-red-400 hover:bg-red-500/10 hover:text-red-300"
-                      tooltip="Delete tag"
-                    >
-                      <Trash2 />
-                    </Button>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-
-        <div className="border-border/70 border-t bg-secondary-bg/40 px-4 py-2 text-[10px] text-text-lighter">
-          {tags.length} tag{tags.length !== 1 ? "s" : ""} total
+        <div className="space-y-2">
+          <Input
+            type="text"
+            placeholder="Tag name"
+            value={newTagName}
+            onChange={(e) => setNewTagName(e.target.value)}
+            className="w-full"
+          />
+          <Input
+            type="text"
+            placeholder="Tag message (optional)"
+            value={newTagMessage}
+            onChange={(e) => setNewTagMessage(e.target.value)}
+            className="w-full"
+          />
+          <Input
+            type="text"
+            placeholder="Commit SHA (optional)"
+            value={newTagCommit}
+            onChange={(e) => setNewTagCommit(e.target.value)}
+            className="w-full"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                void handleCreateTag();
+              }
+            }}
+          />
+          <div className="flex justify-end">
+            <Button
+              onClick={() => void handleCreateTag()}
+              disabled={isLoading || !newTagName.trim()}
+              size="sm"
+              variant="secondary"
+            >
+              {isLoading ? "Creating..." : "Create Tag"}
+            </Button>
+          </div>
         </div>
       </div>
-    </Dialog>
+
+      <CommandList>
+        {isLoading && tags.length === 0 ? (
+          <CommandEmpty>Loading tags...</CommandEmpty>
+        ) : filteredTags.length === 0 ? (
+          <CommandEmpty>{query.trim() ? "No matching tags" : "No tags found"}</CommandEmpty>
+        ) : (
+          filteredTags.map((tag) => {
+            const isActionLoading = actionLoading.has(tag.name);
+
+            return (
+              <CommandItem key={tag.name} className="ui-font items-start">
+                <Tag className="mt-0.5 size-4 shrink-0 text-text-lighter" />
+                <div className="min-w-0 flex-1">
+                  <div className="ui-text-sm text-text">{tag.name}</div>
+                  {tag.message ? (
+                    <div className="ui-text-sm mt-0.5 text-text-lighter">{tag.message}</div>
+                  ) : null}
+                  <div className="ui-text-xs mt-1 flex flex-wrap items-center gap-3 text-text-lighter">
+                    <span className="inline-flex items-center gap-1">
+                      <GitCommit className="size-3.5" />
+                      <span className="ui-font">{tag.commit.substring(0, 7)}</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <Calendar className="size-3.5" />
+                      {formatShortDate(tag.date)}
+                    </span>
+                  </div>
+                </div>
+                <Button
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void handleDeleteTag(tag.name);
+                  }}
+                  disabled={isActionLoading}
+                  variant="ghost"
+                  size="icon-xs"
+                  className="shrink-0 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                  aria-label={`Delete ${tag.name}`}
+                >
+                  <Trash2 className="size-3.5" />
+                </Button>
+              </CommandItem>
+            );
+          })
+        )}
+      </CommandList>
+    </GitCommandSurface>
   );
 };
 

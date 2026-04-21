@@ -1,4 +1,5 @@
 import {
+  Eye,
   Download,
   FolderOpen,
   GitPullRequest,
@@ -32,6 +33,7 @@ interface GitActionsMenuProps {
   onRefresh?: () => void;
   onOpenRemoteManager?: () => void;
   onOpenTagManager?: () => void;
+  onViewStashes?: () => void;
   onSelectRepository?: () => Promise<void> | void;
   isSelectingRepository?: boolean;
 }
@@ -45,6 +47,7 @@ const GitActionsMenu = ({
   onRefresh,
   onOpenRemoteManager,
   onOpenTagManager,
+  onViewStashes,
   onSelectRepository,
   isSelectingRepository,
 }: GitActionsMenuProps) => {
@@ -152,6 +155,11 @@ const GitActionsMenu = ({
     onClose();
   };
 
+  const handleViewStashes = () => {
+    onViewStashes?.();
+    onClose();
+  };
+
   const handleSelectRepository = async () => {
     await onSelectRepository?.();
     onClose();
@@ -205,6 +213,12 @@ const GitActionsMenu = ({
           label: "Manage Tags",
           icon: <Tag />,
           onClick: handleTagManager,
+        },
+        {
+          id: "view-stashes",
+          label: "View Stashes",
+          icon: <Eye />,
+          onClick: handleViewStashes,
         },
         { id: "sep-4", label: "", separator: true, onClick: () => {} },
         {
