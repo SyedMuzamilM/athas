@@ -116,6 +116,7 @@ const TabBar = ({
     dropTargetIndex: number | null;
     startPosition: { x: number; y: number } | null;
     currentPosition: { x: number; y: number } | null;
+    isOutsideRail: boolean;
     tabPositions: TabPosition[];
     lastValidDropTarget: number | null;
     dragDirection: "left" | "right" | null;
@@ -125,6 +126,7 @@ const TabBar = ({
     dropTargetIndex: null,
     startPosition: null,
     currentPosition: null,
+    isOutsideRail: false,
     tabPositions: [],
     lastValidDropTarget: null,
     dragDirection: null,
@@ -452,20 +454,24 @@ const TabBar = ({
             ...prev,
             isDragging: true,
             currentPosition,
+            isOutsideRail: false,
             tabPositions,
             dropTargetIndex: prev.draggedIndex,
             lastValidDropTarget: prev.draggedIndex,
           };
         }
         if (prev.isDragging) {
-          const currentPosition = tabBarRef.current
+          const constrainedDrag = tabBarRef.current
             ? constrainHorizontalTabDrag(
                 pointerPosition,
                 prev.startPosition.y,
                 tabBarRef.current.getBoundingClientRect(),
-              ).position
-            : pointerPosition;
-          setInternalTabDragHover(currentPosition);
+              )
+            : { position: pointerPosition, isOutsideRail: false };
+          const currentPosition = constrainedDrag.position;
+          if (constrainedDrag.isOutsideRail) {
+            setInternalTabDragHover(pointerPosition);
+          }
           const { dropTarget, direction } = calculateDropTarget(
             currentPosition.x,
             prev.dropTargetIndex,
@@ -484,6 +490,7 @@ const TabBar = ({
           return {
             ...prev,
             currentPosition,
+            isOutsideRail: constrainedDrag.isOutsideRail,
             dropTargetIndex: dropTarget,
             lastValidDropTarget: dropTarget,
             dragDirection: direction,
@@ -531,6 +538,7 @@ const TabBar = ({
         dropTargetIndex: null,
         startPosition: { x: e.clientX, y: e.clientY },
         currentPosition: { x: e.clientX, y: e.clientY },
+        isOutsideRail: false,
         tabPositions: [],
         lastValidDropTarget: null,
         dragDirection: null,
@@ -738,7 +746,9 @@ const TabBar = ({
       const draggedBuffer =
         currentState.draggedIndex !== null ? sortedBuffers[currentState.draggedIndex] : null;
       const target = currentState.currentPosition
-        ? resolveDropTarget(currentState.currentPosition)
+        ? currentState.isOutsideRail
+          ? resolveDropTarget(currentState.currentPosition)
+          : { paneId: null, zone: null }
         : { paneId: null, zone: null };
 
       if (
@@ -793,6 +803,7 @@ const TabBar = ({
         dropTargetIndex: null,
         startPosition: null,
         currentPosition: null,
+        isOutsideRail: false,
         tabPositions: [],
         lastValidDropTarget: null,
         dragDirection: null,

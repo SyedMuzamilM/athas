@@ -7,7 +7,7 @@ export function constrainHorizontalTabDrag(
   pointer: PointerPosition,
   startY: number,
   containerRect: DOMRect,
-  slop = 48,
+  slop = 80,
 ): { position: PointerPosition; isOutsideRail: boolean } {
   const isOutsideRail =
     pointer.y < containerRect.top - slop || pointer.y > containerRect.bottom + slop;
