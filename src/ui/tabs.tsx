@@ -7,6 +7,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
+import { restrictToHorizontalAxis } from "@dnd-kit/modifiers";
 import {
   SortableContext,
   arrayMove,
@@ -419,6 +420,7 @@ export function Tabs({
   return (
     <DndContext
       sensors={sensors}
+      modifiers={[restrictToHorizontalAxis]}
       collisionDetection={closestCenter}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
