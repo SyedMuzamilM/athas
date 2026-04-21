@@ -60,7 +60,6 @@ const CommandPalette = () => {
     setIsFindVisible,
     setActiveView,
     setIsQuickOpenVisible,
-    setIsGlobalSearchVisible,
     setIsDatabaseConnectionVisible,
     openSettingsDialog,
   } = useUIState();
