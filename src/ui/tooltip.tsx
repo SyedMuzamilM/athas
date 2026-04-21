@@ -34,7 +34,7 @@ export default function Tooltip({
   return (
     <TooltipPrimitive.Root>
       <TooltipPrimitive.Trigger asChild>
-        <span className="inline-flex items-center">{children}</span>
+        <span className="contents">{children}</span>
       </TooltipPrimitive.Trigger>
       <TooltipPrimitive.Portal>
         <TooltipPrimitive.Content

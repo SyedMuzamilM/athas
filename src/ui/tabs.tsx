@@ -1,12 +1,27 @@
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  horizontalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { cva } from "class-variance-authority";
 import type {
   HTMLAttributes,
-  MouseEvent as ReactMouseEvent,
-  PointerEvent as ReactPointerEvent,
   KeyboardEvent as ReactKeyboardEvent,
+  MouseEvent as ReactMouseEvent,
   ReactNode,
 } from "react";
-import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
+import { forwardRef, useMemo, useRef } from "react";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 
@@ -63,16 +78,6 @@ export const EQUAL_WIDTH_SEGMENTED_TABS_CLASS_NAME =
 export const EQUAL_WIDTH_SEGMENTED_TAB_ITEM_CLASS_NAME =
   "h-10 w-full min-w-0 rounded-lg px-2.5 py-2 transition-colors [&>div]:gap-1.5";
 
-const DRAG_THRESHOLD = 4;
-
-interface DragState {
-  pointerId: number;
-  draggedId: string;
-  startX: number;
-  startY: number;
-  isDragging: boolean;
-}
-
 function moveItem<T>(items: T[], fromIndex: number, toIndex: number): T[] {
   if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0) {
     return items;
@@ -111,7 +116,7 @@ const tabVariants = cva(
         false: "",
       },
       dragged: {
-        true: "opacity-30",
+        true: "opacity-40",
         false: "opacity-100",
       },
     },
@@ -265,30 +270,15 @@ export function Tabs({
 }: TabsProps) {
   const itemMap = useMemo(() => new Map(items.map((item) => [item.id, item])), [items]);
   const orderedIds = useMemo(() => items.map((item) => item.id), [items]);
-  const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const previewOrderRef = useRef(orderedIds);
-  const dragStateRef = useRef<DragState | null>(null);
   const suppressClickRef = useRef<string | null>(null);
-  const [previewOrder, setPreviewOrder] = useState(orderedIds);
-  const [draggedId, setDraggedId] = useState<string | null>(null);
-
-  useEffect(() => {
-    previewOrderRef.current = previewOrder;
-  }, [previewOrder]);
-
-  useEffect(() => {
-    if (dragStateRef.current) {
-      return;
-    }
-
-    setPreviewOrder(orderedIds);
-  }, [orderedIds]);
-
-  useEffect(() => {
-    return () => {
-      document.body.style.removeProperty("user-select");
-    };
-  }, []);
+  const canReorder = reorderable && !!onReorder && items.length > 1;
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 6,
+      },
+    }),
+  );
 
   const commitOrder = (nextOrder: string[]) => {
     if (onReorder && !areOrdersEqual(nextOrder, orderedIds)) {
@@ -296,114 +286,8 @@ export function Tabs({
     }
   };
 
-  const finishDrag = (cancelled = false) => {
-    dragStateRef.current = null;
-    document.body.style.removeProperty("user-select");
-    window.removeEventListener("pointermove", handlePointerMove);
-    window.removeEventListener("pointerup", handlePointerUp);
-    window.removeEventListener("pointercancel", handlePointerCancel);
-
-    const committedOrder = previewOrderRef.current;
-    setDraggedId(null);
-
-    if (cancelled) {
-      setPreviewOrder(orderedIds);
-      previewOrderRef.current = orderedIds;
-      return;
-    }
-
-    commitOrder(committedOrder);
-  };
-
-  const getInsertionIndex = (clientX: number, currentOrder: string[], movingId: string): number => {
-    const movableIds = currentOrder.filter((id) => id !== movingId);
-
-    for (let index = 0; index < movableIds.length; index += 1) {
-      const element = itemRefs.current[movableIds[index]];
-      if (!element) {
-        continue;
-      }
-
-      const rect = element.getBoundingClientRect();
-      if (clientX < rect.left + rect.width / 2) {
-        return index;
-      }
-    }
-
-    return movableIds.length;
-  };
-
-  const handlePointerMove = (event: PointerEvent) => {
-    const dragState = dragStateRef.current;
-    if (!dragState || event.pointerId !== dragState.pointerId) {
-      return;
-    }
-
-    const deltaX = event.clientX - dragState.startX;
-    const deltaY = event.clientY - dragState.startY;
-
-    if (!dragState.isDragging) {
-      const distance = Math.hypot(deltaX, deltaY);
-      if (distance < DRAG_THRESHOLD) {
-        return;
-      }
-
-      dragState.isDragging = true;
-      document.body.style.setProperty("user-select", "none");
-      suppressClickRef.current = dragState.draggedId;
-      setDraggedId(dragState.draggedId);
-    }
-
-    const currentOrder = previewOrderRef.current;
-    const currentIndex = currentOrder.indexOf(dragState.draggedId);
-    const insertionIndex = getInsertionIndex(event.clientX, currentOrder, dragState.draggedId);
-    const targetIndex = insertionIndex > currentIndex ? insertionIndex - 1 : insertionIndex;
-    const nextOrder = moveItem(currentOrder, currentIndex, targetIndex);
-
-    if (!areOrdersEqual(nextOrder, currentOrder)) {
-      previewOrderRef.current = nextOrder;
-      setPreviewOrder(nextOrder);
-    }
-  };
-
-  const handlePointerUp = (event: PointerEvent) => {
-    const dragState = dragStateRef.current;
-    if (!dragState || event.pointerId !== dragState.pointerId) {
-      return;
-    }
-
-    finishDrag(false);
-  };
-
-  const handlePointerCancel = (event: PointerEvent) => {
-    const dragState = dragStateRef.current;
-    if (!dragState || event.pointerId !== dragState.pointerId) {
-      return;
-    }
-
-    finishDrag(true);
-  };
-
-  const handlePointerDown = (itemId: string) => (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (!reorderable || !onReorder || event.button !== 0 || items.length < 2) {
-      return;
-    }
-
-    dragStateRef.current = {
-      pointerId: event.pointerId,
-      draggedId: itemId,
-      startX: event.clientX,
-      startY: event.clientY,
-      isDragging: false,
-    };
-    previewOrderRef.current = previewOrder;
-    window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerup", handlePointerUp);
-    window.addEventListener("pointercancel", handlePointerCancel);
-  };
-
   const handleKeyDown = (itemId: string) => (event: ReactKeyboardEvent<HTMLDivElement>) => {
-    if (!reorderable || !onReorder || items.length < 2 || !event.shiftKey) {
+    if (!canReorder || !event.shiftKey) {
       return;
     }
 
@@ -431,10 +315,7 @@ export function Tabs({
       return;
     }
 
-    const nextOrder = moveItem(orderedIds, currentIndex, nextIndex);
-    setPreviewOrder(nextOrder);
-    previewOrderRef.current = nextOrder;
-    commitOrder(nextOrder);
+    commitOrder(moveItem(orderedIds, currentIndex, nextIndex));
   };
 
   const handleClickCapture = (itemId: string) => (event: ReactMouseEvent<HTMLDivElement>) => {
@@ -445,6 +326,25 @@ export function Tabs({
     suppressClickRef.current = null;
     event.preventDefault();
     event.stopPropagation();
+  };
+
+  const handleDragStart = (event: DragStartEvent) => {
+    suppressClickRef.current = String(event.active.id);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    const oldIndex = orderedIds.indexOf(String(active.id));
+    const newIndex = orderedIds.indexOf(String(over.id));
+    if (oldIndex < 0 || newIndex < 0) {
+      return;
+    }
+
+    commitOrder(arrayMove(orderedIds, oldIndex, newIndex));
   };
 
   const renderTab = (item: TabsItem, isDragged = false) => {
@@ -482,37 +382,91 @@ export function Tabs({
         side={item.tooltip.side}
         className={item.tooltip.className}
       >
-        {tabNode}
+        <div className="flex w-full min-w-0">{tabNode}</div>
       </Tooltip>
     );
   };
 
-  return (
-    <TabsList variant={variant} className={className} {...props}>
-      {(reorderable ? previewOrder : orderedIds).map((itemId) => {
-        const item = itemMap.get(itemId);
-        if (!item) {
-          return null;
-        }
+  const tabsContent = orderedIds.map((itemId) => {
+    const item = itemMap.get(itemId);
+    if (!item) {
+      return null;
+    }
 
-        return (
-          <div
-            key={item.id}
-            ref={(element) => {
-              itemRefs.current[item.id] = element;
-            }}
-            className={cn(
-              "relative flex min-w-0 w-full items-stretch",
-              reorderable && onReorder && items.length > 1 && "cursor-grab active:cursor-grabbing",
-            )}
-            onPointerDown={handlePointerDown(item.id)}
-            onKeyDown={handleKeyDown(item.id)}
-            onClickCapture={handleClickCapture(item.id)}
-          >
-            {renderTab(item, draggedId === item.id)}
-          </div>
-        );
-      })}
+    return (
+      <SortableTabItem
+        key={item.id}
+        item={item}
+        canReorder={canReorder}
+        renderTab={renderTab}
+        onKeyDown={handleKeyDown(item.id)}
+        onClickCapture={handleClickCapture(item.id)}
+      />
+    );
+  });
+
+  const tabsList = (
+    <TabsList variant={variant} className={className} {...props}>
+      {tabsContent}
     </TabsList>
+  );
+
+  if (!canReorder) {
+    return tabsList;
+  }
+
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
+      <SortableContext items={orderedIds} strategy={horizontalListSortingStrategy}>
+        {tabsList}
+      </SortableContext>
+    </DndContext>
+  );
+}
+
+interface SortableTabItemProps {
+  item: TabsItem;
+  canReorder: boolean;
+  renderTab: (item: TabsItem, isDragged?: boolean) => ReactNode;
+  onKeyDown: (event: ReactKeyboardEvent<HTMLDivElement>) => void;
+  onClickCapture: (event: ReactMouseEvent<HTMLDivElement>) => void;
+}
+
+function SortableTabItem({
+  item,
+  canReorder,
+  renderTab,
+  onKeyDown,
+  onClickCapture,
+}: SortableTabItemProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.id,
+    disabled: !canReorder || item.disabled,
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+      }}
+      className={cn(
+        "relative flex min-w-0 w-full items-stretch",
+        canReorder && "cursor-grab active:cursor-grabbing",
+        isDragging && "z-10",
+      )}
+      onKeyDown={onKeyDown}
+      onClickCapture={onClickCapture}
+      {...attributes}
+      {...listeners}
+    >
+      {renderTab(item, isDragging)}
+    </div>
   );
 }
