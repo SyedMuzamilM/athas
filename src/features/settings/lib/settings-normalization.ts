@@ -1,4 +1,5 @@
 import { getProviderById } from "@/features/ai/types/providers";
+import { isKeybindingPreset } from "@/features/keymaps/defaults/keybinding-presets";
 import {
   DEFAULT_AI_AUTOCOMPLETE_MODEL_ID,
   DEFAULT_AI_MODEL_ID,
@@ -90,6 +91,10 @@ export function normalizeSettings(settings: Settings): Settings {
   }
 
   normalizedSettings.uiFontSize = normalizeUiFontSize(normalizedSettings.uiFontSize);
+  if (!isKeybindingPreset(normalizedSettings.keybindingPreset)) {
+    normalizedSettings.keybindingPreset = "none";
+  }
+
   if (
     normalizedSettings.iconTheme === "colorful-material" ||
     normalizedSettings.iconTheme === "seti"
@@ -127,6 +132,10 @@ export function normalizeSettingValue<K extends keyof Settings>(
 
   if (key === "iconTheme" && (value === "colorful-material" || value === "seti")) {
     return "material" as Settings[K];
+  }
+
+  if (key === "keybindingPreset" && !isKeybindingPreset(value as string)) {
+    return "none" as Settings[K];
   }
 
   return value;

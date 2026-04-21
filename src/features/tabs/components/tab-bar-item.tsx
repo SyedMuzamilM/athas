@@ -13,6 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { memo, useCallback, useEffect, useState } from "react";
+import type { RefCallback } from "react";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import type { PaneContent } from "@/features/panes/types/pane-content";
 import { Button } from "@/ui/button";
@@ -27,9 +28,10 @@ interface TabBarItemProps {
   index: number;
   isActive: boolean;
   isDraggedTab: boolean;
-  showDropIndicatorBefore: boolean;
-  tabRef: (el: HTMLDivElement | null) => void;
-  onMouseDown: (e: React.MouseEvent) => void;
+  showDropIndicatorBefore?: boolean;
+  tabRef?: RefCallback<HTMLDivElement>;
+  onClick?: () => void;
+  onMouseDown?: (e: React.MouseEvent) => void;
   onDoubleClick: (e: React.MouseEvent) => void;
   onContextMenu: (e: React.MouseEvent) => void;
   onKeyDown: (e: React.KeyboardEvent) => void;
@@ -42,8 +44,9 @@ const TabBarItem = memo(function TabBarItem({
   displayName,
   isActive,
   isDraggedTab,
-  showDropIndicatorBefore,
+  showDropIndicatorBefore = false,
   tabRef,
+  onClick,
   onMouseDown,
   onDoubleClick,
   onContextMenu,
@@ -81,14 +84,11 @@ const TabBarItem = memo(function TabBarItem({
   );
 
   return (
-    <>
-      {showDropIndicatorBefore && (
-        <div className="relative">
-          <div className="drop-indicator absolute top-1 bottom-1 left-0 z-20 w-0.5 bg-accent" />
-        </div>
-      )}
+    <div ref={tabRef} className="relative">
+      {showDropIndicatorBefore ? (
+        <div className="drop-indicator absolute top-1 bottom-1 left-0 z-20 w-0.5 bg-accent" />
+      ) : null}
       <Tab
-        ref={tabRef}
         role="tab"
         aria-selected={isActive}
         aria-label={`${buffer.name}${buffer.type === "editor" && buffer.isDirty ? " (unsaved)" : ""}${buffer.isPinned ? " (pinned)" : ""}${buffer.isPreview ? " (preview)" : ""}`}
@@ -96,6 +96,7 @@ const TabBarItem = memo(function TabBarItem({
         isActive={isActive}
         isDragged={isDraggedTab}
         className={isActive ? "bg-hover/80" : undefined}
+        onClick={onClick}
         onMouseDown={onMouseDown}
         onDoubleClick={onDoubleClick}
         onContextMenu={onContextMenu}
@@ -208,7 +209,7 @@ const TabBarItem = memo(function TabBarItem({
           />
         )}
       </Tab>
-    </>
+    </div>
   );
 });
 

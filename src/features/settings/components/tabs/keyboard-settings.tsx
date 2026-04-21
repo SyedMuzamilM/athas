@@ -10,7 +10,10 @@ import {
 } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
 import { KeybindingRow } from "@/features/keymaps/components/keybinding-row";
-import { keybindingPresetDefinitions } from "@/features/keymaps/defaults/keybinding-presets";
+import {
+  type KeybindingPreset,
+  keybindingPresetOptions,
+} from "@/features/keymaps/defaults/keybinding-presets";
 import { useKeymapStore } from "@/features/keymaps/stores/store";
 import type { Keybinding } from "@/features/keymaps/types";
 import { getEffectiveKeybindingForCommand } from "@/features/keymaps/utils/effective-keymaps";
@@ -277,11 +280,8 @@ export const KeyboardSettings = () => {
             >
               <Select
                 value={settings.keybindingPreset}
-                onChange={(value) => updateSetting("keybindingPreset", value as "none" | "vscode")}
-                options={Object.entries(keybindingPresetDefinitions).map(([value, definition]) => ({
-                  value,
-                  label: definition.label,
-                }))}
+                onChange={(value) => updateSetting("keybindingPreset", value as KeybindingPreset)}
+                options={keybindingPresetOptions}
                 size="sm"
                 variant="outline"
                 searchable

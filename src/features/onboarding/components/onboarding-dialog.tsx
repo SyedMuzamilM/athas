@@ -3,12 +3,18 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft } from "lucide-react";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import {
+  type KeybindingPreset,
+  keybindingPresetDefinitions,
+  keybindingPresetOptions,
+} from "@/features/keymaps/defaults/keybinding-presets";
+import {
   type OnboardingContext,
   type OnboardingMode,
 } from "@/features/onboarding/lib/onboarding-state";
 import { useSettingsStore } from "@/features/settings/store";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
+import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 
 interface OnboardingDialogProps {
@@ -61,6 +67,9 @@ export default function OnboardingDialog({ context, onClose, onComplete }: Onboa
     settings.openFoldersInNewWindow,
   );
   const [horizontalTabScroll, setHorizontalTabScroll] = useState(settings.horizontalTabScroll);
+  const [keybindingPreset, setKeybindingPreset] = useState<KeybindingPreset>(
+    settings.keybindingPreset,
+  );
   const modeCopy = getModeCopy(context.mode, context.currentVersion, context.previousVersion);
 
   useEffect(() => {
@@ -69,9 +78,11 @@ export default function OnboardingDialog({ context, onClose, onComplete }: Onboa
     setVimMode(settings.vimMode);
     setOpenFoldersInNewWindow(settings.openFoldersInNewWindow);
     setHorizontalTabScroll(settings.horizontalTabScroll);
+    setKeybindingPreset(settings.keybindingPreset);
   }, [
     context.mode,
     settings.horizontalTabScroll,
+    settings.keybindingPreset,
     settings.openFoldersInNewWindow,
     settings.syncSystemTheme,
     settings.telemetry,
@@ -101,6 +112,7 @@ export default function OnboardingDialog({ context, onClose, onComplete }: Onboa
       updateSetting("vimMode", vimMode),
       updateSetting("openFoldersInNewWindow", openFoldersInNewWindow),
       updateSetting("horizontalTabScroll", horizontalTabScroll),
+      updateSetting("keybindingPreset", keybindingPreset),
     ]);
   };
 
@@ -135,6 +147,30 @@ export default function OnboardingDialog({ context, onClose, onComplete }: Onboa
 
     return (
       <div className="mx-auto max-w-[440px] space-y-2">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2 }}
+          className="rounded-lg bg-secondary-bg px-4 py-3"
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <div className="ui-font ui-text-sm text-text">Keybinding preset</div>
+              <p className="ui-font ui-text-sm mt-1 text-text-light">
+                {keybindingPresetDefinitions[keybindingPreset].description}
+              </p>
+            </div>
+            <Select
+              value={keybindingPreset}
+              onChange={(value) => setKeybindingPreset(value as KeybindingPreset)}
+              options={keybindingPresetOptions}
+              size="sm"
+              variant="outline"
+              aria-label="Keybinding preset"
+            />
+          </div>
+        </motion.div>
+
         {[
           {
             title: "Sync with system theme",
