@@ -1,24 +1,19 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useDebouncedCallback } from "use-debounce";
+import { useEffect, useMemo, useRef } from "react";
+import { MagnifyingGlass } from "@phosphor-icons/react";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import { useSettingsStore } from "@/features/settings/store";
 import { Button } from "@/ui/button";
 import { CommandInput, CommandList } from "@/ui/command";
 import { SEARCH_TOGGLE_ICONS } from "@/ui/search";
 import { cn } from "@/utils/cn";
-import { PREVIEW_DEBOUNCE_DELAY } from "../constants/limits";
 import { useContentSearch } from "../hooks/use-content-search";
 import { useKeyboardNavigation } from "../hooks/use-keyboard-navigation";
 import { ContentSearchResult } from "./content-search-result";
-import { FilePreview } from "./file-preview";
 
 const MAX_DISPLAYED_MATCHES = 500;
 
 const GlobalSearchBuffer = () => {
   const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
-  const quickOpenPreview = useSettingsStore((state) => state.settings.quickOpenPreview);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [previewFilePath, setPreviewFilePath] = useState<string | null>(null);
   const {
     query,
     setQuery,
@@ -30,11 +25,6 @@ const GlobalSearchBuffer = () => {
     searchOptions,
     setSearchOption,
   } = useContentSearch(true);
-
-  const debouncedSetPreview = useDebouncedCallback(
-    (path: string | null) => setPreviewFilePath(path),
-    PREVIEW_DEBOUNCE_DELAY,
-  );
 
   const handleFileClick = (filePath: string, lineNumber?: number) => {
     void handleFileSelect(filePath, false, lineNumber);
@@ -103,15 +93,6 @@ const GlobalSearchBuffer = () => {
     return () => cancelAnimationFrame(frame);
   }, []);
 
-  useEffect(() => {
-    if (quickOpenPreview && flattenedMatches.length > 0 && selectedIndex >= 0) {
-      const selectedMatch = flattenedMatches[selectedIndex];
-      if (selectedMatch) {
-        debouncedSetPreview(selectedMatch.filePath);
-      }
-    }
-  }, [selectedIndex, flattenedMatches, quickOpenPreview, debouncedSetPreview]);
-
   const matchIndexMap = useMemo(
     () => new Map(navigationItems.map((item, index) => [item.path, index])),
     [navigationItems],
@@ -158,6 +139,9 @@ const GlobalSearchBuffer = () => {
     <div className="flex h-full min-h-0 flex-col">
       <div className="border-border border-b px-4 py-3">
         <div className="flex min-w-0 items-center gap-3">
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-md border border-border bg-secondary-bg text-text-lighter">
+            <MagnifyingGlass className="size-[18px]" weight="duotone" />
+          </div>
           <CommandInput
             ref={inputRef}
             value={query}
@@ -193,70 +177,64 @@ const GlobalSearchBuffer = () => {
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1">
-        <div
-          className={cn(
-            "flex min-h-0 flex-1 flex-col overflow-hidden",
-            quickOpenPreview ? "border-border border-r" : "w-full",
-          )}
-        >
-          <CommandList ref={scrollContainerRef}>
-            {!debouncedQuery ? (
-              <div className="ui-text-sm flex h-full items-center justify-center text-center text-text-lighter">
-                Type to search across all files in your project
-              </div>
-            ) : null}
-
-            {debouncedQuery && isSearching ? (
-              <div className="ui-text-sm flex h-full items-center justify-center text-center text-text-lighter">
-                Searching...
-              </div>
-            ) : null}
-
-            {debouncedQuery && !isSearching && !hasResults && !error ? (
-              <div className="ui-text-sm flex h-full items-center justify-center text-center text-text-lighter">
-                No results found for "{debouncedQuery}"
-              </div>
-            ) : null}
-
-            {error ? (
-              <div className="ui-text-sm flex h-full items-center justify-center text-center text-red-500">
-                {error}
-              </div>
-            ) : null}
-
-            {hasResults ? (
-              <>
-                <div className="space-y-1">
-                  {results.map((result) => (
-                    <ContentSearchResult
-                      key={result.file_path}
-                      result={result}
-                      rootFolderPath={rootFolderPath}
-                      onFileClick={handleFileClick}
-                      onFileHover={quickOpenPreview ? debouncedSetPreview : undefined}
-                      selectedMatchKey={selectedMatchKey}
-                      getMatchIndex={(lineNumber) =>
-                        matchIndexMap.get(`${result.file_path}:${lineNumber}`)
-                      }
-                    />
-                  ))}
+      <div className="min-h-0 flex-1 bg-primary-bg">
+        <CommandList ref={scrollContainerRef}>
+          {!debouncedQuery ? (
+            <div className="flex h-full min-h-[320px] items-center justify-center px-6">
+              <div className="flex max-w-md flex-col items-center text-center">
+                <div className="mb-3 flex size-11 items-center justify-center rounded-lg border border-border bg-secondary-bg text-text-lighter">
+                  <MagnifyingGlass className="size-6" weight="duotone" />
                 </div>
-                {hasMore ? (
-                  <div className="ui-text-sm px-3 py-2 text-center text-text-lighter">
-                    Showing first {displayedCount} of {totalMatches} results
-                  </div>
-                ) : null}
-              </>
-            ) : null}
-          </CommandList>
-        </div>
+                <div className="ui-text-sm font-medium text-text">Search across your project</div>
+                <div className="ui-text-sm mt-1 text-text-lighter">
+                  Type a query to see matching files and lines in a single vertical result stream.
+                </div>
+              </div>
+            </div>
+          ) : null}
 
-        {quickOpenPreview ? (
-          <div className="w-[min(48%,600px)] shrink-0">
-            <FilePreview filePath={previewFilePath} />
-          </div>
-        ) : null}
+          {debouncedQuery && isSearching ? (
+            <div className="ui-text-sm flex min-h-[240px] items-center justify-center text-center text-text-lighter">
+              Searching...
+            </div>
+          ) : null}
+
+          {debouncedQuery && !isSearching && !hasResults && !error ? (
+            <div className="ui-text-sm flex min-h-[240px] items-center justify-center text-center text-text-lighter">
+              No results found for "{debouncedQuery}"
+            </div>
+          ) : null}
+
+          {error ? (
+            <div className="ui-text-sm flex min-h-[240px] items-center justify-center text-center text-red-500">
+              {error}
+            </div>
+          ) : null}
+
+          {hasResults ? (
+            <div className="mx-auto w-full max-w-5xl px-3 py-3">
+              <div className="space-y-2">
+                {results.map((result) => (
+                  <ContentSearchResult
+                    key={result.file_path}
+                    result={result}
+                    rootFolderPath={rootFolderPath}
+                    onFileClick={handleFileClick}
+                    selectedMatchKey={selectedMatchKey}
+                    getMatchIndex={(lineNumber) =>
+                      matchIndexMap.get(`${result.file_path}:${lineNumber}`)
+                    }
+                  />
+                ))}
+              </div>
+              {hasMore ? (
+                <div className="ui-text-sm px-3 py-3 text-center text-text-lighter">
+                  Showing first {displayedCount} of {totalMatches} results
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </CommandList>
       </div>
     </div>
   );

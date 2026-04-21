@@ -4,6 +4,17 @@ import { immer } from "zustand/middleware/immer";
 import { createWithEqualityFn } from "zustand/traditional";
 import type { DatabaseType } from "@/features/database/models/provider.types";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
+import { createPaneContent } from "@/features/editor/stores/buffer-content-factory";
+import {
+  closeNewTabInActivePane,
+  removeBufferFromPanes,
+  syncAndFocusBufferInPane,
+  syncBufferToPane,
+} from "@/features/editor/stores/buffer-pane-sync";
+import {
+  clearQueuedWorkspaceSessionSave,
+  saveSessionToStore,
+} from "@/features/editor/stores/buffer-session-persistence";
 import { detectLanguageFromFileName } from "@/features/editor/utils/language-detection";
 import { logger } from "@/features/editor/utils/logger";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
@@ -25,63 +36,10 @@ import {
   isVirtualContent,
   shouldStartLsp,
 } from "@/features/panes/types/pane-content";
-import { createWorkspaceSessionSaveQueue } from "@/features/editor/stores/workspace-session-save-queue";
-import { useProjectStore } from "@/features/window/stores/project-store";
-import type { BufferSession } from "@/features/window/stores/session-store";
-import { useSessionStore } from "@/features/window/stores/session-store";
 import { createSelectors } from "@/utils/zustand-selectors";
 
 /** @deprecated Use `PaneContent` directly. Kept for backward compatibility. */
 export type Buffer = PaneContent;
-
-const syncBufferToPane = (bufferId: string) => {
-  const paneStore = usePaneStore.getState();
-  const activePane = paneStore.actions.getActivePane();
-  if (activePane && !activePane.bufferIds.includes(bufferId)) {
-    paneStore.actions.addBufferToPane(activePane.id, bufferId);
-  } else if (activePane) {
-    paneStore.actions.setActivePaneBuffer(activePane.id, bufferId);
-  }
-};
-
-const syncAndFocusBufferInPane = (bufferId: string) => {
-  const paneStore = usePaneStore.getState();
-  const paneWithBuffer = paneStore.actions.getPaneByBufferId(bufferId);
-
-  if (paneWithBuffer) {
-    paneStore.actions.setActivePane(paneWithBuffer.id);
-    paneStore.actions.setActivePaneBuffer(paneWithBuffer.id, bufferId);
-    return;
-  }
-
-  syncBufferToPane(bufferId);
-};
-
-const removeBufferFromPanes = (bufferId: string) => {
-  const paneStore = usePaneStore.getState();
-  // Remove from ALL panes that contain this buffer, not just the first one.
-  // A buffer can end up in multiple panes if the user split an editor tab.
-  for (const pane of paneStore.actions.getAllPaneGroups()) {
-    if (pane.bufferIds.includes(bufferId)) {
-      paneStore.actions.removeBufferFromPane(pane.id, bufferId);
-    }
-  }
-};
-
-/**
- * Close any new-tab placeholder in the active pane and return filtered buffers.
- */
-const closeNewTabInActivePane = (buffers: PaneContent[]): PaneContent[] => {
-  const paneStore = usePaneStore.getState();
-  const activePane = paneStore.actions.getActivePane();
-  const paneBufferIds = activePane?.bufferIds ?? [];
-  const newTabBuffer = buffers.find((b) => b.type === "newTab" && paneBufferIds.includes(b.id));
-  if (newTabBuffer) {
-    removeBufferFromPanes(newTabBuffer.id);
-    return buffers.filter((b) => b.id !== newTabBuffer.id);
-  }
-  return buffers;
-};
 
 interface PendingClose {
   bufferId: string;
@@ -195,291 +153,6 @@ interface BufferActions {
 
 const generateBufferId = (path: string): string => {
   return `buffer_${path.replace(/[^a-zA-Z0-9]/g, "_")}_${Date.now()}`;
-};
-
-const SAVE_SESSION_DEBOUNCE_MS = 300;
-
-const sessionSaveQueue = createWorkspaceSessionSaveQueue(
-  (
-    projectPath: string,
-    payload: {
-      buffers: PaneContent[];
-      activeBufferId: string | null;
-    },
-  ) => {
-    saveSessionToStoreImmediate(projectPath, payload.buffers, payload.activeBufferId);
-  },
-  SAVE_SESSION_DEBOUNCE_MS,
-);
-
-const saveSessionToStore = (buffers: PaneContent[], activeBufferId: string | null) => {
-  const rootFolderPath = useProjectStore.getState().rootFolderPath;
-
-  if (!rootFolderPath) return;
-
-  sessionSaveQueue.schedule(rootFolderPath, {
-    buffers,
-    activeBufferId,
-  });
-};
-
-const serializeBufferForSession = (buffer: PaneContent): BufferSession | null => {
-  if (buffer.type === "editor" && !buffer.isVirtual) {
-    return {
-      type: "editor",
-      path: buffer.path,
-      name: buffer.name,
-      isPinned: buffer.isPinned,
-    };
-  }
-
-  if (buffer.type === "terminal") {
-    return {
-      type: "terminal",
-      path: buffer.path,
-      name: buffer.name,
-      isPinned: buffer.isPinned,
-      sessionId: buffer.sessionId,
-      initialCommand: buffer.initialCommand,
-      workingDirectory: buffer.workingDirectory,
-      remoteConnectionId: buffer.remoteConnectionId,
-    };
-  }
-
-  if (buffer.type === "webViewer") {
-    return {
-      type: "webViewer",
-      path: buffer.path,
-      name: buffer.name,
-      isPinned: buffer.isPinned,
-      url: buffer.url,
-      zoomLevel: buffer.zoomLevel,
-    };
-  }
-
-  return null;
-};
-
-const saveSessionToStoreImmediate = (
-  projectPath: string,
-  buffers: PaneContent[],
-  activeBufferId: string | null,
-) => {
-  const persistableBuffers = buffers
-    .map(serializeBufferForSession)
-    .filter((buffer): buffer is BufferSession => buffer !== null);
-
-  const activeBuffer = buffers.find((b) => b.id === activeBufferId);
-  const activeBufferPath =
-    activeBuffer &&
-    ((activeBuffer.type === "editor" && !activeBuffer.isVirtual) ||
-      activeBuffer.type === "terminal" ||
-      activeBuffer.type === "webViewer")
-      ? activeBuffer.path
-      : null;
-
-  useSessionStore.getState().saveSession(projectPath, persistableBuffers, activeBufferPath);
-};
-
-export const clearQueuedWorkspaceSessionSave = (projectPath: string) => {
-  sessionSaveQueue.clear(projectPath);
-};
-
-/**
- * Create a PaneContent variant from an OpenContentSpec.
- * Used internally by openContent; also handles the "editor" type's complex logic
- * (preview mode, max tabs, extension checking, recent files) in the openContent action itself.
- */
-const createPaneContent = (id: string, spec: OpenContentSpec): PaneContent => {
-  const base = {
-    id,
-    isPinned: false,
-    isActive: true,
-  };
-
-  switch (spec.type) {
-    case "editor":
-      return {
-        ...base,
-        type: "editor",
-        path: spec.path,
-        name: spec.name,
-        content: spec.content,
-        savedContent: spec.content,
-        isDirty: false,
-        isVirtual: spec.isVirtual ?? false,
-        isPreview: spec.isPreview ?? false,
-        language: spec.language ?? detectLanguageFromFileName(spec.name),
-        tokens: [],
-      };
-    case "terminal":
-      const sessionId = spec.sessionId ?? id.replace("buffer_", "");
-      return {
-        ...base,
-        type: "terminal",
-        path: spec.path ?? `terminal://${sessionId}`,
-        name: spec.name ?? "Terminal",
-        isPreview: false,
-        sessionId,
-        initialCommand: spec.command,
-        workingDirectory: spec.workingDirectory,
-        remoteConnectionId: spec.remoteConnectionId,
-      };
-    case "agent":
-      return {
-        ...base,
-        type: "agent",
-        path: `agent://${spec.sessionId ?? id}`,
-        name: "Agent",
-        isPreview: false,
-        sessionId: spec.sessionId ?? id.replace("buffer_", ""),
-      };
-    case "webViewer":
-      return {
-        ...base,
-        type: "webViewer",
-        path: `web-viewer://${spec.url}`,
-        name: "Web Viewer",
-        isPreview: false,
-        url: spec.url,
-        zoomLevel: spec.zoomLevel,
-      };
-    case "newTab":
-      return {
-        ...base,
-        type: "newTab",
-        path: `newtab://${id}`,
-        name: "New Tab",
-        isPreview: false,
-      };
-    case "diff":
-      return {
-        ...base,
-        type: "diff",
-        path: spec.path,
-        name: spec.name,
-        isPreview: false,
-        content: spec.content,
-        savedContent: spec.content,
-        diffData: spec.diffData,
-      };
-    case "image":
-      return {
-        ...base,
-        type: "image",
-        path: spec.path,
-        name: spec.name,
-        isPreview: false,
-      };
-    case "pdf":
-      return {
-        ...base,
-        type: "pdf",
-        path: spec.path,
-        name: spec.name,
-        isPreview: false,
-      };
-    case "binary":
-      return {
-        ...base,
-        type: "binary",
-        path: spec.path,
-        name: spec.name,
-        isPreview: false,
-      };
-    case "database":
-      return {
-        ...base,
-        type: "database",
-        path: spec.path,
-        name: spec.name,
-        isPreview: false,
-        databaseType: spec.databaseType,
-        connectionId: spec.connectionId,
-      };
-    case "pullRequest":
-      return {
-        ...base,
-        type: "pullRequest",
-        path: spec.selectedFilePath
-          ? `pr://${spec.prNumber}?file=${encodeURIComponent(spec.selectedFilePath)}`
-          : `pr://${spec.prNumber}`,
-        name: spec.name ?? "Pull Request",
-        isPreview: false,
-        prNumber: spec.prNumber,
-        authorAvatarUrl: spec.authorAvatarUrl,
-      };
-    case "githubIssue":
-      return {
-        ...base,
-        type: "githubIssue",
-        path: spec.url ?? `github-issue://${spec.issueNumber}`,
-        name: spec.name ?? "Issue",
-        isPreview: false,
-        repoPath: spec.repoPath,
-        issueNumber: spec.issueNumber,
-        authorAvatarUrl: spec.authorAvatarUrl,
-        url: spec.url,
-      };
-    case "githubAction":
-      return {
-        ...base,
-        type: "githubAction",
-        path: spec.url ?? `github-action://${spec.runId}`,
-        name: spec.name ?? "Action",
-        isPreview: false,
-        repoPath: spec.repoPath,
-        runId: spec.runId,
-        url: spec.url,
-      };
-    case "markdownPreview":
-      return {
-        ...base,
-        type: "markdownPreview",
-        path: spec.path,
-        name: spec.name,
-        isPreview: false,
-        content: spec.content,
-        sourceFilePath: spec.sourceFilePath,
-      };
-    case "htmlPreview":
-      return {
-        ...base,
-        type: "htmlPreview",
-        path: spec.path,
-        name: spec.name,
-        isPreview: false,
-        content: spec.content,
-        sourceFilePath: spec.sourceFilePath,
-      };
-    case "csvPreview":
-      return {
-        ...base,
-        type: "csvPreview",
-        path: spec.path,
-        name: spec.name,
-        isPreview: false,
-        content: spec.content,
-        sourceFilePath: spec.sourceFilePath,
-      };
-    case "externalEditor":
-      return {
-        ...base,
-        type: "externalEditor",
-        path: spec.path,
-        name: spec.name,
-        isPreview: false,
-        terminalConnectionId: spec.terminalConnectionId,
-      };
-    case "globalSearch":
-      return {
-        ...base,
-        type: "globalSearch",
-        path: "search://global",
-        name: "Search",
-        isPreview: false,
-      };
-  }
 };
 
 /**
@@ -1756,3 +1429,5 @@ export const useBufferStore = createSelectors(
     isEqual,
   ),
 );
+
+export { clearQueuedWorkspaceSessionSave };

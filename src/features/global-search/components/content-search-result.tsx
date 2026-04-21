@@ -1,6 +1,6 @@
-import { File } from "lucide-react";
-import { cn } from "@/utils/cn";
+import { File, MagnifyingGlass } from "@phosphor-icons/react";
 import { Button } from "@/ui/button";
+import { cn } from "@/utils/cn";
 import type { FileSearchResult, SearchMatch } from "@/features/global-search/lib/rust-api/search";
 
 interface ContentSearchResultProps {
@@ -47,7 +47,7 @@ const MatchLine = ({
       size="sm"
       data-item-index={itemIndex}
       className={cn(
-        "ui-text-sm editor-font flex h-auto w-full items-start justify-start gap-2 px-4 py-1 text-left hover:bg-hover",
+        "ui-text-sm editor-font flex h-auto w-full items-start justify-start gap-2 rounded-md px-4 py-1.5 text-left hover:bg-hover",
         isSelected && "bg-hover",
       )}
     >
@@ -72,24 +72,22 @@ export const ContentSearchResult = ({
     : result.file_path;
 
   return (
-    <div className="mb-2">
-      {/* File header */}
+    <div className="overflow-hidden rounded-lg border border-border bg-secondary-bg/35">
       <Button
         onClick={() => onFileClick(result.file_path)}
         onMouseEnter={() => onFileHover?.(result.file_path)}
         variant="ghost"
         size="sm"
-        className="flex h-auto w-full items-center justify-start gap-2 px-2 py-1.5 hover:bg-hover"
+        className="flex h-auto w-full items-center justify-start gap-2 rounded-none border-b border-border px-3 py-2.5 hover:bg-hover"
       >
-        <File className="shrink-0 text-text-lighter" />
+        <File className="size-[18px] shrink-0 text-text-lighter" weight="duotone" />
         <span className="ui-text-sm truncate font-medium text-text">{displayPath}</span>
         <span className="ui-text-sm ml-auto shrink-0 text-text-lighter">
           {result.total_matches} {result.total_matches === 1 ? "match" : "matches"}
         </span>
       </Button>
 
-      {/* Matched lines */}
-      <div className="ml-2">
+      <div className="space-y-0.5 px-2 py-2">
         {result.matches.slice(0, 10).map((match, idx) => (
           <MatchLine
             key={`${match.line_number}-${idx}`}
@@ -101,8 +99,9 @@ export const ContentSearchResult = ({
           />
         ))}
         {result.matches.length > 10 && (
-          <div className="ui-text-sm px-4 py-1 text-text-lighter">
-            ... and {result.matches.length - 10} more matches
+          <div className="ui-text-sm flex items-center gap-2 px-4 py-2 text-text-lighter">
+            <MagnifyingGlass className="size-4 shrink-0" weight="duotone" />
+            <span>... and {result.matches.length - 10} more matches</span>
           </div>
         )}
       </div>
