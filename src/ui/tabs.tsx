@@ -381,6 +381,7 @@ export function Tabs({
         shortcut={item.tooltip.shortcut}
         side={item.tooltip.side}
         className={item.tooltip.className}
+        triggerClassName="flex w-full min-w-0 items-stretch"
       >
         <div className="flex w-full min-w-0">{tabNode}</div>
       </Tooltip>
@@ -458,7 +459,7 @@ function SortableTabItem({
       }}
       className={cn(
         "relative flex min-w-0 w-full items-stretch",
-        canReorder && "cursor-grab active:cursor-grabbing",
+        canReorder && "cursor-grab touch-none active:cursor-grabbing",
         isDragging && "z-10",
       )}
       onKeyDown={onKeyDown}
