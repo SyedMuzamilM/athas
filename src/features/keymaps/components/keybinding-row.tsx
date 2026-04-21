@@ -8,6 +8,10 @@ import { useKeymapStore } from "../stores/store";
 import type { Command, Keybinding } from "../types";
 import { KeybindingInput } from "./keybinding-input";
 
+export const KEYBINDING_TABLE_GRID_COLS_CLASS_NAME =
+  "grid-cols-[minmax(240px,2.2fr)_minmax(180px,1.1fr)_minmax(160px,1.6fr)_88px_108px]";
+export const KEYBINDING_TABLE_MIN_WIDTH_CLASS_NAME = "min-w-[820px]";
+
 interface KeybindingRowProps {
   command: Command;
   keybinding?: Keybinding;
@@ -64,7 +68,9 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
   return (
     <div
       className={cn(
-        "grid grid-cols-[minmax(0,2.2fr)_minmax(180px,1.1fr)_minmax(0,1.6fr)_88px_108px] gap-4 border-b border-border px-2 py-2 transition-colors hover:bg-hover",
+        "grid gap-4 border-b border-border px-2 py-2 transition-colors hover:bg-hover",
+        KEYBINDING_TABLE_GRID_COLS_CLASS_NAME,
+        KEYBINDING_TABLE_MIN_WIDTH_CLASS_NAME,
         hasConflict && "bg-error/5 hover:bg-error/10",
       )}
     >

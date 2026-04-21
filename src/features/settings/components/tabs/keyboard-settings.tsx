@@ -9,7 +9,10 @@ import {
   User,
 } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
-import { KeybindingRow } from "@/features/keymaps/components/keybinding-row";
+import {
+  KEYBINDING_TABLE_MIN_WIDTH_CLASS_NAME,
+  KeybindingRow,
+} from "@/features/keymaps/components/keybinding-row";
 import {
   type KeybindingPreset,
   keybindingPresetOptions,
@@ -186,6 +189,7 @@ export const KeyboardSettings = () => {
               <SegmentedControl
                 value={filterType}
                 onChange={(value) => setFilterType(value as FilterType)}
+                className="inline-flex h-auto max-w-full flex-wrap items-stretch gap-1 overflow-visible self-start rounded-xl border border-border/60 bg-secondary-bg/40 p-1"
                 options={[
                   {
                     value: "all",
@@ -216,28 +220,34 @@ export const KeyboardSettings = () => {
               />
             </div>
 
-            <div className="flex-1 overflow-y-auto">
-              <TableHeader
-                gridCols="minmax(0,2.2fr) minmax(180px,1.1fr) minmax(0,1.6fr) 88px 108px"
-                className="px-2 py-1.5"
-              >
-                <TableHeadCell>Command</TableHeadCell>
-                <TableHeadCell>Keybinding</TableHeadCell>
-                <TableHeadCell>When</TableHeadCell>
-                <TableHeadCell>Source</TableHeadCell>
-                <TableHeadCell>Actions</TableHeadCell>
-              </TableHeader>
+            <div className="flex-1 overflow-hidden">
+              <div className="h-full overflow-x-auto overflow-y-auto">
+                <div className={KEYBINDING_TABLE_MIN_WIDTH_CLASS_NAME}>
+                  <TableHeader
+                    gridCols="minmax(240px,2.2fr) minmax(180px,1.1fr) minmax(160px,1.6fr) 88px 108px"
+                    className="px-2 py-1.5"
+                  >
+                    <TableHeadCell>Command</TableHeadCell>
+                    <TableHeadCell>Keybinding</TableHeadCell>
+                    <TableHeadCell>When</TableHeadCell>
+                    <TableHeadCell>Source</TableHeadCell>
+                    <TableHeadCell>Actions</TableHeadCell>
+                  </TableHeader>
 
-              {filteredCommands.length === 0 ? (
-                <div className="ui-font ui-text-md flex items-center justify-center py-12 text-text-lighter">
-                  No keybindings found
+                  {filteredCommands.length === 0 ? (
+                    <div className="ui-font ui-text-md flex items-center justify-center py-12 text-text-lighter">
+                      No keybindings found
+                    </div>
+                  ) : (
+                    filteredCommands.map((command) => {
+                      const binding = getKeybindingForCommand(command.id);
+                      return (
+                        <KeybindingRow key={command.id} command={command} keybinding={binding} />
+                      );
+                    })
+                  )}
                 </div>
-              ) : (
-                filteredCommands.map((command) => {
-                  const binding = getKeybindingForCommand(command.id);
-                  return <KeybindingRow key={command.id} command={command} keybinding={binding} />;
-                })
-              )}
+              </div>
             </div>
 
             <div className="mt-4 flex items-center justify-between border-t border-border pt-4">

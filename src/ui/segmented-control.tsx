@@ -13,6 +13,7 @@ interface SegmentedControlProps {
   onChange: (value: string) => void;
   size?: "xs" | "sm" | "md";
   className?: string;
+  wrap?: boolean;
 }
 
 export function SegmentedControl({
@@ -21,11 +22,17 @@ export function SegmentedControl({
   onChange,
   size = "xs",
   className,
+  wrap = true,
 }: SegmentedControlProps) {
   return (
     <TabsList
       variant="segmented"
-      className={className ?? "inline-flex w-fit max-w-full self-start"}
+      className={
+        className ??
+        (wrap
+          ? "inline-flex h-auto max-w-full flex-wrap items-stretch gap-1 overflow-visible self-start rounded-xl border border-border/60 bg-secondary-bg/40 p-1"
+          : "inline-flex w-fit max-w-full self-start")
+      }
     >
       {options.map((option) => (
         <Tab
@@ -33,6 +40,7 @@ export function SegmentedControl({
           isActive={value === option.value}
           variant="segmented"
           size={size}
+          className="h-auto w-auto shrink-0 rounded-lg border-0 px-2.5 py-1.5"
           role="button"
           tabIndex={0}
           onClick={() => onChange(option.value)}

@@ -411,6 +411,7 @@ export const ExtensionsSettings = () => {
           onChange={(value) =>
             updateSetting("extensionsActiveTab", value as typeof settings.extensionsActiveTab)
           }
+          className="inline-flex h-auto max-w-full flex-wrap items-stretch gap-1 overflow-visible self-start rounded-xl border border-border/60 bg-secondary-bg/40 p-1"
           options={FILTER_TABS.map((tab) => {
             const Icon = "icon" in tab ? tab.icon : undefined;
             return {
