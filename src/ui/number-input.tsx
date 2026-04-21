@@ -41,6 +41,7 @@ export default function NumberInput({
   onChange,
   className,
   disabled = false,
+  onKeyDown,
   ...props
 }: InputProps) {
   const parseNumber = (raw: string | number | readonly string[]) => {
@@ -115,6 +116,22 @@ export default function NumberInput({
     commitValue(nextValue);
   };
 
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    onKeyDown?.(event);
+    if (event.defaultPrevented || disabled) return;
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      handleStep(1);
+      return;
+    }
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      handleStep(-1);
+    }
+  };
+
   const canDecrement = !disabled && numericValue > min;
   const canIncrement = !disabled && numericValue < max;
 
@@ -134,9 +151,11 @@ export default function NumberInput({
 
       <input
         data-setting-primary-control="true"
+        {...props}
         value={inputValue}
         onChange={handleInputChange}
         onBlur={handleBlur}
+        onKeyDown={handleKeyDown}
         disabled={disabled}
         type="text"
         inputMode="decimal"
@@ -147,7 +166,6 @@ export default function NumberInput({
           numberInputFieldPadding[size],
           "min-w-[5ch] flex-1 bg-transparent text-center tabular-nums text-text outline-none placeholder:text-text-lighter",
         )}
-        {...props}
       />
 
       <Button
