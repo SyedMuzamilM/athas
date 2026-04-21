@@ -48,6 +48,8 @@ export default function Switch({
     >
       <input
         type="checkbox"
+        role="switch"
+        aria-checked={checked}
         className="peer sr-only"
         checked={checked}
         onChange={(e) => !disabled && onChange(e.target.checked)}

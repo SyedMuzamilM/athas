@@ -1,7 +1,7 @@
 import { cva } from "class-variance-authority";
 import { Check, ChevronDown, Search } from "lucide-react";
 import type { AriaAttributes, ComponentType, KeyboardEvent, ReactNode, RefObject } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { buttonVariants } from "@/ui/button";
 import { controlFieldIconSizes } from "@/ui/control-field";
 import { Dropdown } from "@/ui/dropdown";
@@ -106,6 +106,8 @@ function SelectSearchField({
   inputRef: RefObject<HTMLInputElement | null>;
   onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
 }) {
+  const searchInputId = useId();
+
   return (
     <div className="border-border/60 border-b px-1.5 pb-1.5 pt-0.5">
       <div className="relative">
@@ -114,12 +116,14 @@ function SelectSearchField({
           size={12}
         />
         <input
+          id={searchInputId}
           ref={inputRef}
           data-prevent-dialog-escape="true"
           type="text"
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder="Search..."
+          aria-label="Search options"
           className={selectSearchInputVariants()}
           onKeyDown={(event) => {
             event.stopPropagation();
@@ -160,12 +164,14 @@ function getInputTriggerText(
 
 function InputTriggerOptionRow({
   option,
+  optionId,
   isHovered,
   isSelected,
   onMouseEnter,
   onSelect,
 }: {
   option: SelectOption;
+  optionId: string;
   isHovered: boolean;
   isSelected: boolean;
   onMouseEnter: () => void;
@@ -173,7 +179,10 @@ function InputTriggerOptionRow({
 }) {
   return (
     <button
+      id={optionId}
       type="button"
+      role="option"
+      aria-selected={isSelected}
       onMouseEnter={onMouseEnter}
       onPointerMove={onMouseEnter}
       onMouseDown={(event) => event.preventDefault()}
@@ -213,6 +222,7 @@ export default function Select({
   onOpenChange,
   "aria-label": ariaLabel,
 }: SelectProps) {
+  const selectId = useId();
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [hoveredIndex, setHoveredIndex] = useState(0);
@@ -256,6 +266,12 @@ export default function Select({
     setHoveredIndex(0);
   }, [searchQuery]);
 
+  const listboxId = `${selectId}-listbox`;
+  const activeOptionId =
+    hoveredIndex >= 0 && hoveredIndex < filteredOptions.length
+      ? `${selectId}-option-${hoveredIndex}`
+      : undefined;
+
   if (searchable && searchableTrigger === "input") {
     return (
       <div className={cn("min-w-0 w-36", className)}>
@@ -263,6 +279,11 @@ export default function Select({
           ref={searchInputRef}
           data-setting-primary-control="true"
           data-prevent-dialog-escape={open ? "true" : undefined}
+          role="combobox"
+          aria-expanded={open}
+          aria-controls={listboxId}
+          aria-autocomplete="list"
+          aria-activedescendant={open ? activeOptionId : undefined}
           id={id}
           title={title}
           value={triggerText}
@@ -331,7 +352,7 @@ export default function Select({
           className={cn("overflow-hidden rounded-xl p-0", menuClassName)}
           menuClassName="flex min-h-0 flex-1 flex-col overflow-hidden"
         >
-          <div className="max-h-80 overflow-y-auto p-1">
+          <div id={listboxId} role="listbox" className="max-h-80 overflow-y-auto p-1">
             {filteredOptions.length === 0 ? (
               <SelectEmptyState />
             ) : (
@@ -340,6 +361,7 @@ export default function Select({
                   <InputTriggerOptionRow
                     key={option.value}
                     option={option}
+                    optionId={`${selectId}-option-${index}`}
                     isHovered={index === hoveredIndex}
                     isSelected={option.value === value}
                     onMouseEnter={() => setHoveredIndex(index)}
@@ -363,6 +385,7 @@ export default function Select({
         ref={triggerRef}
         data-setting-primary-control="true"
         data-prevent-dialog-escape={open ? "true" : undefined}
+        role="combobox"
         id={id}
         title={title}
         type="button"
@@ -370,6 +393,8 @@ export default function Select({
         className={resolvedTriggerClassName}
         aria-label={ariaLabel ?? placeholder}
         aria-expanded={open}
+        aria-controls={listboxId}
+        aria-activedescendant={open ? activeOptionId : undefined}
         aria-haspopup="listbox"
         onClick={() => handleOpenChange(!open)}
         onKeyDown={(event) => {
@@ -465,7 +490,7 @@ export default function Select({
           />
         )}
 
-        <div className="max-h-96 overflow-y-auto p-1">
+        <div id={listboxId} role="listbox" className="max-h-96 overflow-y-auto p-1">
           {filteredOptions.length === 0 ? (
             <SelectEmptyState />
           ) : (
@@ -477,7 +502,10 @@ export default function Select({
                 return (
                   <button
                     key={option.value}
+                    id={`${selectId}-option-${index}`}
                     type="button"
+                    role="option"
+                    aria-selected={isSelected}
                     onMouseEnter={() => setHoveredIndex(index)}
                     onClick={() => {
                       onChange(option.value);

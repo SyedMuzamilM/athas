@@ -56,35 +56,52 @@ export function SettingRow({
   resetLabel,
 }: SettingRowProps) {
   const controlRef = React.useRef<HTMLDivElement>(null);
+  const rowId = React.useId();
+  const labelId = `${rowId}-label`;
+  const descriptionId = `${rowId}-description`;
 
   const interactiveSelector =
     "button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [role='button'], [role='switch'], [tabindex]:not([tabindex='-1'])";
+  const passthroughSelector =
+    "button, input, select, textarea, a, label, [role='button'], [role='switch'], [data-slot='button'], [data-setting-interactive-root='true']";
 
-  const handleRowClick = (event: React.MouseEvent<HTMLDivElement>) => {
-    const target = event.target as HTMLElement;
-
-    if (
-      target.closest(
-        "button, input, select, textarea, a, label, [role='button'], [role='switch'], [data-slot='button'], [data-setting-interactive-root='true']",
-      )
-    ) {
-      return;
-    }
-
+  const getPrimaryInteractive = React.useCallback(() => {
     const controlRoot = controlRef.current;
-    if (!controlRoot) return;
+    if (!controlRoot) return null;
 
     const primaryInteractive =
       controlRoot.querySelector<HTMLElement>(
         "[data-setting-primary-control='true'], [data-setting-interactive-root='true']",
       ) ?? controlRoot.querySelector<HTMLElement>(interactiveSelector);
 
-    if (!primaryInteractive) return;
+    if (!primaryInteractive) return null;
 
-    const firstInteractive = primaryInteractive.matches(interactiveSelector)
+    return primaryInteractive.matches(interactiveSelector)
       ? primaryInteractive
       : primaryInteractive.querySelector<HTMLElement>(interactiveSelector);
+  }, [interactiveSelector]);
 
+  React.useLayoutEffect(() => {
+    const control = getPrimaryInteractive();
+    if (!control) return;
+
+    if (!control.getAttribute("aria-labelledby") && !control.getAttribute("aria-label")) {
+      control.setAttribute("aria-labelledby", labelId);
+    }
+
+    if (description && !control.getAttribute("aria-describedby")) {
+      control.setAttribute("aria-describedby", descriptionId);
+    }
+  }, [description, descriptionId, getPrimaryInteractive, labelId]);
+
+  const handleRowClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement;
+
+    if (target.closest(passthroughSelector)) {
+      return;
+    }
+
+    const firstInteractive = getPrimaryInteractive();
     if (!firstInteractive) return;
 
     if (firstInteractive.getAttribute("aria-expanded") != null) {
@@ -109,15 +126,20 @@ export function SettingRow({
 
   return (
     <div
+      role="group"
+      aria-labelledby={labelId}
+      aria-describedby={description ? descriptionId : undefined}
       className={cn(
-        "flex items-center justify-between gap-3 rounded-lg px-1 py-2 select-none transition-colors hover:bg-hover/40",
+        "flex items-center justify-between gap-3 rounded-lg px-1 py-2 select-none transition-colors hover:bg-hover/40 focus-within:bg-hover/40",
         className,
       )}
       onClick={handleRowClick}
     >
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
-          <div className="ui-font ui-text-sm cursor-default text-text">{label}</div>
+          <div id={labelId} className="ui-font ui-text-sm cursor-default text-text">
+            {label}
+          </div>
           {onReset ? (
             <span className="flex size-5 items-center justify-center">
               <Button
@@ -136,7 +158,9 @@ export function SettingRow({
           ) : null}
         </div>
         {description && (
-          <div className="ui-font ui-text-sm cursor-default text-text-lighter">{description}</div>
+          <div id={descriptionId} className="ui-font ui-text-sm cursor-default text-text-lighter">
+            {description}
+          </div>
         )}
       </div>
       <div

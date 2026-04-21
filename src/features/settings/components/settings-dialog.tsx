@@ -102,6 +102,9 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
 
   if (!isOpen) return null;
 
+  const activePanelId = `settings-panel-${activeTab}`;
+  const activeTabId = `settings-tab-${activeTab}`;
+
   return (
     <Dialog
       onClose={onClose}
@@ -125,12 +128,20 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
     >
       <div className="flex h-full w-full overflow-hidden">
         <div className="w-52">
-          <SettingsVerticalTabs activeTab={activeTab} onTabChange={handleTabChange} />
+          <SettingsVerticalTabs
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+            panelIdForTab={(tab) => `settings-panel-${tab}`}
+          />
         </div>
 
         <div
           ref={contentRef}
+          id={activePanelId}
+          role="tabpanel"
+          aria-labelledby={activeTabId}
           data-settings-content=""
+          tabIndex={-1}
           className="flex-1 overflow-y-auto p-3 [--app-ui-control-font-size:var(--ui-text-sm)] [overscroll-behavior:contain]"
         >
           {renderTabContent()}
