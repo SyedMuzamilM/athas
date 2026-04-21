@@ -113,7 +113,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
       </div>
 
       <div className="flex items-center">
-        <Badge variant={isUserOverride ? "accent" : "default"} shape="pill" size="compact">
+        <Badge variant={isUserOverride ? "accent" : "default"} size="compact">
           {sourceLabel}
         </Badge>
       </div>

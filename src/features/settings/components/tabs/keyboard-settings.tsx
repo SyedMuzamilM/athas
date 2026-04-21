@@ -17,7 +17,6 @@ import {
   type KeybindingPreset,
   getKeybindingPresetCoverageReport,
   getKeybindingPresetDiffReport,
-  keybindingPresetDefinitions,
   keybindingPresetOptions,
 } from "@/features/keymaps/defaults/keybinding-presets";
 import { useKeymapStore } from "@/features/keymaps/stores/store";
@@ -126,16 +125,31 @@ export const KeyboardSettings = () => {
     showToast({ message: "Keybindings reset to defaults", type: "success" });
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     const userBindings = userKeybindings.filter((kb) => kb.source === "user");
-    const json = JSON.stringify(userBindings, null, 2);
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "keybindings.json";
-    a.click();
-    URL.revokeObjectURL(url);
+
+    try {
+      const { save } = await import("@tauri-apps/plugin-dialog");
+      const { writeTextFile } = await import("@tauri-apps/plugin-fs");
+
+      const targetPath = await save({
+        title: "Export Keybindings",
+        defaultPath: "keybindings.json",
+        filters: [{ name: "JSON", extensions: ["json"] }],
+      });
+
+      if (!targetPath) {
+        return;
+      }
+
+      await writeTextFile(targetPath, JSON.stringify(userBindings, null, 2));
+      showToast({ message: "Keybindings exported", type: "success" });
+    } catch (error) {
+      showToast({
+        message: `Failed to export keybindings: ${error instanceof Error ? error.message : "Unknown error"}`,
+        type: "error",
+      });
+    }
   };
 
   const handleImport = () => {
@@ -280,7 +294,7 @@ export const KeyboardSettings = () => {
                 <Button variant="default" size="xs" onClick={handleImport}>
                   Import
                 </Button>
-                <Button variant="default" size="xs" onClick={handleExport}>
+                <Button variant="default" size="xs" onClick={() => void handleExport()}>
                   Export
                 </Button>
               </div>
@@ -303,11 +317,7 @@ export const KeyboardSettings = () => {
 
             <SettingRow
               label="Keybinding Preset"
-              description={
-                settings.keybindingPreset === "none"
-                  ? "Apply a base shortcut style before your custom overrides."
-                  : `${keybindingPresetDefinitions[settings.keybindingPreset].description} Covers ${selectedPresetCoverage.coveredCommandIds.length}/${selectedPresetCoverage.totalCommandCount} built-in commands.`
-              }
+              description="Apply a base shortcut style before your custom overrides."
               onReset={() =>
                 updateSetting("keybindingPreset", getDefaultSetting("keybindingPreset"))
               }
