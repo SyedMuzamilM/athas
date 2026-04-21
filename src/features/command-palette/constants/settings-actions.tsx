@@ -17,32 +17,17 @@ import {
   Terminal,
   WrapText,
 } from "lucide-react";
+import { settingsSearchIndex } from "@/features/settings/config/search-index";
+import type { Settings as AppSettings } from "@/features/settings/store";
+import type { SettingsTab } from "@/features/window/stores/ui-state-store";
 import type { Action } from "../models/action.types";
 
 interface SettingsActionsParams {
-  settings: {
-    vimMode: boolean;
-    wordWrap: boolean;
-    lineNumbers: boolean;
-    vimRelativeLineNumbers: boolean;
-    autoSave: boolean;
-    autoDetectLanguage: boolean;
-    formatOnSave: boolean;
-    autoCompletion: boolean;
-    parameterHints: boolean;
-    aiCompletion: boolean;
-    coreFeatures: {
-      breadcrumbs: boolean;
-      diagnostics: boolean;
-      search: boolean;
-      git: boolean;
-      terminal: boolean;
-      aiChat: boolean;
-      remote: boolean;
-      persistentCommands: boolean;
-    };
-  };
+  query: string;
+  settings: AppSettings;
   setIsSettingsDialogVisible: (v: boolean) => void;
+  openSettingsDialog: (tab?: SettingsTab) => void;
+  setSettingsSearchQuery: (query: string) => void;
   setIsThemeSelectorVisible: (v: boolean) => void;
   setIsIconThemeSelectorVisible: (v: boolean) => void;
   updateSetting: (key: string, value: any) => void | Promise<void>;
@@ -53,10 +38,80 @@ interface SettingsActionsParams {
   onClose: () => void;
 }
 
+const settingsTabLabels: Record<SettingsTab, string> = {
+  account: "Account",
+  general: "General",
+  editor: "Editor",
+  git: "Git",
+  appearance: "Appearance",
+  databases: "Databases",
+  extensions: "Extensions",
+  ai: "AI",
+  keyboard: "Keybindings",
+  language: "Language",
+  features: "Features",
+  enterprise: "Enterprise",
+  advanced: "Advanced",
+  terminal: "Terminal",
+  "file-explorer": "Files",
+};
+
+const settingsTabCommands = (Object.entries(settingsTabLabels) as Array<[SettingsTab, string]>).map(
+  ([tab, label]) => ({ tab, label }),
+);
+
+function normalizeSearchText(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function getMatchingSettingsRecords(query: string) {
+  const trimmedQuery = query.trim();
+  if (trimmedQuery.length < 2) return [];
+
+  const normalizedQuery = normalizeSearchText(trimmedQuery);
+  const tokens = normalizedQuery.split(/\s+/);
+
+  return settingsSearchIndex
+    .map((record) => {
+      const searchableText = normalizeSearchText(
+        [record.label, record.description, record.section, ...(record.keywords || [])].join(" "),
+      );
+
+      let score = 0;
+      for (const token of tokens) {
+        if (!searchableText.includes(token)) {
+          return null;
+        }
+
+        score += 1;
+        if (normalizeSearchText(record.label).includes(token)) {
+          score += 10;
+        }
+        if (record.keywords?.some((keyword) => normalizeSearchText(keyword).includes(token))) {
+          score += 5;
+        }
+      }
+
+      return { record, score };
+    })
+    .filter((entry): entry is { record: (typeof settingsSearchIndex)[number]; score: number } => {
+      return entry !== null;
+    })
+    .sort((left, right) => right.score - left.score)
+    .slice(0, 12)
+    .map((entry) => entry.record);
+}
+
 export const createSettingsActions = (params: SettingsActionsParams): Action[] => {
   const {
+    query,
     settings,
     setIsSettingsDialogVisible,
+    openSettingsDialog,
+    setSettingsSearchQuery,
     setIsThemeSelectorVisible,
     setIsIconThemeSelectorVisible,
     updateSetting,
@@ -66,6 +121,32 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
     openOnboarding,
     onClose,
   } = params;
+
+  const openSettingsTabActions: Action[] = settingsTabCommands.map(({ tab, label }) => ({
+    id: `open-settings-tab-${tab}`,
+    label: `Preferences: Open ${label} Settings`,
+    description: `Open the ${label.toLowerCase()} settings tab`,
+    icon: <Settings />,
+    category: "Settings",
+    action: () => {
+      onClose();
+      setSettingsSearchQuery("");
+      openSettingsDialog(tab);
+    },
+  }));
+
+  const generatedSettingActions: Action[] = getMatchingSettingsRecords(query).map((record) => ({
+    id: `open-setting-${record.id}`,
+    label: `Settings: ${record.label}`,
+    description: `Open ${settingsTabLabels[record.tab]} > ${record.label}`,
+    icon: <Settings />,
+    category: "Settings",
+    action: () => {
+      onClose();
+      setSettingsSearchQuery(record.label);
+      openSettingsDialog(record.tab);
+    },
+  }));
 
   return [
     {
@@ -315,6 +396,32 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       },
     },
     {
+      id: "toggle-show-minimap",
+      label: settings.showMinimap ? "Editor: Hide Minimap" : "Editor: Show Minimap",
+      description: settings.showMinimap
+        ? "Hide the editor minimap overview"
+        : "Show the editor minimap overview",
+      icon: <Code2 />,
+      category: "Editor",
+      action: () => {
+        updateSetting("showMinimap", !settings.showMinimap);
+        onClose();
+      },
+    },
+    {
+      id: "toggle-telemetry",
+      label: settings.telemetry ? "Advanced: Disable Telemetry" : "Advanced: Enable Telemetry",
+      description: settings.telemetry
+        ? "Stop sending anonymous usage diagnostics"
+        : "Enable anonymous usage diagnostics",
+      icon: <Info />,
+      category: "Advanced",
+      action: () => {
+        updateSetting("telemetry", !settings.telemetry);
+        onClose();
+      },
+    },
+    {
       id: "toggle-breadcrumbs",
       label: settings.coreFeatures.breadcrumbs
         ? "Features: Disable Breadcrumbs"
@@ -448,5 +555,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
         onClose();
       },
     },
+    ...openSettingsTabActions,
+    ...generatedSettingActions,
   ];
 };

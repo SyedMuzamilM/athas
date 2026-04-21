@@ -139,8 +139,11 @@ const CommandPalette = () => {
       onClose,
     }),
     ...createSettingsActions({
+      query,
       settings,
       setIsSettingsDialogVisible,
+      openSettingsDialog,
+      setSettingsSearchQuery: useSettingsStore.getState().setSearchQuery,
       setIsThemeSelectorVisible,
       setIsIconThemeSelectorVisible,
       updateSetting: useSettingsStore.getState().updateSetting as (
