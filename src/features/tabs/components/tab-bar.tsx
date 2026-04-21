@@ -29,7 +29,6 @@ import { Button } from "@/ui/button";
 import { calculateDisplayNames } from "../utils/path-shortener";
 import {
   clearInternalTabDragData,
-  getInternalTabDragData,
   resolveDropTarget,
   setInternalTabDragHover,
   setInternalTabDragData,
@@ -68,14 +67,8 @@ const TabBar = ({
   const paneRoot = usePaneStore.use.root();
   const bottomRoot = usePaneStore.use.bottomRoot();
   const fullscreenPaneId = usePaneStore.use.fullscreenPaneId();
-  const {
-    moveBufferToPane,
-    addBufferToPane,
-    setActivePane,
-    splitPane,
-    closePane,
-    togglePaneFullscreen,
-  } = usePaneStore.use.actions();
+  const { moveBufferToPane, setActivePane, splitPane, closePane, togglePaneFullscreen } =
+    usePaneStore.use.actions();
 
   // Filter buffers by paneId if provided
   const pane = paneId
@@ -98,7 +91,6 @@ const TabBar = ({
     convertPreviewToDefinite,
   } = useBufferStore.use.actions();
   const { handleSave } = useEditorAppStore.use.actions();
-  const { openTerminalBuffer } = useBufferStore.use.actions();
   const { settings } = useSettingsStore();
   const { updateActivePath } = useSidebarStore();
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.() || undefined;
@@ -137,8 +129,6 @@ const TabBar = ({
     position: { x: number; y: number };
     buffer: PaneContent | null;
   }>({ isOpen: false, position: { x: 0, y: 0 }, buffer: null });
-
-  const [isDropTarget, setIsDropTarget] = useState(false);
 
   const [srAnnouncement, setSrAnnouncement] = useState<string>("");
 
@@ -580,105 +570,6 @@ const TabBar = ({
     });
   }, []);
 
-  const handleDragStart = useCallback(
-    (e: React.DragEvent, index: number) => {
-      const buffer = sortedBuffers[index];
-      if (!buffer) return;
-      const dragData = {
-        source: "pane" as const,
-        bufferId: buffer.id,
-        paneId: paneId,
-      };
-      e.dataTransfer.setData("application/tab-data", JSON.stringify(dragData));
-      e.dataTransfer.setData("text/plain", "athas-internal-tab-drag");
-      setInternalTabDragData(dragData);
-      e.dataTransfer.effectAllowed = "move";
-      const dragImage = document.createElement("div");
-      dragImage.className =
-        "bg-primary-bg border border-border rounded px-2 py-1 text-xs ui-font shadow-lg";
-      dragImage.textContent = buffer.name;
-      dragImage.style.position = "absolute";
-      dragImage.style.top = "-1000px";
-      document.body.appendChild(dragImage);
-      e.dataTransfer.setDragImage(dragImage, 0, 0);
-      setTimeout(() => {
-        document.body.removeChild(dragImage);
-      }, 0);
-    },
-    [sortedBuffers, paneId],
-  );
-
-  const handleDragEnd = useCallback(() => {
-    clearInternalTabDragData();
-  }, []);
-
-  // Handle drag over for cross-pane drops
-  const handleTabBarDragOver = useCallback(
-    (e: React.DragEvent) => {
-      const hasInternalTabDrag =
-        e.dataTransfer.types.includes("application/tab-data") ||
-        e.dataTransfer.types.includes("text/plain") ||
-        !!getInternalTabDragData();
-      if (hasInternalTabDrag && paneId) {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = "move";
-        setIsDropTarget(true);
-      }
-    },
-    [paneId],
-  );
-
-  const handleTabBarDragLeave = useCallback(() => {
-    setIsDropTarget(false);
-  }, []);
-
-  // Handle drop for cross-pane tab movement
-  const handleTabBarDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      setIsDropTarget(false);
-
-      if (!paneId) return;
-
-      const tabDataString = e.dataTransfer.getData("application/tab-data");
-      const fallbackTabData = getInternalTabDragData();
-      if (tabDataString || fallbackTabData) {
-        try {
-          const tabData = tabDataString ? JSON.parse(tabDataString) : fallbackTabData;
-          const { bufferId, paneId: sourcePaneId, source, terminalId } = tabData;
-
-          if (source === "terminal-panel" && terminalId) {
-            setActivePane(paneId);
-            openTerminalBuffer({
-              sessionId: terminalId,
-              name: tabData.name,
-              command: tabData.initialCommand,
-              workingDirectory: tabData.currentDirectory,
-              remoteConnectionId: tabData.remoteConnectionId,
-            });
-            window.dispatchEvent(
-              new CustomEvent("terminal-detach-to-buffer", {
-                detail: { terminalId },
-              }),
-            );
-          } else if (sourcePaneId && sourcePaneId !== paneId) {
-            // Move buffer from source pane to this pane
-            setActivePane(paneId);
-            moveBufferToPane(bufferId, sourcePaneId, paneId);
-          } else if (!sourcePaneId) {
-            // Tab from legacy source, just add to this pane
-            addBufferToPane(paneId, bufferId, true);
-          }
-        } catch {
-          // Invalid tab data
-        } finally {
-          clearInternalTabDragData();
-        }
-      }
-    },
-    [paneId, setActivePane, moveBufferToPane, addBufferToPane, openTerminalBuffer],
-  );
-
   const handleCopyPath = useCallback(
     async (path: string) => {
       await writeText(path);
@@ -927,13 +818,10 @@ const TabBar = ({
       <div
         ref={tabBarRef}
         data-tab-bar-pane-id={paneId ?? ""}
-        className={`relative flex shrink-0 items-center gap-1 overflow-hidden bg-primary-bg px-1.5 py-1 ${isDropTarget ? "ring-2 ring-accent ring-inset" : ""}`}
+        className="relative flex shrink-0 items-center gap-1 overflow-hidden bg-primary-bg px-1.5 py-1"
         role="tablist"
         aria-label="Open files"
         onWheel={handleWheel}
-        onDragOver={handleTabBarDragOver}
-        onDragLeave={handleTabBarDragLeave}
-        onDrop={handleTabBarDrop}
       >
         <div className="flex shrink-0 items-center gap-0.5">
           <Button
@@ -988,8 +876,6 @@ const TabBar = ({
                 onDoubleClick={(e) => handleDoubleClick(e, index)}
                 onContextMenu={(e) => handleContextMenu(e, buffer)}
                 onKeyDown={(e) => handleKeyDown(e, index)}
-                onDragStart={(e) => handleDragStart(e, index)}
-                onDragEnd={handleDragEnd}
                 handleTabClose={(id) => {
                   handleTabClose(id);
                   clearPositionCache(id);

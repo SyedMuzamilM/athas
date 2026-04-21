@@ -16,8 +16,6 @@ interface TerminalTabBarItemProps {
   tabRef: (el: HTMLDivElement | null) => void;
   onMouseDown: (e: React.MouseEvent) => void;
   onContextMenu: (e: React.MouseEvent) => void;
-  onDragStart: (e: React.DragEvent) => void;
-  onDragEnd: (e: React.DragEvent) => void;
   onKeyDown: (e: React.KeyboardEvent) => void;
   handleTabClose: (id: string) => void;
   handleTabPin: (id: string) => void;
@@ -39,8 +37,6 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
   tabRef,
   onMouseDown,
   onContextMenu,
-  onDragStart,
-  onDragEnd,
   onKeyDown,
   handleTabClose,
   handleTabPin,
@@ -109,9 +105,6 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
         onMouseDown={isEditing ? undefined : onMouseDown}
         onContextMenu={onContextMenu}
         onKeyDown={onKeyDown}
-        draggable={false}
-        onDragStart={onDragStart}
-        onDragEnd={onDragEnd}
         onAuxClick={handleAuxClick}
         action={
           !isEditing ? (

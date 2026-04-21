@@ -547,28 +547,6 @@ const TerminalTabBar = ({
     });
   };
 
-  const handleDragStart = (e: React.DragEvent, index: number) => {
-    const terminal = sortedTerminals[index];
-    if (!terminal) return;
-
-    const dragData = {
-      source: "terminal-panel" as const,
-      terminalId: terminal.id,
-      name: terminal.name,
-      initialCommand: terminal.initialCommand,
-      currentDirectory: terminal.currentDirectory,
-      remoteConnectionId: terminal.remoteConnectionId,
-    };
-    e.dataTransfer.effectAllowed = "move";
-    e.dataTransfer.setData("application/tab-data", JSON.stringify(dragData));
-    e.dataTransfer.setData("text/plain", "athas-internal-tab-drag");
-    setInternalTabDragData(dragData);
-  };
-
-  const handleDragEnd = () => {
-    clearInternalTabDragData();
-  };
-
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "F2" && activeTerminalId) {
       e.preventDefault();
@@ -836,8 +814,6 @@ const TerminalTabBar = ({
                     }}
                     onMouseDown={(e) => handleMouseDown(e, index)}
                     onContextMenu={(e) => handleContextMenu(e, terminal)}
-                    onDragStart={(e) => handleDragStart(e, index)}
-                    onDragEnd={handleDragEnd}
                     onKeyDown={handleKeyDown}
                     handleTabClose={handleTabCloseWrapper}
                     handleTabPin={handleTabPin}
@@ -895,8 +871,6 @@ const TerminalTabBar = ({
                   }}
                   onMouseDown={(e) => handleMouseDown(e, index)}
                   onContextMenu={(e) => handleContextMenu(e, terminal)}
-                  onDragStart={(e) => handleDragStart(e, index)}
-                  onDragEnd={handleDragEnd}
                   onKeyDown={handleKeyDown}
                   handleTabClose={handleTabCloseWrapper}
                   handleTabPin={handleTabPin}

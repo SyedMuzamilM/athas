@@ -32,8 +32,6 @@ interface TabBarItemProps {
   onMouseDown: (e: React.MouseEvent) => void;
   onDoubleClick: (e: React.MouseEvent) => void;
   onContextMenu: (e: React.MouseEvent) => void;
-  onDragStart: (e: React.DragEvent) => void;
-  onDragEnd: (e: React.DragEvent) => void;
   onKeyDown: (e: React.KeyboardEvent) => void;
   handleTabClose: (id: string) => void;
   handleTabPin: (id: string) => void;
@@ -49,8 +47,6 @@ const TabBarItem = memo(function TabBarItem({
   onMouseDown,
   onDoubleClick,
   onContextMenu,
-  onDragStart,
-  onDragEnd,
   onKeyDown,
   handleTabClose,
   handleTabPin,
@@ -104,9 +100,6 @@ const TabBarItem = memo(function TabBarItem({
         onDoubleClick={onDoubleClick}
         onContextMenu={onContextMenu}
         onKeyDown={onKeyDown}
-        draggable
-        onDragStart={onDragStart}
-        onDragEnd={onDragEnd}
         onAuxClick={handleAuxClick}
         action={
           <Button
