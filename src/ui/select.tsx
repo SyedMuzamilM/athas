@@ -115,6 +115,7 @@ function SelectSearchField({
         />
         <input
           ref={inputRef}
+          data-prevent-dialog-escape="true"
           type="text"
           value={value}
           onChange={(event) => onChange(event.target.value)}
@@ -261,6 +262,7 @@ export default function Select({
         <Input
           ref={searchInputRef}
           data-setting-primary-control="true"
+          data-prevent-dialog-escape={open ? "true" : undefined}
           id={id}
           title={title}
           value={triggerText}
@@ -360,6 +362,7 @@ export default function Select({
       <button
         ref={triggerRef}
         data-setting-primary-control="true"
+        data-prevent-dialog-escape={open ? "true" : undefined}
         id={id}
         title={title}
         type="button"

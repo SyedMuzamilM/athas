@@ -46,6 +46,7 @@ export function TypedConfirmAction({
       <div className="flex items-center gap-2">
         <Input
           ref={inputRef}
+          data-prevent-dialog-escape="true"
           value={value}
           onChange={(event) => setValue(event.target.value)}
           placeholder={`Type '${confirmWord}'`}
@@ -54,6 +55,8 @@ export function TypedConfirmAction({
           className="w-28"
           onKeyDown={(event) => {
             if (event.key === "Escape") {
+              event.preventDefault();
+              event.stopPropagation();
               setIsConfirming(false);
               return;
             }

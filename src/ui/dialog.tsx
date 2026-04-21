@@ -3,6 +3,7 @@ import { cva } from "class-variance-authority";
 import { motion } from "framer-motion";
 import { type LucideProps, X } from "lucide-react";
 import { type ReactNode } from "react";
+import { resolveEscapeGuard } from "@/utils/keyboard/escape-guard";
 import { cn } from "@/utils/cn";
 
 interface DialogProps {
@@ -70,7 +71,21 @@ const Dialog = ({
         <DialogPrimitive.Content
           asChild
           onEscapeKeyDown={(event) => {
-            if (event.defaultPrevented) {
+            const target = event.target as HTMLElement | null;
+            const activeElement =
+              typeof document !== "undefined"
+                ? (document.activeElement as HTMLElement | null)
+                : null;
+            const { dismissTarget, blurTarget } = resolveEscapeGuard(target, activeElement);
+
+            if (event.defaultPrevented || dismissTarget) {
+              event.preventDefault();
+              return;
+            }
+
+            if (blurTarget) {
+              event.preventDefault();
+              blurTarget.blur();
               return;
             }
             onClose();

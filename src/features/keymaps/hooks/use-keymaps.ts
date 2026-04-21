@@ -8,6 +8,7 @@
 import { useEffect, useRef, useState } from "react";
 import { logger } from "@/features/editor/utils/logger";
 import { useSettingsStore } from "@/features/settings/store";
+import { resolveEscapeGuard } from "@/utils/keyboard/escape-guard";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useKeymapStore } from "../stores/store";
 import { getEffectiveKeybindings } from "../utils/effective-keymaps";
@@ -81,6 +82,14 @@ export function useKeymaps() {
 
       // Escape key - global modal closing
       if (e.key === "Escape") {
+        const activeElement =
+          typeof document !== "undefined" ? (document.activeElement as HTMLElement | null) : null;
+        const { dismissTarget, blurTarget } = resolveEscapeGuard(e.target, activeElement);
+
+        if (dismissTarget || blurTarget) {
+          return;
+        }
+
         const { hasOpenModal, closeTopModal } = useUIState.getState();
         if (hasOpenModal()) {
           e.preventDefault();

@@ -131,6 +131,7 @@ export function MenuPopover({
   const node = isOpen ? (
     <motion.div
       ref={menuRef}
+      data-prevent-dialog-escape="true"
       onMouseDown={(event) => event.stopPropagation()}
       onPointerDown={(event) => event.stopPropagation()}
       onWheelCapture={containScrollChain}
