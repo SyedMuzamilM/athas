@@ -44,6 +44,7 @@ import {
   setInternalTabDragData,
   setInternalTabDragHoverTarget,
 } from "@/features/tabs/utils/internal-tab-drag";
+import { constrainHorizontalTabDrag } from "@/features/tabs/utils/horizontal-tab-drag";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import Tooltip from "../../../ui/tooltip";
 import TerminalTabBarItem from "./terminal-tab-bar-item";
@@ -356,7 +357,16 @@ const TerminalTabBar = ({
   const handleMouseMove = (e: MouseEvent) => {
     if (draggedIndex === null || !dragStartPosition || !tabBarRef.current) return;
 
-    setDragCurrentPosition({ x: e.clientX, y: e.clientY });
+    const pointerPosition = { x: e.clientX, y: e.clientY };
+    const constrainedPosition =
+      orientation === "horizontal"
+        ? constrainHorizontalTabDrag(
+            pointerPosition,
+            dragStartPosition.y,
+            tabBarRef.current.getBoundingClientRect(),
+          )
+        : { position: pointerPosition, isOutsideRail: false };
+    setDragCurrentPosition(constrainedPosition.position);
 
     const distance = Math.sqrt(
       (e.clientX - dragStartPosition.x) ** 2 + (e.clientY - dragStartPosition.y) ** 2,
@@ -368,15 +378,20 @@ const TerminalTabBar = ({
 
     if (isDragging) {
       const rect = tabBarRef.current.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
+      const x = constrainedPosition.position.x - rect.left;
+      const y = constrainedPosition.position.y - rect.top;
 
       // Check if dragged outside the tab bar
-      const isOutside = x < 0 || x > rect.width || y < -50 || y > rect.height + 50;
+      const isOutside =
+        constrainedPosition.isOutsideRail ||
+        x < 0 ||
+        x > rect.width ||
+        y < -50 ||
+        y > rect.height + 50;
       setIsDraggedOutside(isOutside);
 
       if (isOutside) {
-        const resolvedTarget = resolveDropTarget({ x: e.clientX, y: e.clientY });
+        const resolvedTarget = resolveDropTarget(pointerPosition);
         if (resolvedTarget.paneId) {
           lastValidExternalDropTargetRef.current = resolvedTarget;
           setInternalTabDragHoverTarget(resolvedTarget);
@@ -385,7 +400,7 @@ const TerminalTabBar = ({
         }
       } else {
         lastValidExternalDropTargetRef.current = null;
-        setInternalTabDragHover({ x: e.clientX, y: e.clientY });
+        setInternalTabDragHover(constrainedPosition.position);
       }
 
       if (!isOutside) {

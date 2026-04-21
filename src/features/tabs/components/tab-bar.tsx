@@ -34,6 +34,7 @@ import {
   setInternalTabDragHover,
   setInternalTabDragData,
 } from "../utils/internal-tab-drag";
+import { constrainHorizontalTabDrag } from "../utils/horizontal-tab-drag";
 import { NewTabMenu } from "./new-tab-menu";
 import TabBarItem from "./tab-bar-item";
 import TabContextMenu from "./tab-context-menu";
@@ -426,13 +427,20 @@ const TabBar = ({
     (e: MouseEvent) => {
       setDragState((prev) => {
         if (prev.draggedIndex === null || !prev.startPosition) return prev;
-        const currentPosition = { x: e.clientX, y: e.clientY };
+        const pointerPosition = { x: e.clientX, y: e.clientY };
         const distance = Math.sqrt(
-          (currentPosition.x - prev.startPosition.x) ** 2 +
-            (currentPosition.y - prev.startPosition.y) ** 2,
+          (pointerPosition.x - prev.startPosition.x) ** 2 +
+            (pointerPosition.y - prev.startPosition.y) ** 2,
         );
         if (!prev.isDragging && distance > DRAG_THRESHOLD) {
           const tabPositions = cacheTabPositions();
+          const currentPosition = tabBarRef.current
+            ? constrainHorizontalTabDrag(
+                pointerPosition,
+                prev.startPosition.y,
+                tabBarRef.current.getBoundingClientRect(),
+              ).position
+            : pointerPosition;
           if (
             prev.isDragging &&
             prev.currentPosition?.x === currentPosition.x &&
@@ -450,9 +458,16 @@ const TabBar = ({
           };
         }
         if (prev.isDragging) {
+          const currentPosition = tabBarRef.current
+            ? constrainHorizontalTabDrag(
+                pointerPosition,
+                prev.startPosition.y,
+                tabBarRef.current.getBoundingClientRect(),
+              ).position
+            : pointerPosition;
           setInternalTabDragHover(currentPosition);
           const { dropTarget, direction } = calculateDropTarget(
-            e.clientX,
+            currentPosition.x,
             prev.dropTargetIndex,
             prev.draggedIndex,
             prev.tabPositions,
@@ -475,12 +490,12 @@ const TabBar = ({
           };
         }
         if (
-          prev.currentPosition?.x === currentPosition.x &&
-          prev.currentPosition?.y === currentPosition.y
+          prev.currentPosition?.x === pointerPosition.x &&
+          prev.currentPosition?.y === pointerPosition.y
         ) {
           return prev; // No change
         }
-        return { ...prev, currentPosition };
+        return { ...prev, currentPosition: pointerPosition };
       });
     },
     [cacheTabPositions],
