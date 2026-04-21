@@ -1,4 +1,4 @@
-import { Globe, Plus, Server, Trash2 } from "lucide-react";
+import { Globe, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/ui/button";
 import { CommandEmpty, CommandItem, CommandList } from "@/ui/command";

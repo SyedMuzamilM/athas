@@ -4,7 +4,6 @@ import {
   ArrowSquareOut,
   ChatCircleText,
   Check,
-  ClockCounterClockwise,
   Copy,
   FolderOpen,
   GitBranch,

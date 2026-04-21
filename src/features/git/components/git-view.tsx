@@ -1,10 +1,5 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import {
-  ClockCounterClockwise,
-  FolderSimpleStar,
-  GitBranch,
-  TreeStructure,
-} from "@phosphor-icons/react";
+import { ClockCounterClockwise, FolderSimpleStar, TreeStructure } from "@phosphor-icons/react";
 import { Check, Eye, FolderOpen, MoreHorizontal, RefreshCw } from "lucide-react";
 import { memo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
