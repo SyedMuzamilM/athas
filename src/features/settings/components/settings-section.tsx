@@ -57,6 +57,9 @@ export function SettingRow({
 }: SettingRowProps) {
   const controlRef = React.useRef<HTMLDivElement>(null);
 
+  const interactiveSelector =
+    "button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [role='button'], [role='switch'], [tabindex]:not([tabindex='-1'])";
+
   const handleRowClick = (event: React.MouseEvent<HTMLDivElement>) => {
     const target = event.target as HTMLElement;
 
@@ -74,18 +77,13 @@ export function SettingRow({
     const primaryInteractive =
       controlRoot.querySelector<HTMLElement>(
         "[data-setting-primary-control='true'], [data-setting-interactive-root='true']",
-      ) ??
-      controlRoot.querySelector<HTMLElement>(
-        "button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [role='button'], [role='switch'], [tabindex]:not([tabindex='-1'])",
-      );
+      ) ?? controlRoot.querySelector<HTMLElement>(interactiveSelector);
 
     if (!primaryInteractive) return;
 
-    const firstInteractive = primaryInteractive.matches(
-      "button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [role='button'], [role='switch'], [tabindex]:not([tabindex='-1'])",
-    )
+    const firstInteractive = primaryInteractive.matches(interactiveSelector)
       ? primaryInteractive
-      : null;
+      : primaryInteractive.querySelector<HTMLElement>(interactiveSelector);
 
     if (!firstInteractive) return;
 
