@@ -133,6 +133,7 @@ export default function NumberInput({
       </Button>
 
       <input
+        data-setting-primary-control="true"
         value={inputValue}
         onChange={handleInputChange}
         onBlur={handleBlur}

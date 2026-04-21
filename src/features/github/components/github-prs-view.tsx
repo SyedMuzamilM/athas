@@ -441,10 +441,7 @@ const GitHubPRsView = memo(() => {
               tabIndex: 0,
               icon: <div className="relative flex items-center justify-center">{tab.icon}</div>,
               label: <span className="ui-text-sm text-center leading-none">{tab.label}</span>,
-              className: cn(
-                EQUAL_WIDTH_SEGMENTED_TAB_ITEM_CLASS_NAME,
-                "h-10 whitespace-normal px-2.5 py-2",
-              ),
+              className: EQUAL_WIDTH_SEGMENTED_TAB_ITEM_CLASS_NAME,
             }))}
           />
 

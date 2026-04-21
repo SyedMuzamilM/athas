@@ -26,7 +26,7 @@ export const DROPDOWN_TRIGGER_BASE = cn(
 );
 
 const dropdownRootVariants = cva(
-  "fixed z-[10040] min-w-[240px] max-w-[min(480px,calc(100vw-16px))] select-none overflow-y-auto rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur-sm [overscroll-behavior:contain]",
+  "pointer-events-auto fixed z-[10040] min-w-[240px] max-w-[min(480px,calc(100vw-16px))] select-none overflow-y-auto rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur-sm [overscroll-behavior:contain]",
 );
 
 const dropdownItemVariants = cva(
@@ -530,6 +530,8 @@ export function Dropdown(props: DropdownProps) {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
         onClose();
       }
     };
@@ -539,7 +541,7 @@ export function Dropdown(props: DropdownProps) {
     window.visualViewport?.addEventListener("resize", positionMenu);
     window.visualViewport?.addEventListener("scroll", positionMenu);
     document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleEscape);
+    document.addEventListener("keydown", handleEscape, true);
 
     return () => {
       resizeObserver.disconnect();
@@ -548,7 +550,7 @@ export function Dropdown(props: DropdownProps) {
       window.visualViewport?.removeEventListener("resize", positionMenu);
       window.visualViewport?.removeEventListener("scroll", positionMenu);
       document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleEscape);
+      document.removeEventListener("keydown", handleEscape, true);
     };
   }, [isOpen, onClose, positionMenu, anchorRef]);
 

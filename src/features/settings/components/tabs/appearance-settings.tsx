@@ -155,10 +155,6 @@ export const AppearanceSettings = () => {
           canReset={settings.theme !== getDefaultSetting("theme")}
         >
           <div className="flex items-center gap-2">
-            <Button onClick={handleUploadTheme} variant="default" size="xs" className="gap-1">
-              <Upload />
-              Upload
-            </Button>
             <Select
               value={settings.theme}
               options={normalizedThemeOptions}
@@ -170,6 +166,10 @@ export const AppearanceSettings = () => {
               searchableTrigger="input"
               disabled={settings.syncSystemTheme}
             />
+            <Button onClick={handleUploadTheme} variant="default" size="xs" className="gap-1">
+              <Upload />
+              Upload
+            </Button>
           </div>
         </SettingRow>
 
@@ -293,6 +293,8 @@ export const AppearanceSettings = () => {
             className={SETTINGS_CONTROL_WIDTHS.compact}
             size="xs"
             variant="secondary"
+            searchable
+            searchableTrigger="input"
           />
         </SettingRow>
 
@@ -311,6 +313,8 @@ export const AppearanceSettings = () => {
             className={SETTINGS_CONTROL_WIDTHS.compact}
             size="xs"
             variant="secondary"
+            searchable
+            searchableTrigger="input"
           />
         </SettingRow>
 
@@ -404,6 +408,8 @@ export const AppearanceSettings = () => {
             className={SETTINGS_CONTROL_WIDTHS.default}
             size="xs"
             variant="secondary"
+            searchable
+            searchableTrigger="input"
           />
         </SettingRow>
 
