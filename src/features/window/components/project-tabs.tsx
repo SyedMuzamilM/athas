@@ -11,8 +11,8 @@ import {
   X,
   ArrowSquareOut,
 } from "@phosphor-icons/react";
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { KeyboardEvent } from "react";
+import { useCallback, useMemo, useState } from "react";
+import type { KeyboardEvent, MouseEvent } from "react";
 import { createPortal } from "react-dom";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
@@ -21,14 +21,8 @@ import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-s
 import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { Button } from "@/ui/button";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
-import { Tab, TabsList } from "@/ui/tabs";
+import { Tabs } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
-import {
-  HORIZONTAL_TAB_DRAG_THRESHOLD,
-  type HorizontalTabPosition,
-  calculateHorizontalTabDropTarget,
-  constrainHorizontalTabDrag,
-} from "@/features/tabs/utils/horizontal-tab-drag";
 import ProjectIconPicker from "./project-icon-picker";
 import ProjectPickerDialog from "./project-picker-dialog";
 
@@ -44,135 +38,8 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
   const { switchToProject, closeProject } = useFileSystemStore();
   const isSwitchingProject = useFileSystemStore.use.isSwitchingProject();
   const { isProjectPickerVisible, setIsProjectPickerVisible } = useUIState();
-
-  const tabBarRef = useRef<HTMLDivElement>(null);
-  const tabRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const dragStateRef = useRef({
-    isDragging: false,
-    draggedIndex: null as number | null,
-    dropTargetIndex: null as number | null,
-  });
-
-  const [dragState, setDragState] = useState<{
-    isDragging: boolean;
-    draggedIndex: number | null;
-    dropTargetIndex: number | null;
-    startPosition: { x: number; y: number } | null;
-    currentPosition: { x: number; y: number } | null;
-    tabPositions: HorizontalTabPosition[];
-  }>({
-    isDragging: false,
-    draggedIndex: null,
-    dropTargetIndex: null,
-    startPosition: null,
-    currentPosition: null,
-    tabPositions: [],
-  });
-
   const [iconPickerTab, setIconPickerTab] = useState<ProjectTab | null>(null);
-
   const contextMenu = useContextMenu<ProjectTab>();
-
-  useEffect(() => {
-    dragStateRef.current = {
-      isDragging: dragState.isDragging,
-      draggedIndex: dragState.draggedIndex,
-      dropTargetIndex: dragState.dropTargetIndex,
-    };
-  }, [dragState.isDragging, dragState.draggedIndex, dragState.dropTargetIndex]);
-
-  useEffect(() => {
-    tabRefs.current = tabRefs.current.slice(0, projectTabs.length);
-  }, [projectTabs.length]);
-
-  const cacheTabPositions = useCallback((): HorizontalTabPosition[] => {
-    if (!tabBarRef.current) return [];
-    const containerRect = tabBarRef.current.getBoundingClientRect();
-    const positions: HorizontalTabPosition[] = [];
-    tabRefs.current.forEach((tab, index) => {
-      if (tab) {
-        const rect = tab.getBoundingClientRect();
-        const left = rect.left - containerRect.left;
-        const right = rect.right - containerRect.left;
-        positions.push({
-          index,
-          left,
-          right,
-          width: rect.width,
-          center: left + rect.width / 2,
-        });
-      }
-    });
-    return positions;
-  }, []);
-
-  const handleMouseMove = useCallback(
-    (e: MouseEvent) => {
-      setDragState((prev) => {
-        if (prev.draggedIndex === null || !prev.startPosition) return prev;
-
-        const currentPosition = constrainHorizontalTabDrag(
-          { x: e.clientX, y: e.clientY },
-          prev.startPosition.y,
-          tabBarRef.current!.getBoundingClientRect(),
-        ).position;
-        const distance = Math.sqrt(
-          (e.clientX - prev.startPosition.x) ** 2 + (e.clientY - prev.startPosition.y) ** 2,
-        );
-
-        if (!prev.isDragging && distance > HORIZONTAL_TAB_DRAG_THRESHOLD) {
-          const tabPositions = cacheTabPositions();
-          return {
-            ...prev,
-            isDragging: true,
-            currentPosition,
-            tabPositions,
-            dropTargetIndex: prev.draggedIndex,
-          };
-        }
-
-        if (prev.isDragging) {
-          const { dropTarget } = calculateHorizontalTabDropTarget(
-            currentPosition.x,
-            tabBarRef.current!.getBoundingClientRect(),
-            prev.draggedIndex,
-            prev.tabPositions,
-            prev.dropTargetIndex,
-          );
-          return {
-            ...prev,
-            currentPosition,
-            dropTargetIndex: dropTarget,
-          };
-        }
-
-        return { ...prev, currentPosition };
-      });
-    },
-    [cacheTabPositions],
-  );
-
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent, index: number, _tab: ProjectTab) => {
-      if (disableReorder) {
-        return;
-      }
-      if (e.button !== 0 || (e.target as HTMLElement).closest("button.close-button")) {
-        return;
-      }
-
-      e.preventDefault();
-      setDragState({
-        isDragging: false,
-        draggedIndex: index,
-        dropTargetIndex: null,
-        startPosition: { x: e.clientX, y: e.clientY },
-        currentPosition: { x: e.clientX, y: e.clientY },
-        tabPositions: [],
-      });
-    },
-    [disableReorder, switchToProject],
-  );
 
   const handleTabClick = useCallback(
     async (tab: ProjectTab) => {
@@ -195,7 +62,7 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
     setIsProjectPickerVisible(true);
   };
 
-  const handleTabActionsClick = (e: React.MouseEvent, tab: ProjectTab) => {
+  const handleTabActionsClick = (e: MouseEvent<HTMLElement>, tab: ProjectTab) => {
     e.preventDefault();
     e.stopPropagation();
     const rect = e.currentTarget.getBoundingClientRect();
@@ -318,141 +185,93 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
     [projectTabs, closeProject],
   );
 
-  useEffect(() => {
-    if (disableReorder) return;
-    if (dragState.draggedIndex === null) return;
+  const projectTabItems = useMemo(
+    () =>
+      projectTabs.map((tab) => {
+        const isRemote = isRemoteProjectTab(tab);
 
-    const handleGlobalMouseMove = (e: MouseEvent) => {
-      handleMouseMove(e);
-    };
-
-    const handleGlobalMouseUp = () => {
-      const { isDragging, draggedIndex, dropTargetIndex } = dragStateRef.current;
-
-      if (
-        isDragging &&
-        draggedIndex !== null &&
-        dropTargetIndex !== null &&
-        draggedIndex !== dropTargetIndex
-      ) {
-        let adjustedDropTarget = dropTargetIndex;
-        if (draggedIndex < dropTargetIndex) {
-          adjustedDropTarget = dropTargetIndex - 1;
-        }
-
-        if (adjustedDropTarget !== draggedIndex) {
-          reorderProjectTabs(draggedIndex, adjustedDropTarget);
-        }
-      }
-
-      setDragState({
-        isDragging: false,
-        draggedIndex: null,
-        dropTargetIndex: null,
-        startPosition: null,
-        currentPosition: null,
-        tabPositions: [],
-      });
-    };
-
-    document.addEventListener("mousemove", handleGlobalMouseMove);
-    document.addEventListener("mouseup", handleGlobalMouseUp);
-
-    return () => {
-      document.removeEventListener("mousemove", handleGlobalMouseMove);
-      document.removeEventListener("mouseup", handleGlobalMouseUp);
-    };
-  }, [disableReorder, dragState.draggedIndex, reorderProjectTabs, handleMouseMove]);
+        return {
+          id: tab.id,
+          role: "tab" as const,
+          tabIndex: 0,
+          title: tab.path,
+          isActive: tab.isActive,
+          onClick: () => void handleTabClick(tab),
+          onContextMenu: (event: MouseEvent<HTMLDivElement>) => contextMenu.open(event, tab),
+          onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => handleTabKeyDown(event, tab),
+          icon: tab.customIcon ? (
+            <img
+              src={convertFileSrc(tab.customIcon)}
+              alt=""
+              className="shrink-0 rounded-sm object-contain"
+              style={{
+                width: "var(--app-ui-font-size)",
+                height: "var(--app-ui-font-size)",
+              }}
+            />
+          ) : isRemote ? (
+            <HardDrives weight="duotone" />
+          ) : (
+            <Folder weight="duotone" />
+          ),
+          label: <span className="max-w-32 truncate">{tab.name}</span>,
+          className: cn(
+            "px-6",
+            isRemote &&
+              (tab.isActive ? "bg-sky-500/15 text-sky-100" : "text-sky-200/85 hover:text-sky-100"),
+            isSwitchingProject && "cursor-wait",
+          ),
+          style: { fontSize: "var(--ui-text-sm)" },
+          action: (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              onClick={(event) => handleTabActionsClick(event, tab)}
+              className={cn(
+                "close-button -translate-y-1/2 absolute top-1/2 right-0.5 z-10 rounded-none border-0 text-text-lighter transition",
+                "hover:bg-hover/60 hover:text-text",
+                "opacity-0 group-hover/tab:opacity-100 group-focus-within/tab:opacity-100",
+              )}
+              tooltip="Project actions"
+              aria-label="Project actions"
+            >
+              <DotsThreeVertical weight="bold" />
+            </Button>
+          ),
+        };
+      }),
+    [contextMenu, handleTabClick, handleTabKeyDown, isSwitchingProject, projectTabs],
+  );
 
   if (projectTabs.length === 0) {
     return null;
   }
 
-  const { isDragging, draggedIndex, dropTargetIndex } = dragState;
-
   return (
     <>
-      <TabsList ref={tabBarRef} variant="segmented" className="group">
-        {projectTabs.map((tab: ProjectTab, index: number) => {
-          const isRemote = isRemoteProjectTab(tab);
-          const isDraggedTab = isDragging && draggedIndex === index;
-          const showDropIndicatorBefore =
-            isDragging && dropTargetIndex === index && draggedIndex !== index;
+      <div className="group flex min-w-0 items-stretch">
+        <Tabs
+          items={projectTabItems}
+          size="xs"
+          variant="segmented"
+          labelPosition="start"
+          reorderable={!disableReorder}
+          onReorder={(orderedIds) => {
+            const currentIds = projectTabs.map((tab) => tab.id);
+            orderedIds.forEach((tabId, targetIndex) => {
+              const currentIndex = currentIds.indexOf(tabId);
+              if (currentIndex === -1 || currentIndex === targetIndex) {
+                return;
+              }
 
-          return (
-            <div key={tab.id} className="relative flex h-full items-stretch">
-              {showDropIndicatorBefore && (
-                <div className="absolute top-1 bottom-1 left-0 z-20 w-0.5 bg-accent" />
-              )}
-              <Tab
-                role="tab"
-                tabIndex={0}
-                aria-selected={tab.isActive}
-                isActive={tab.isActive}
-                isDragged={isDraggedTab}
-                size="xs"
-                variant="segmented"
-                labelPosition="start"
-                ref={(el) => {
-                  tabRefs.current[index] = el;
-                }}
-                onMouseDown={disableReorder ? undefined : (e) => handleMouseDown(e, index, tab)}
-                onContextMenu={(e) => contextMenu.open(e, tab)}
-                onKeyDown={(event) => handleTabKeyDown(event, tab)}
-                className={cn(
-                  "px-6",
-                  isRemote &&
-                    (tab.isActive
-                      ? "bg-sky-500/15 text-sky-100"
-                      : "text-sky-200/85 hover:text-sky-100"),
-                  isSwitchingProject && "cursor-wait",
-                )}
-                style={{ fontSize: "var(--ui-text-sm)" }}
-                onClick={() => void handleTabClick(tab)}
-                title={tab.path}
-                action={
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-xs"
-                    onClick={(e) => handleTabActionsClick(e, tab)}
-                    className={cn(
-                      "close-button -translate-y-1/2 absolute top-1/2 right-0.5 z-10 rounded-none border-0 text-text-lighter transition",
-                      "hover:bg-hover/60 hover:text-text",
-                      "opacity-0 group-hover/tab:opacity-100 group-focus-within/tab:opacity-100",
-                    )}
-                    tooltip="Project actions"
-                    aria-label="Project actions"
-                  >
-                    <DotsThreeVertical weight="bold" />
-                  </Button>
-                }
-              >
-                {tab.customIcon ? (
-                  <img
-                    src={convertFileSrc(tab.customIcon)}
-                    alt=""
-                    className="shrink-0 rounded-sm object-contain"
-                    style={{
-                      width: "var(--app-ui-font-size)",
-                      height: "var(--app-ui-font-size)",
-                    }}
-                  />
-                ) : isRemote ? (
-                  <HardDrives weight="duotone" />
-                ) : (
-                  <Folder weight="duotone" />
-                )}
-                <span className="max-w-32 truncate">{tab.name}</span>
-              </Tab>
-            </div>
-          );
-        })}
-        {isDragging && dropTargetIndex === projectTabs.length && (
-          <div className="relative">
-            <div className="absolute top-1 bottom-1 left-0 z-20 w-0.5 bg-accent" />
-          </div>
-        )}
+              reorderProjectTabs(currentIndex, targetIndex);
+              currentIds.splice(currentIndex, 1);
+              currentIds.splice(targetIndex, 0, tabId);
+            });
+          }}
+          className="min-w-0"
+        />
         <div className="w-0 overflow-hidden transition-[width,opacity] duration-150 ease-out group-hover:w-6 focus-within:w-6">
           <Button
             type="button"
@@ -466,7 +285,7 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
             <Plus weight="bold" />
           </Button>
         </div>
-      </TabsList>
+      </div>
 
       {createPortal(
         <ContextMenu

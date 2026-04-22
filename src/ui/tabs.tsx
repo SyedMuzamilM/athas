@@ -47,14 +47,18 @@ export interface TabsItem {
   id: string;
   label?: ReactNode;
   icon?: ReactNode;
+  action?: ReactNode;
   isActive?: boolean;
   onClick?: () => void;
+  onContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
+  onKeyDown?: (event: ReactKeyboardEvent<HTMLDivElement>) => void;
   title?: string;
   ariaLabel?: string;
   role?: HTMLAttributes<HTMLDivElement>["role"];
   tabIndex?: number;
   disabled?: boolean;
   className?: string;
+  style?: HTMLAttributes<HTMLDivElement>["style"];
   tooltip?: {
     content: string;
     shortcut?: string;
@@ -288,7 +292,10 @@ export function Tabs({
   };
 
   const handleKeyDown = (itemId: string) => (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    const item = itemMap.get(itemId);
+
     if (!canReorder || !event.shiftKey) {
+      item?.onKeyDown?.(event);
       return;
     }
 
@@ -313,10 +320,12 @@ export function Tabs({
 
     event.preventDefault();
     if (nextIndex === currentIndex) {
+      item?.onKeyDown?.(event);
       return;
     }
 
     commitOrder(moveItem(orderedIds, currentIndex, nextIndex));
+    item?.onKeyDown?.(event);
   };
 
   const handleClickCapture = (itemId: string) => (event: ReactMouseEvent<HTMLDivElement>) => {
@@ -359,12 +368,15 @@ export function Tabs({
         title={item.title}
         isActive={!!item.isActive}
         isDragged={isDragged}
+        action={item.action}
         size={size}
         variant={variant}
         labelPosition={labelPosition}
         contentLayout={contentLayout}
         className={item.className}
+        style={item.style}
         onClick={item.onClick}
+        onContextMenu={item.onContextMenu}
       >
         {item.icon}
         {item.label}
@@ -460,7 +472,7 @@ function SortableTabItem({
         transition,
       }}
       className={cn(
-        "relative flex min-w-0 w-full items-stretch",
+        "relative flex min-w-0 items-stretch",
         canReorder && "cursor-grab touch-none active:cursor-grabbing",
         isDragging && "z-10",
       )}
