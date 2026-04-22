@@ -8,6 +8,8 @@ import {
   Sliders,
   User,
 } from "@phosphor-icons/react";
+import { save } from "@tauri-apps/plugin-dialog";
+import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { useMemo, useState } from "react";
 import {
   KEYBINDING_TABLE_MIN_WIDTH_CLASS_NAME,
@@ -129,13 +131,12 @@ export const KeyboardSettings = () => {
     const userBindings = userKeybindings.filter((kb) => kb.source === "user");
 
     try {
-      const { save } = await import("@tauri-apps/plugin-dialog");
-      const { writeTextFile } = await import("@tauri-apps/plugin-fs");
-
       const targetPath = await save({
-        title: "Export Keybindings",
         defaultPath: "keybindings.json",
-        filters: [{ name: "JSON", extensions: ["json"] }],
+        filters: [
+          { name: "JSON", extensions: ["json"] },
+          { name: "All Files", extensions: ["*"] },
+        ],
       });
 
       if (!targetPath) {
@@ -145,8 +146,16 @@ export const KeyboardSettings = () => {
       await writeTextFile(targetPath, JSON.stringify(userBindings, null, 2));
       showToast({ message: "Keybindings exported", type: "success" });
     } catch (error) {
+      console.error("Failed to export keybindings:", error);
+      const message =
+        error instanceof Error
+          ? error.message
+          : typeof error === "string"
+            ? error
+            : JSON.stringify(error);
+
       showToast({
-        message: `Failed to export keybindings: ${error instanceof Error ? error.message : "Unknown error"}`,
+        message: `Failed to export keybindings: ${message}`,
         type: "error",
       });
     }
@@ -201,7 +210,15 @@ export const KeyboardSettings = () => {
                 <ArrowLeft size={14} weight="duotone" />
                 Back
               </Button>
-              <div className="ui-font ui-text-sm text-text-lighter">Keybindings Editor</div>
+              <div className="flex items-center gap-2">
+                <TypedConfirmAction actionLabel="Reset to Defaults" onConfirm={handleResetAll} />
+                <Button variant="default" size="xs" onClick={handleImport}>
+                  Import
+                </Button>
+                <Button variant="default" size="xs" onClick={() => void handleExport()}>
+                  Export
+                </Button>
+              </div>
             </div>
 
             <div className="mb-3 flex items-center gap-2">
@@ -282,21 +299,6 @@ export const KeyboardSettings = () => {
                     })
                   )}
                 </div>
-              </div>
-            </div>
-
-            <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
-              <div className="ui-font ui-text-sm text-text-lighter">
-                {filteredCommands.length} of {commands.length} keybindings
-              </div>
-              <div className="flex gap-2">
-                <TypedConfirmAction actionLabel="Reset to Defaults" onConfirm={handleResetAll} />
-                <Button variant="default" size="xs" onClick={handleImport}>
-                  Import
-                </Button>
-                <Button variant="default" size="xs" onClick={() => void handleExport()}>
-                  Export
-                </Button>
               </div>
             </div>
           </motion.div>
