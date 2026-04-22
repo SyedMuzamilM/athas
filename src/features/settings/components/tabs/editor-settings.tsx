@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+import { getAllLanguages } from "@/features/editor/utils/language-id";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
 import Input from "@/ui/input";
 import NumberInput from "@/ui/number-input";
@@ -8,6 +10,16 @@ import { FontSelector } from "../font-selector";
 
 export const EditorSettings = () => {
   const { settings, updateSetting } = useSettingsStore();
+  const languageOptions = useMemo(
+    () => [
+      { value: "auto", label: "Auto Detect" },
+      ...getAllLanguages().map((language) => ({
+        value: language.id,
+        label: language.displayName,
+      })),
+    ],
+    [],
+  );
 
   return (
     <div className="space-y-4">
@@ -153,6 +165,91 @@ export const EditorSettings = () => {
             size="sm"
           />
         </SettingRow>
+        <SettingRow
+          label="Default Language"
+          description="Default syntax highlighting for new files"
+          onReset={() => updateSetting("defaultLanguage", getDefaultSetting("defaultLanguage"))}
+          canReset={settings.defaultLanguage !== getDefaultSetting("defaultLanguage")}
+        >
+          <Select
+            value={settings.defaultLanguage}
+            options={languageOptions}
+            onChange={(value) => updateSetting("defaultLanguage", value)}
+            className={SETTINGS_CONTROL_WIDTHS.default}
+            size="xs"
+            variant="secondary"
+            searchable
+            searchableTrigger="input"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Auto-detect Language"
+          description="Automatically detect file language from extension"
+          onReset={() =>
+            updateSetting("autoDetectLanguage", getDefaultSetting("autoDetectLanguage"))
+          }
+          canReset={settings.autoDetectLanguage !== getDefaultSetting("autoDetectLanguage")}
+        >
+          <Switch
+            checked={settings.autoDetectLanguage}
+            onChange={(checked) => updateSetting("autoDetectLanguage", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Format on Save"
+          description="Automatically format code when saving"
+          onReset={() => updateSetting("formatOnSave", getDefaultSetting("formatOnSave"))}
+          canReset={settings.formatOnSave !== getDefaultSetting("formatOnSave")}
+        >
+          <Switch
+            checked={settings.formatOnSave}
+            onChange={(checked) => updateSetting("formatOnSave", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Lint on Save"
+          description="Run linter when saving files"
+          onReset={() => updateSetting("lintOnSave", getDefaultSetting("lintOnSave"))}
+          canReset={settings.lintOnSave !== getDefaultSetting("lintOnSave")}
+        >
+          <Switch
+            checked={settings.lintOnSave}
+            onChange={(checked) => updateSetting("lintOnSave", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Auto Completion"
+          description="Show completion suggestions while typing"
+          onReset={() => updateSetting("autoCompletion", getDefaultSetting("autoCompletion"))}
+          canReset={settings.autoCompletion !== getDefaultSetting("autoCompletion")}
+        >
+          <Switch
+            checked={settings.autoCompletion}
+            onChange={(checked) => updateSetting("autoCompletion", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Parameter Hints"
+          description="Show function parameter hints"
+          onReset={() => updateSetting("parameterHints", getDefaultSetting("parameterHints"))}
+          canReset={settings.parameterHints !== getDefaultSetting("parameterHints")}
+        >
+          <Switch
+            checked={settings.parameterHints}
+            onChange={(checked) => updateSetting("parameterHints", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
         <SettingRow
           label="Default Editor"
           description="Open files in an external terminal editor instead of the built-in editor"

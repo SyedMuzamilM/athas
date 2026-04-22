@@ -44,11 +44,11 @@ const settingsTabLabels: Record<SettingsTab, string> = {
   editor: "Editor",
   git: "Git",
   appearance: "Appearance",
-  databases: "Databases",
+  databases: "Database",
   extensions: "Extensions",
   ai: "AI",
   keyboard: "Keybindings",
-  language: "Language",
+  language: "Editor",
   features: "Features",
   enterprise: "Enterprise",
   advanced: "Advanced",
@@ -56,9 +56,9 @@ const settingsTabLabels: Record<SettingsTab, string> = {
   "file-explorer": "Files",
 };
 
-const settingsTabCommands = (Object.entries(settingsTabLabels) as Array<[SettingsTab, string]>).map(
-  ([tab, label]) => ({ tab, label }),
-);
+const settingsTabCommands = (Object.entries(settingsTabLabels) as Array<[SettingsTab, string]>)
+  .map(([tab, label]) => ({ tab, label }))
+  .filter(({ tab }) => tab !== "language");
 
 function normalizeSearchText(value: string) {
   return value

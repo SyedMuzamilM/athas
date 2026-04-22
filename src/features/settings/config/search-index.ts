@@ -580,7 +580,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
   // Language Settings
   {
     id: "language-default-language",
-    tab: "language",
+    tab: "editor",
     section: "Language Support",
     label: "Default Language",
     description: "Default syntax highlighting for new files",
@@ -588,7 +588,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
   },
   {
     id: "language-auto-detect",
-    tab: "language",
+    tab: "editor",
     section: "Language Support",
     label: "Auto-detect Language",
     description: "Automatically detect file language from extension",
@@ -596,7 +596,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
   },
   {
     id: "language-format-on-save",
-    tab: "language",
+    tab: "editor",
     section: "Code Formatting",
     label: "Format on Save",
     description: "Automatically format code when saving",
@@ -604,7 +604,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
   },
   {
     id: "language-lint-on-save",
-    tab: "language",
+    tab: "editor",
     section: "Code Formatting",
     label: "Lint on Save",
     description: "Run linter when saving files",
@@ -612,7 +612,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
   },
   {
     id: "language-auto-completion",
-    tab: "language",
+    tab: "editor",
     section: "IntelliSense",
     label: "Auto Completion",
     description: "Show completion suggestions while typing",
@@ -620,7 +620,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
   },
   {
     id: "language-parameter-hints",
-    tab: "language",
+    tab: "editor",
     section: "IntelliSense",
     label: "Parameter Hints",
     description: "Show function parameter hints",

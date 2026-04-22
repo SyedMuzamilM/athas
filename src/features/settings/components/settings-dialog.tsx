@@ -19,7 +19,6 @@ import { FeaturesSettings } from "./tabs/features-settings";
 import { GeneralSettings } from "./tabs/general-settings";
 import { GitSettings } from "./tabs/git-settings";
 import { KeyboardSettings } from "./tabs/keyboard-settings";
-import { LanguageSettings } from "./tabs/language-settings";
 import { FileTreeSettings } from "./tabs/file-tree-settings";
 import { TerminalSettings } from "./tabs/terminal-settings";
 
@@ -42,7 +41,9 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
   // Sync active tab with settingsInitialTab whenever it changes (enables deep linking when dialog is already open)
   useEffect(() => {
     if (isOpen) {
-      if (!hasEnterpriseAccess && settingsInitialTab === "enterprise") {
+      if (settingsInitialTab === "language") {
+        setActiveTab("editor");
+      } else if (!hasEnterpriseAccess && settingsInitialTab === "enterprise") {
         setActiveTab("general");
       } else {
         setActiveTab(settingsInitialTab);
@@ -83,8 +84,6 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
         return <AISettings />;
       case "keyboard":
         return <KeyboardSettings />;
-      case "language":
-        return <LanguageSettings />;
       case "features":
         return <FeaturesSettings />;
       case "enterprise":

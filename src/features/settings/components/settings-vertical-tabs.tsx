@@ -5,7 +5,6 @@ import {
   Gear,
   GearSix,
   GitBranch,
-  GlobeHemisphereWest,
   Keyboard,
   PaintBrush,
   PuzzlePiece,
@@ -83,11 +82,6 @@ const tabItems: TabItem[] = [
     icon: TerminalWindow,
   },
   {
-    id: "language",
-    label: "Language",
-    icon: GlobeHemisphereWest,
-  },
-  {
     id: "keyboard",
     label: "Keybindings",
     icon: Keyboard,
@@ -99,7 +93,7 @@ const tabItems: TabItem[] = [
   },
   {
     id: "databases",
-    label: "Databases",
+    label: "Database",
     icon: Database,
   },
   {
