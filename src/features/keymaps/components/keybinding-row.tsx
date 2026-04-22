@@ -76,8 +76,8 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
       )}
     >
       <div className="min-w-0">
-        <div className="ui-font text-[12px] truncate text-text">{command.title}</div>
-        <div className="ui-font mt-0.5 truncate text-[10px] text-text-lighter">
+        <div className="ui-font ui-text-sm truncate text-text">{command.title}</div>
+        <div className="ui-font ui-text-xs mt-0.5 truncate text-text-lighter">
           {command.category} • {command.id}
         </div>
       </div>
@@ -96,7 +96,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
             onClick={() => setIsEditing(true)}
             variant="outline"
             size="xs"
-            className="flex h-7 w-full items-center justify-start px-1.5 text-[11px] hover:border-accent"
+            className="ui-text-sm flex h-7 w-full items-center justify-start px-1.5 hover:border-accent"
             aria-label={`Edit keybinding for ${command.title}`}
           >
             {keybinding?.key ? (
@@ -108,12 +108,16 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
         )}
       </div>
 
-      <div className="ui-font flex items-center truncate text-[10px] text-text-lighter">
+      <div className="ui-font ui-text-xs flex items-center truncate text-text-lighter">
         {keybinding?.when || command.keybinding ? keybinding?.when || "-" : "-"}
       </div>
 
       <div className="flex items-center">
-        <Badge variant={isUserOverride ? "accent" : "default"} size="compact">
+        <Badge
+          variant={isUserOverride ? "accent" : "default"}
+          size="compact"
+          className="h-6 min-w-[68px] px-2"
+        >
           {sourceLabel}
         </Badge>
       </div>
@@ -125,7 +129,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
             onClick={handleReset}
             variant="ghost"
             size="xs"
-            className="text-[10px] text-text-lighter hover:text-text"
+            className="ui-text-xs text-text-lighter hover:text-text"
             tooltip="Reset to default"
             aria-label="Reset to default keybinding"
           >
@@ -138,7 +142,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
             onClick={handleRemove}
             variant="ghost"
             size="xs"
-            className="text-[10px] text-text-lighter hover:text-error"
+            className="ui-text-xs text-text-lighter hover:text-error"
             tooltip="Remove keybinding"
             aria-label="Remove keybinding"
           >
@@ -148,7 +152,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
       </div>
 
       {hasConflict && (
-        <div className="ui-font col-span-5 rounded-lg border border-error/20 bg-error/5 px-2.5 py-2 text-[10px] text-error">
+        <div className="ui-font ui-text-xs col-span-5 rounded-lg border border-error/20 bg-error/5 px-2.5 py-2 text-error">
           ⚠ Conflicts with: {conflictingCommands.map((c) => c.title).join(", ")}
         </div>
       )}
