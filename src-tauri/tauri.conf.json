@@ -5,7 +5,7 @@
   "identifier": "com.code.athas",
   "build": {
     "beforeDevCommand": "bunx vp dev",
-    "devUrl": "http://localhost:1420",
+    "devUrl": "http://127.0.0.1:1420",
     "beforeBuildCommand": "bunx vp build",
     "frontendDist": "../dist"
   },
