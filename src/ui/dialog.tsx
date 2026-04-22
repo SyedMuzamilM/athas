@@ -70,6 +70,7 @@ const Dialog = ({
 
         <DialogPrimitive.Content
           asChild
+          aria-describedby={undefined}
           onEscapeKeyDown={(event) => {
             const target = event.target as HTMLElement | null;
             const activeElement =

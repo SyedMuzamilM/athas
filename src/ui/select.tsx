@@ -1,7 +1,14 @@
 import { cva } from "class-variance-authority";
 import { Check, ChevronDown, Search } from "lucide-react";
-import type { AriaAttributes, ComponentType, KeyboardEvent, ReactNode, RefObject } from "react";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import type {
+  AriaAttributes,
+  ComponentType,
+  KeyboardEvent,
+  ReactNode,
+  RefObject,
+  WheelEvent,
+} from "react";
+import { forwardRef, useEffect, useId, useMemo, useRef, useState } from "react";
 import { buttonVariants } from "@/ui/button";
 import { controlFieldIconSizes } from "@/ui/control-field";
 import { Dropdown } from "@/ui/dropdown";
@@ -162,23 +169,23 @@ function getInputTriggerText(
   return selectedOption?.label || value || "";
 }
 
-function InputTriggerOptionRow({
-  option,
-  optionId,
-  isHovered,
-  isSelected,
-  onMouseEnter,
-  onSelect,
-}: {
-  option: SelectOption;
-  optionId: string;
-  isHovered: boolean;
-  isSelected: boolean;
-  onMouseEnter: () => void;
-  onSelect: () => void;
-}) {
+const InputTriggerOptionRow = forwardRef<
+  HTMLButtonElement,
+  {
+    option: SelectOption;
+    optionId: string;
+    isHovered: boolean;
+    isSelected: boolean;
+    onMouseEnter: () => void;
+    onSelect: () => void;
+  }
+>(function InputTriggerOptionRow(
+  { option, optionId, isHovered, isSelected, onMouseEnter, onSelect },
+  ref,
+) {
   return (
     <button
+      ref={ref}
       id={optionId}
       type="button"
       role="option"
@@ -200,7 +207,7 @@ function InputTriggerOptionRow({
       {isSelected ? <Check className="ml-auto shrink-0 text-accent" /> : null}
     </button>
   );
-}
+});
 
 export default function Select({
   value,
@@ -228,6 +235,8 @@ export default function Select({
   const [hoveredIndex, setHoveredIndex] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const listboxRef = useRef<HTMLDivElement>(null);
+  const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const open = openProp ?? uncontrolledOpen;
 
   const handleOpenChange = (nextOpen: boolean) => {
@@ -266,6 +275,20 @@ export default function Select({
     setHoveredIndex(0);
   }, [searchQuery]);
 
+  useEffect(() => {
+    if (!open || hoveredIndex < 0) return;
+    optionRefs.current[hoveredIndex]?.scrollIntoView({ block: "nearest" });
+  }, [hoveredIndex, open]);
+
+  const handleListWheel = (event: WheelEvent<HTMLDivElement>) => {
+    const listElement = event.currentTarget;
+    if (listElement.scrollHeight <= listElement.clientHeight) return;
+
+    listElement.scrollTop += event.deltaY;
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
   const listboxId = `${selectId}-listbox`;
   const activeOptionId =
     hoveredIndex >= 0 && hoveredIndex < filteredOptions.length
@@ -295,7 +318,12 @@ export default function Select({
           }}
           onKeyDown={(event) => {
             if (event.key === "Escape") {
-              handleOpenChange(false);
+              event.preventDefault();
+              if (open) {
+                handleOpenChange(false);
+              } else {
+                searchInputRef.current?.blur();
+              }
               return;
             }
 
@@ -352,7 +380,13 @@ export default function Select({
           className={cn("overflow-hidden rounded-xl p-0", menuClassName)}
           menuClassName="flex min-h-0 flex-1 flex-col overflow-hidden"
         >
-          <div id={listboxId} role="listbox" className="max-h-80 overflow-y-auto p-1">
+          <div
+            ref={listboxRef}
+            id={listboxId}
+            role="listbox"
+            className="max-h-80 overflow-y-auto p-1"
+            onWheel={handleListWheel}
+          >
             {filteredOptions.length === 0 ? (
               <SelectEmptyState />
             ) : (
@@ -360,6 +394,9 @@ export default function Select({
                 {filteredOptions.map((option, index) => (
                   <InputTriggerOptionRow
                     key={option.value}
+                    ref={(element) => {
+                      optionRefs.current[index] = element;
+                    }}
                     option={option}
                     optionId={`${selectId}-option-${index}`}
                     isHovered={index === hoveredIndex}
@@ -406,7 +443,11 @@ export default function Select({
 
           if (event.key === "Escape") {
             event.preventDefault();
-            handleOpenChange(false);
+            if (open) {
+              handleOpenChange(false);
+            } else {
+              triggerRef.current?.blur();
+            }
             return;
           }
 
@@ -490,7 +531,13 @@ export default function Select({
           />
         )}
 
-        <div id={listboxId} role="listbox" className="max-h-96 overflow-y-auto p-1">
+        <div
+          ref={listboxRef}
+          id={listboxId}
+          role="listbox"
+          className="max-h-96 overflow-y-auto p-1"
+          onWheel={handleListWheel}
+        >
           {filteredOptions.length === 0 ? (
             <SelectEmptyState />
           ) : (
@@ -502,6 +549,9 @@ export default function Select({
                 return (
                   <button
                     key={option.value}
+                    ref={(element) => {
+                      optionRefs.current[index] = element;
+                    }}
                     id={`${selectId}-option-${index}`}
                     type="button"
                     role="option"
