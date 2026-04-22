@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { WarningCircle } from "@phosphor-icons/react";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import KeybindingDisplay from "@/ui/keybinding";
@@ -152,8 +153,9 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
       </div>
 
       {hasConflict && (
-        <div className="ui-font ui-text-xs col-span-5 rounded-lg border border-error/20 bg-error/5 px-2.5 py-2 text-error">
-          ⚠ Conflicts with: {conflictingCommands.map((c) => c.title).join(", ")}
+        <div className="ui-font ui-text-xs col-span-5 flex items-start gap-1.5 rounded-lg border border-error/20 bg-error/5 px-2.5 py-2 text-error">
+          <WarningCircle className="mt-0.5 shrink-0" size={14} weight="duotone" />
+          <span>Conflicts with: {conflictingCommands.map((c) => c.title).join(", ")}</span>
         </div>
       )}
     </div>
