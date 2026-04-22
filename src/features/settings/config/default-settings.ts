@@ -1,5 +1,11 @@
 import { normalizeUiFontSize, UI_FONT_SIZE_DEFAULT } from "@/features/settings/lib/ui-font-size";
 import {
+  DEFAULT_CODE_FONT_SIZE,
+  DEFAULT_MONO_FONT_FAMILY,
+  DEFAULT_TERMINAL_FONT_SIZE,
+  DEFAULT_UI_FONT_FAMILY,
+} from "@/features/settings/config/typography-defaults";
+import {
   FOOTER_LEADING_ITEM_IDS,
   FOOTER_TRAILING_ITEM_IDS,
   HEADER_TRAILING_ITEM_IDS,
@@ -17,15 +23,15 @@ export const defaultSettings: Settings = {
   sidebarPosition: "left",
   quickOpenPreview: true,
   // Editor
-  fontFamily: "Geist Mono Variable",
-  fontSize: 14,
+  fontFamily: DEFAULT_MONO_FONT_FAMILY,
+  fontSize: DEFAULT_CODE_FONT_SIZE,
   tabSize: 2,
   wordWrap: false,
   lineNumbers: true,
   showMinimap: false,
   // Terminal
-  terminalFontFamily: "Geist Mono Variable",
-  terminalFontSize: 14,
+  terminalFontFamily: DEFAULT_MONO_FONT_FAMILY,
+  terminalFontSize: DEFAULT_TERMINAL_FONT_SIZE,
   terminalLineHeight: 1.2,
   terminalLetterSpacing: 0,
   terminalScrollback: 10000,
@@ -35,7 +41,7 @@ export const defaultSettings: Settings = {
   terminalDefaultShellId: "",
   terminalDefaultProfileId: "",
   // UI
-  uiFontFamily: "Geist Variable",
+  uiFontFamily: DEFAULT_UI_FONT_FAMILY,
   uiFontSize: UI_FONT_SIZE_DEFAULT,
   // Theme
   theme: "athas-dark",

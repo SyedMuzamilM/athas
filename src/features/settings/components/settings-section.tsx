@@ -101,8 +101,34 @@ export function SettingRow({
       return;
     }
 
+    const segmentedControl = controlRef.current?.querySelector<HTMLElement>(
+      "[data-setting-segmented-control='true']",
+    );
+    if (segmentedControl) {
+      const segmentedItems = Array.from(
+        segmentedControl.querySelectorAll<HTMLElement>("[role='button']"),
+      ).filter((item) => !item.hasAttribute("disabled"));
+      const activeIndex = segmentedItems.findIndex(
+        (item) => item.getAttribute("data-setting-segmented-active") === "true",
+      );
+
+      if (segmentedItems.length > 0) {
+        const nextIndex = activeIndex >= 0 ? (activeIndex + 1) % segmentedItems.length : 0;
+        const nextItem = segmentedItems[nextIndex];
+        nextItem?.focus();
+        nextItem?.click();
+        return;
+      }
+    }
+
     const firstInteractive = getPrimaryInteractive();
     if (!firstInteractive) return;
+
+    if (firstInteractive.getAttribute("role") === "combobox") {
+      firstInteractive.focus();
+      firstInteractive.click();
+      return;
+    }
 
     if (firstInteractive.getAttribute("aria-expanded") != null) {
       firstInteractive.focus();

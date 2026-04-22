@@ -1,5 +1,9 @@
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
+import {
+  DEFAULT_CODE_FONT_SIZE,
+  DEFAULT_MONO_FONT_FAMILY,
+} from "@/features/settings/config/typography-defaults";
 import { useSettingsStore } from "@/features/settings/store";
 import { createSelectors } from "@/utils/zustand-selectors";
 
@@ -27,8 +31,8 @@ interface EditorSettingsActions {
 export const useEditorSettingsStore = createSelectors(
   create<EditorSettingsState>()(
     subscribeWithSelector((set) => ({
-      fontSize: 14,
-      fontFamily: "Menlo, Consolas, Liberation Mono, monospace",
+      fontSize: DEFAULT_CODE_FONT_SIZE,
+      fontFamily: DEFAULT_MONO_FONT_FAMILY,
       tabSize: 2,
       wordWrap: false,
       lineNumbers: true,

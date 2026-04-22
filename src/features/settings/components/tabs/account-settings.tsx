@@ -29,12 +29,8 @@ export const AccountSettings = () => {
     <div className="space-y-4">
       <Section title="Account">
         <SettingRow
-          label={isAuthenticated ? "Signed In" : "Sign In"}
-          description={
-            isAuthenticated
-              ? "Your current account session."
-              : "Sign in to access account and subscription features."
-          }
+          label="Account"
+          description="Sign in to access account and subscription features."
         >
           {isAuthenticated ? (
             <span className="ui-font text-[length:var(--app-ui-control-font-size)] text-text-lighter">

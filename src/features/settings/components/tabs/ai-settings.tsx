@@ -311,11 +311,7 @@ export const AISettings = () => {
           </SettingRow>
           <SettingRow
             label="API Key"
-            description={
-              needsApiKey
-                ? "Required for Ollama Cloud — create one at ollama.com/settings/keys"
-                : "Optional — only needed if your Ollama server requires authentication"
-            }
+            description="Used for authenticated Ollama endpoints and Ollama Cloud."
           >
             <div className="flex items-center gap-1.5">
               <Input
@@ -353,6 +349,11 @@ export const AISettings = () => {
               )}
             </div>
           </SettingRow>
+          {needsApiKey ? (
+            <div className="ui-font ui-text-sm px-1 text-text-lighter">
+              Required for Ollama Cloud. Create one at ollama.com/settings/keys.
+            </div>
+          ) : null}
           {needsApiKey && !hasStoredOllamaKey && (
             <div className="ui-font ui-text-sm flex items-center gap-1.5 px-1 text-text-lighter">
               <AlertCircle className="shrink-0 text-warning" />
@@ -455,6 +456,15 @@ export const AISettings = () => {
             canReset={settings.aiAutocompleteModelId !== getDefaultSetting("aiAutocompleteModelId")}
           >
             <div className="flex items-center gap-2">
+              <Button
+                variant="default"
+                size="xs"
+                onClick={loadAutocompleteModels}
+                disabled={isLoadingAutocompleteModels || !aiCompletionAllowedByPolicy}
+                title="Refresh model list"
+              >
+                <RefreshCw className={cn(isLoadingAutocompleteModels && "animate-spin")} />
+              </Button>
               <Select
                 value={settings.aiAutocompleteModelId}
                 options={autocompleteModels.map((model) => ({
@@ -469,15 +479,6 @@ export const AISettings = () => {
                 className={SETTINGS_CONTROL_WIDTHS.xwide}
                 disabled={!aiCompletionAllowedByPolicy}
               />
-              <Button
-                variant="default"
-                size="xs"
-                onClick={loadAutocompleteModels}
-                disabled={isLoadingAutocompleteModels || !aiCompletionAllowedByPolicy}
-                title="Refresh model list"
-              >
-                <RefreshCw className={cn(isLoadingAutocompleteModels && "animate-spin")} />
-              </Button>
             </div>
           </SettingRow>
           {autocompleteModelError && (

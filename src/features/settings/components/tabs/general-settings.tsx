@@ -113,17 +113,7 @@ export const GeneralSettings = () => {
     <div className="space-y-4">
       <SettingRow
         label="Version"
-        description={
-          downloading
-            ? `Athas ${appVersion || "..."} · Downloading ${downloadProgress?.percentage ?? 0}%`
-            : installing
-              ? `Athas ${appVersion || "..."} · Installing update...`
-              : available
-                ? `Athas ${appVersion || "..."} · Version ${updateInfo?.version} available`
-                : error
-                  ? `Athas ${appVersion || "..."} · Failed to check for updates`
-                  : `Athas ${appVersion || "..."} · App is up to date`
-        }
+        description="Check for updates and install the latest app version."
       >
         <div className="flex gap-2">
           <Button
@@ -147,6 +137,18 @@ export const GeneralSettings = () => {
         </div>
       </SettingRow>
 
+      <div className="ui-font ui-text-sm px-1 text-text-lighter">
+        {downloading
+          ? `Athas ${appVersion || "..."} · Downloading ${downloadProgress?.percentage ?? 0}%`
+          : installing
+            ? `Athas ${appVersion || "..."} · Installing update...`
+            : available
+              ? `Athas ${appVersion || "..."} · Version ${updateInfo?.version} available`
+              : error
+                ? `Athas ${appVersion || "..."} · Failed to check for updates`
+                : `Athas ${appVersion || "..."} · App is up to date`}
+      </div>
+
       {downloading && downloadProgress && (
         <div className="px-3">
           <div className="h-1 w-full overflow-hidden rounded-full bg-secondary-bg">
@@ -162,13 +164,7 @@ export const GeneralSettings = () => {
 
       <SettingRow
         label="Terminal Command"
-        description={
-          cliChecking
-            ? "Checking..."
-            : cliInstalled
-              ? "CLI command is installed at $HOME/.local/bin/athas"
-              : "Install 'athas' command to launch app from terminal"
-        }
+        description="Install the `athas` command to launch the app from your terminal."
       >
         <div className="flex gap-2">
           {cliInstalled ? (
@@ -201,6 +197,14 @@ export const GeneralSettings = () => {
           )}
         </div>
       </SettingRow>
+
+      <div className="ui-font ui-text-sm px-1 text-text-lighter">
+        {cliChecking
+          ? "Checking..."
+          : cliInstalled
+            ? "CLI command is installed at $HOME/.local/bin/athas"
+            : "CLI command is not installed."}
+      </div>
 
       <SettingRow
         label="Report a Bug"

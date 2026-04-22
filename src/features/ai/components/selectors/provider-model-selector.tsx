@@ -1,13 +1,4 @@
-import {
-  AlertCircle,
-  Check,
-  ChevronDown,
-  ExternalLink,
-  Lock,
-  RefreshCw,
-  Search,
-  X,
-} from "lucide-react";
+import { AlertCircle, Check, ChevronDown, Lock, RefreshCw, Search } from "lucide-react";
 import {
   type KeyboardEvent as ReactKeyboardEvent,
   useCallback,
@@ -17,6 +8,7 @@ import {
   useState,
 } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
+import ProviderApiKeyModal from "@/features/ai/components/provider-api-key-modal";
 import { useAIChatStore } from "@/features/ai/store/store";
 import { getAvailableProviders, getProviderById } from "@/features/ai/types/providers";
 import { useProFeature } from "@/extensions/ui/hooks/use-pro-feature";
@@ -60,20 +52,18 @@ export function ProviderModelSelector({
   disabled,
 }: ProviderModelSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [activePanel, setActivePanel] = useState<"provider" | "model" | "apiKey">("provider");
-  const [pendingProviderSelection, setPendingProviderSelection] = useState<string | null>(null);
+  const [activePanel, setActivePanel] = useState<"provider" | "model">("provider");
+  const [apiKeyModalProviderId, setApiKeyModalProviderId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [modelFetchError, setModelFetchError] = useState<string | null>(null);
-  const [apiKeyDraft, setApiKeyDraft] = useState("");
-  const [isSavingApiKey, setIsSavingApiKey] = useState(false);
-  const [apiKeyError, setApiKeyError] = useState<string | null>(null);
 
   const { isPro } = useProFeature();
   const { dynamicModels, setDynamicModels } = useAIChatStore();
   const hasProviderApiKey = useAIChatStore((state) => state.hasProviderApiKey);
   const saveApiKey = useAIChatStore((state) => state.saveApiKey);
+  const removeApiKey = useAIChatStore((state) => state.removeApiKey);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -212,30 +202,6 @@ export function ProviderModelSelector({
   }, [availableModels, modelId, providerId, search]);
 
   const selectableItems = activePanel === "provider" ? filteredProviders : filteredModels;
-  const pendingProvider = pendingProviderSelection
-    ? getProviderById(pendingProviderSelection)
-    : undefined;
-
-  const dashboardLink = pendingProviderSelection
-    ? {
-        openrouter: "https://openrouter.ai/keys",
-        v0: "https://v0.dev/chat/settings/keys",
-        grok: "https://console.x.ai",
-        openai: "https://platform.openai.com/api-keys",
-        anthropic: "https://console.anthropic.com/settings/keys",
-        gemini: "https://aistudio.google.com/app/apikey",
-      }[pendingProviderSelection]
-    : undefined;
-
-  const apiKeyPlaceholder = pendingProviderSelection
-    ? {
-        openrouter: "sk-or-v1-xxxxxxxxxxxxxxxxxxxx",
-        v0: "v0_xxxxxxxxxxxxxxxxxxxx",
-        grok: "xai-xxxxxxxxxxxxxxxxxxxx",
-        openai: "sk-xxxxxxxxxxxxxxxxxxxx",
-      }[pendingProviderSelection] || "Enter your API key..."
-    : "Enter your API key...";
-
   useEffect(() => {
     setSelectedIndex(0);
   }, [search]);
@@ -251,9 +217,6 @@ export function ProviderModelSelector({
 
     setSearch("");
     setSelectedIndex(0);
-    setPendingProviderSelection(null);
-    setApiKeyDraft("");
-    setApiKeyError(null);
     setActivePanel("provider");
   }, [isOpen]);
 
@@ -273,10 +236,8 @@ export function ProviderModelSelector({
     (selectedProviderId: string) => {
       const provider = getProviderById(selectedProviderId);
       if (provider?.requiresApiKey && !hasProviderApiKey(selectedProviderId)) {
-        setPendingProviderSelection(selectedProviderId);
-        setApiKeyDraft("");
-        setApiKeyError(null);
-        setActivePanel("apiKey");
+        setIsOpen(false);
+        setApiKeyModalProviderId(selectedProviderId);
         return;
       }
 
@@ -295,17 +256,6 @@ export function ProviderModelSelector({
 
   const handleKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLInputElement>) => {
-      if (activePanel === "apiKey") {
-        if (event.key === "Enter") {
-          event.preventDefault();
-        }
-        if (event.key === "Escape") {
-          event.preventDefault();
-          setIsOpen(false);
-        }
-        return;
-      }
-
       switch (event.key) {
         case "ArrowDown":
           event.preventDefault();
@@ -333,29 +283,6 @@ export function ProviderModelSelector({
       }
     },
     [activePanel, handleModelSelect, handleProviderItemClick, selectableItems, selectedIndex],
-  );
-
-  const handleApiKeySave = useCallback(
-    async (targetProviderId: string, apiKey: string) => {
-      setIsSavingApiKey(true);
-      setApiKeyError(null);
-
-      try {
-        const isValid = await saveApiKey(targetProviderId, apiKey);
-        if (isValid && pendingProviderSelection === targetProviderId) {
-          handleProviderSelect(targetProviderId);
-          return true;
-        }
-        setApiKeyError("Invalid API key.");
-        return false;
-      } catch {
-        setApiKeyError("Failed to validate API key.");
-        return false;
-      } finally {
-        setIsSavingApiKey(false);
-      }
-    },
-    [handleProviderSelect, pendingProviderSelection, saveApiKey],
   );
 
   const openProviderPanel = useCallback(() => {
@@ -405,8 +332,40 @@ export function ProviderModelSelector({
         menuClassName="flex min-h-0 flex-1 flex-col overflow-hidden"
         style={{ maxHeight: "480px" }}
       >
-        {activePanel !== "apiKey" && (
-          <div className="border-border/60 border-b px-1.5 pb-1.5 pt-1.5">
+        <div className="border-border/60 border-b px-1.5 pb-1.5 pt-1.5">
+          {activePanel === "model" ? (
+            <div className="mb-1 flex items-center gap-1">
+              <Button
+                type="button"
+                onClick={() => {
+                  setActivePanel("provider");
+                  setSearch("");
+                  setSelectedIndex(0);
+                  inputRef.current?.focus();
+                }}
+                variant="ghost"
+                size="sm"
+                className="h-auto justify-start rounded-md px-2 py-1.5 text-left text-xs text-text-lighter"
+              >
+                Back
+              </Button>
+              {supportsDynamicModels ? (
+                <Button
+                  type="button"
+                  onClick={() => void fetchDynamicModels()}
+                  disabled={isLoadingModels}
+                  variant="ghost"
+                  size="icon-sm"
+                  className="rounded-md text-text-lighter"
+                  aria-label="Refresh models"
+                >
+                  <RefreshCw className={cn(isLoadingModels && "animate-spin")} />
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
+
+          <div>
             <Input
               ref={inputRef}
               type="text"
@@ -428,7 +387,7 @@ export function ProviderModelSelector({
               }
             />
           </div>
-        )}
+        </div>
 
         <div
           className="min-h-0 flex-1 overflow-y-auto p-1.5 [overscroll-behavior:contain]"
@@ -441,98 +400,7 @@ export function ProviderModelSelector({
             </div>
           )}
 
-          {activePanel === "apiKey" ? (
-            <div className="space-y-3 rounded-lg border border-border/70 bg-primary-bg/40 p-3">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 text-text text-xs">
-                  {pendingProvider ? (
-                    <ProviderIcon
-                      providerId={pendingProvider.id}
-                      size={14}
-                      className="shrink-0 text-text-lighter"
-                    />
-                  ) : null}
-                  <span className="font-medium">Connect {pendingProvider?.name}</span>
-                </div>
-                <div className="text-text-lighter text-xs">
-                  Enter an API key to continue with this provider.
-                </div>
-              </div>
-
-              <Input
-                ref={inputRef}
-                type="password"
-                value={apiKeyDraft}
-                onChange={(event) => {
-                  setApiKeyDraft(event.target.value);
-                  setApiKeyError(null);
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" && pendingProviderSelection && apiKeyDraft.trim()) {
-                    event.preventDefault();
-                    void handleApiKeySave(pendingProviderSelection, apiKeyDraft);
-                  }
-                }}
-                placeholder={apiKeyPlaceholder}
-                className="w-full"
-                autoComplete="off"
-                aria-label={`${pendingProvider?.name || "Provider"} API key`}
-              />
-
-              {apiKeyError ? (
-                <div className="flex items-center gap-1.5 text-red-400 text-xs">
-                  <AlertCircle className="shrink-0" />
-                  <span>{apiKeyError}</span>
-                </div>
-              ) : null}
-
-              <div className="flex items-center justify-between gap-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setActivePanel("provider");
-                    setApiKeyDraft("");
-                    setApiKeyError(null);
-                    inputRef.current?.focus();
-                  }}
-                  className="px-2 text-xs text-text-lighter"
-                >
-                  Back
-                </Button>
-                <div className="flex items-center gap-2">
-                  {dashboardLink ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      asChild
-                      className="px-2 text-xs text-text-lighter"
-                    >
-                      <a href={dashboardLink} target="_blank" rel="noreferrer">
-                        <ExternalLink />
-                        Dashboard
-                      </a>
-                    </Button>
-                  ) : null}
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() =>
-                      pendingProviderSelection
-                        ? void handleApiKeySave(pendingProviderSelection, apiKeyDraft)
-                        : undefined
-                    }
-                    disabled={!apiKeyDraft.trim() || isSavingApiKey}
-                    className="px-2 text-xs"
-                  >
-                    {isSavingApiKey ? "Saving..." : "Continue"}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ) : selectableItems.length === 0 ? (
+          {selectableItems.length === 0 ? (
             <div className="p-4 text-center text-text-lighter text-xs">
               {activePanel === "provider" ? "No providers found" : "No models found"}
             </div>
@@ -568,45 +436,6 @@ export function ProviderModelSelector({
             })
           ) : (
             <>
-              <div className="sticky top-0 z-10 mb-1 flex items-center gap-1 rounded-lg border border-border/70 bg-secondary-bg p-1">
-                <Button
-                  type="button"
-                  onClick={() => {
-                    setActivePanel("provider");
-                    setSearch("");
-                    setSelectedIndex(0);
-                    inputRef.current?.focus();
-                  }}
-                  variant="ghost"
-                  size="sm"
-                  className="h-auto flex-1 justify-start rounded-md px-2 py-1.5 text-left text-xs text-text-lighter"
-                >
-                  Back to providers
-                </Button>
-                {supportsDynamicModels && (
-                  <Button
-                    type="button"
-                    onClick={() => void fetchDynamicModels()}
-                    disabled={isLoadingModels}
-                    variant="ghost"
-                    size="icon-sm"
-                    className="rounded-md text-text-lighter"
-                    aria-label="Refresh models"
-                  >
-                    <RefreshCw className={cn(isLoadingModels && "animate-spin")} />
-                  </Button>
-                )}
-                <Button
-                  type="button"
-                  onClick={() => setIsOpen(false)}
-                  variant="ghost"
-                  size="icon-sm"
-                  className="rounded-md text-text-lighter"
-                  aria-label="Close model selector"
-                >
-                  <X />
-                </Button>
-              </div>
               {filteredModels.map((item, itemIndex) => {
                 const isHighlighted = itemIndex === selectedIndex;
 
@@ -637,6 +466,22 @@ export function ProviderModelSelector({
           )}
         </div>
       </Dropdown>
+      <ProviderApiKeyModal
+        isOpen={apiKeyModalProviderId != null}
+        onClose={() => setApiKeyModalProviderId(null)}
+        providerId={apiKeyModalProviderId ?? ""}
+        onSave={async (targetProviderId, apiKey) => {
+          const isValid = await saveApiKey(targetProviderId, apiKey);
+          if (isValid) {
+            setApiKeyModalProviderId(null);
+            handleProviderSelect(targetProviderId);
+            setIsOpen(true);
+          }
+          return isValid;
+        }}
+        onRemove={removeApiKey}
+        hasExistingKey={apiKeyModalProviderId ? hasProviderApiKey(apiKeyModalProviderId) : false}
+      />
     </div>
   );
 }

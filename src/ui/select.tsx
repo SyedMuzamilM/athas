@@ -237,6 +237,7 @@ export default function Select({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const listboxRef = useRef<HTMLDivElement>(null);
   const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const openedByFocusRef = useRef(false);
   const open = openProp ?? uncontrolledOpen;
 
   const handleOpenChange = (nextOpen: boolean) => {
@@ -310,8 +311,20 @@ export default function Select({
           id={id}
           title={title}
           value={triggerText}
-          onFocus={() => handleOpenChange(true)}
-          onClick={() => handleOpenChange(true)}
+          onFocus={() => {
+            if (!open) {
+              openedByFocusRef.current = true;
+              handleOpenChange(true);
+            }
+          }}
+          onClick={() => {
+            if (openedByFocusRef.current) {
+              openedByFocusRef.current = false;
+              return;
+            }
+
+            handleOpenChange(!open);
+          }}
           onChange={(event) => {
             setSearchQuery(event.target.value);
             if (!open) handleOpenChange(true);
@@ -324,6 +337,7 @@ export default function Select({
               } else {
                 searchInputRef.current?.blur();
               }
+              openedByFocusRef.current = false;
               return;
             }
 
@@ -349,6 +363,7 @@ export default function Select({
                 if (filteredOptions[hoveredIndex]) {
                   onChange(filteredOptions[hoveredIndex].value);
                   handleOpenChange(false);
+                  openedByFocusRef.current = false;
                 }
                 break;
               default:
@@ -405,6 +420,7 @@ export default function Select({
                     onSelect={() => {
                       onChange(option.value);
                       handleOpenChange(false);
+                      openedByFocusRef.current = false;
                     }}
                   />
                 ))}

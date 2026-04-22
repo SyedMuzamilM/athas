@@ -140,17 +140,12 @@ export const AppearanceSettings = () => {
     updateSetting("iconTheme", themeId);
   };
 
-  const getThemeDescription = () => {
-    const currentTheme = themeRegistry.getTheme(settings.theme);
-    return currentTheme?.description || "Choose your preferred color theme";
-  };
-
   return (
     <div className="space-y-4">
       <Section title="Theme">
         <SettingRow
           label="Color Theme"
-          description={getThemeDescription()}
+          description="Choose your preferred color theme"
           onReset={() => updateSetting("theme", getDefaultSetting("theme"))}
           canReset={settings.theme !== getDefaultSetting("theme")}
         >
@@ -318,47 +313,6 @@ export const AppearanceSettings = () => {
           />
         </SettingRow>
 
-        <SettingRow
-          label="Show GitHub Pull Requests"
-          description="Display the pull requests section in the GitHub sidebar"
-          onReset={() =>
-            updateSetting("showGitHubPullRequests", getDefaultSetting("showGitHubPullRequests"))
-          }
-          canReset={settings.showGitHubPullRequests !== getDefaultSetting("showGitHubPullRequests")}
-        >
-          <Switch
-            checked={settings.showGitHubPullRequests}
-            onChange={(checked) => updateSetting("showGitHubPullRequests", checked)}
-            size="sm"
-          />
-        </SettingRow>
-
-        <SettingRow
-          label="Show GitHub Issues"
-          description="Display the issues section in the GitHub sidebar"
-          onReset={() => updateSetting("showGitHubIssues", getDefaultSetting("showGitHubIssues"))}
-          canReset={settings.showGitHubIssues !== getDefaultSetting("showGitHubIssues")}
-        >
-          <Switch
-            checked={settings.showGitHubIssues}
-            onChange={(checked) => updateSetting("showGitHubIssues", checked)}
-            size="sm"
-          />
-        </SettingRow>
-
-        <SettingRow
-          label="Show GitHub Actions"
-          description="Display the actions section in the GitHub sidebar"
-          onReset={() => updateSetting("showGitHubActions", getDefaultSetting("showGitHubActions"))}
-          canReset={settings.showGitHubActions !== getDefaultSetting("showGitHubActions")}
-        >
-          <Switch
-            checked={settings.showGitHubActions}
-            onChange={(checked) => updateSetting("showGitHubActions", checked)}
-            size="sm"
-          />
-        </SettingRow>
-
         {!IS_MAC && (
           <SettingRow
             label="Native Menu Bar"
@@ -410,19 +364,6 @@ export const AppearanceSettings = () => {
             variant="secondary"
             searchable
             searchableTrigger="input"
-          />
-        </SettingRow>
-
-        <SettingRow
-          label="Global Search Preview"
-          description="Show the right-side file preview in global search"
-          onReset={() => updateSetting("quickOpenPreview", getDefaultSetting("quickOpenPreview"))}
-          canReset={settings.quickOpenPreview !== getDefaultSetting("quickOpenPreview")}
-        >
-          <Switch
-            checked={settings.quickOpenPreview}
-            onChange={(checked) => updateSetting("quickOpenPreview", checked)}
-            size="sm"
           />
         </SettingRow>
 

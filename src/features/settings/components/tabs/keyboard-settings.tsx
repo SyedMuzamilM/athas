@@ -346,14 +346,17 @@ export const KeyboardSettings = () => {
               </div>
             ) : null}
 
-            <SettingRow
-              label="Edit Keybindings"
-              description={`Customize shortcuts individually. ${userOverrideCount} user override${userOverrideCount === 1 ? "" : "s"} currently saved.`}
-            >
+            <SettingRow label="Edit Keybindings" description="Customize shortcuts individually.">
               <Button variant="default" size="xs" onClick={() => setIsEditingKeybindings(true)}>
                 Open Editor
               </Button>
             </SettingRow>
+            {userOverrideCount > 0 ? (
+              <div className="ui-font ui-text-sm px-1 text-text-lighter">
+                {userOverrideCount} user override{userOverrideCount === 1 ? "" : "s"} currently
+                saved.
+              </div>
+            ) : null}
           </motion.div>
         )}
       </AnimatePresence>
