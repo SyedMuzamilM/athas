@@ -12,16 +12,9 @@ const BUNDLED_FONTS: FontInfo[] = [
     style: "Regular",
     is_monospace: false,
   },
-  { name: "Geist Variable", family: "Geist Variable", style: "Regular", is_monospace: false },
   {
     name: "JetBrains Mono Variable",
     family: "JetBrains Mono Variable",
-    style: "Regular",
-    is_monospace: true,
-  },
-  {
-    name: "Geist Mono Variable",
-    family: "Geist Mono Variable",
     style: "Regular",
     is_monospace: true,
   },
