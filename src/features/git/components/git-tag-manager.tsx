@@ -1,4 +1,4 @@
-import { Calendar, GitCommit, Plus, Tag, Trash2 } from "lucide-react";
+import { Calendar, GitCommit, Plus, Tag, Trash as Trash2 } from "@phosphor-icons/react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/ui/button";
 import { CommandEmpty, CommandItem, CommandList } from "@/ui/command";

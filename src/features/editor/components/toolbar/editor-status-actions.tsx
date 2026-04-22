@@ -1,5 +1,12 @@
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
-import { Check, Loader2, SlidersHorizontal, Square, Zap, ZapOff } from "lucide-react";
+import {
+  Check,
+  SpinnerGap as Loader2,
+  SlidersHorizontal,
+  Square,
+  Lightning as Zap,
+  LightningSlash as ZapOff,
+} from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { setSyntaxHighlightingFilePath } from "@/features/editor/extensions/builtin/syntax-highlighting";

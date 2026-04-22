@@ -5,8 +5,8 @@ import {
   GitPullRequest,
   Hash,
   Package,
-  Search,
-} from "lucide-react";
+  MagnifyingGlass as Search,
+} from "@phosphor-icons/react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import type { SettingsTab } from "@/features/window/stores/ui-state/types";
 import type { Action } from "../models/action.types";

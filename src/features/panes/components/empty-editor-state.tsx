@@ -3,13 +3,13 @@ import {
   Database,
   FileText,
   FolderOpen,
-  Globe,
+  GlobeHemisphereWest as Globe,
   Pencil,
   Plus,
-  Sparkles,
-  Terminal,
-  Trash2,
-} from "lucide-react";
+  Sparkle as Sparkles,
+  TerminalWindow as Terminal,
+  Trash as Trash2,
+} from "@phosphor-icons/react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";

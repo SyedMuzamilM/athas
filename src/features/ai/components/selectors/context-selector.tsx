@@ -1,4 +1,4 @@
-import { Database, FileText, Plus, Search } from "lucide-react";
+import { Database, FileText, Plus, MagnifyingGlass as Search } from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDebounce } from "use-debounce";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";

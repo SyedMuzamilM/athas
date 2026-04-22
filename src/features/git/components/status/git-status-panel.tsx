@@ -1,13 +1,13 @@
 import {
   Archive,
   Check,
-  ChevronDown,
-  ChevronRight,
+  CaretDown as ChevronDown,
+  CaretRight as ChevronRight,
   FileText,
   Minus,
   Plus,
-  Trash2,
-} from "lucide-react";
+  Trash as Trash2,
+} from "@phosphor-icons/react";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useSettingsStore } from "@/features/settings/store";

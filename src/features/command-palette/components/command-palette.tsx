@@ -1,5 +1,5 @@
 import { appDataDir } from "@tauri-apps/api/path";
-import { History } from "lucide-react";
+import { ClockCounterClockwise as History } from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLspStore } from "@/features/editor/lsp/lsp-store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";

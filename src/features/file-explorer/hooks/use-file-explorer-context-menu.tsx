@@ -1,22 +1,22 @@
 import {
   Clipboard,
   Copy,
-  Edit,
+  PencilSimple as Edit,
   Eye,
   FilePlus,
   FileText,
   FolderOpen,
   FolderPlus,
-  ImageIcon,
+  Image as ImageIcon,
   Info,
   Link,
-  RefreshCw,
+  ArrowClockwise as RefreshCw,
   Scissors,
-  Search,
-  Terminal,
+  MagnifyingGlass as Search,
+  TerminalWindow as Terminal,
   Trash,
   Upload,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import { useCallback, useMemo, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileClipboardStore } from "@/features/file-explorer/stores/file-explorer-clipboard-store";

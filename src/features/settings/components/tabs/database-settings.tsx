@@ -1,4 +1,4 @@
-import { Database, Plus, Trash2 } from "lucide-react";
+import { Database, Plus, Trash as Trash2 } from "@phosphor-icons/react";
 import { useEffect } from "react";
 import { useConnectionStore } from "@/features/database/stores/connection-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";

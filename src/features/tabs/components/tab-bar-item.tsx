@@ -1,17 +1,17 @@
 import {
-  Activity,
+  Pulse as Activity,
   Database,
   GitBranch,
   GitPullRequest,
-  Globe,
-  Search,
-  MessageSquare,
+  GlobeHemisphereWest as Globe,
+  MagnifyingGlass as Search,
+  ChatCircleText as MessageSquare,
   Package,
-  Pin,
-  Sparkles,
-  Terminal,
+  PushPin as Pin,
+  Sparkle as Sparkles,
+  TerminalWindow as Terminal,
   X,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import { memo, useCallback, useEffect, useState } from "react";
 import type { RefCallback } from "react";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";

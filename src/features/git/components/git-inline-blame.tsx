@@ -1,5 +1,5 @@
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
-import { Check, Clock, Copy, GitBranch, GitCommit } from "lucide-react";
+import { Check, Clock, Copy, GitBranch, GitCommit } from "@phosphor-icons/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useEventListener } from "usehooks-ts";

@@ -1,12 +1,12 @@
 import {
   Check,
-  ChevronDown,
-  ChevronRight,
-  Columns2,
-  ExternalLink,
-  Rows3,
-  Trash2,
-} from "lucide-react";
+  CaretDown as ChevronDown,
+  CaretRight as ChevronRight,
+  Columns as Columns2,
+  ArrowSquareOut as ExternalLink,
+  Rows as Rows3,
+  Trash as Trash2,
+} from "@phosphor-icons/react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import CodeEditor from "@/features/editor/components/code-editor";

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Eye, Search, Sparkles } from "lucide-react";
+import { Eye, MagnifyingGlass as Search, Sparkle as Sparkles } from "@phosphor-icons/react";
 import { EditorStatusActions } from "@/features/editor/components/toolbar/editor-status-actions";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar-store";

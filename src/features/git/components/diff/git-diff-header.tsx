@@ -1,4 +1,12 @@
-import { Check, ChevronDown, ChevronUp, Columns2, Rows3, Trash2, X } from "lucide-react";
+import {
+  Check,
+  CaretDown as ChevronDown,
+  CaretUp as ChevronUp,
+  Columns as Columns2,
+  Rows as Rows3,
+  Trash as Trash2,
+  X,
+} from "@phosphor-icons/react";
 import { memo } from "react";
 import Breadcrumb from "@/features/editor/components/toolbar/breadcrumb";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";

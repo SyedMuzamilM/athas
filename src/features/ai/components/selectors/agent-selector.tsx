@@ -1,5 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
-import { ChevronDown, Download, LoaderCircle, Plus, Search, Settings2 } from "lucide-react";
+import {
+  CaretDown as ChevronDown,
+  Download,
+  SpinnerGap as LoaderCircle,
+  Plus,
+  MagnifyingGlass as Search,
+  SlidersHorizontal as Settings2,
+} from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";

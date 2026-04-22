@@ -1,5 +1,9 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { FolderOpen, Loader2, PlugZap } from "lucide-react";
+import {
+  FolderOpen,
+  SpinnerGap as Loader2,
+  PlugsConnected as PlugZap,
+} from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { Button } from "@/ui/button";

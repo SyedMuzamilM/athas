@@ -1,4 +1,9 @@
-import { CheckCircle2, ChevronRight, Circle, Play } from "lucide-react";
+import {
+  CheckCircle as CheckCircle2,
+  CaretRight as ChevronRight,
+  Circle,
+  Play,
+} from "@phosphor-icons/react";
 import { memo, useState } from "react";
 import type { PlanStep } from "@/features/ai/lib/plan-parser";
 import { Button } from "@/ui/button";

@@ -1,11 +1,11 @@
 import {
-  AlertCircle,
+  WarningCircle as AlertCircle,
   CheckCircle,
-  ChevronRight,
+  CaretRight as ChevronRight,
   Clock,
-  ExternalLink,
-  TerminalSquare,
-} from "lucide-react";
+  ArrowSquareOut as ExternalLink,
+  TerminalWindow as TerminalSquare,
+} from "@phosphor-icons/react";
 import { useState } from "react";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";

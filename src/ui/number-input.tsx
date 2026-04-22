@@ -1,5 +1,5 @@
 import type React from "react";
-import { Minus, Plus } from "lucide-react";
+import { Minus, Plus } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
 import {

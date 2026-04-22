@@ -1,22 +1,22 @@
 import {
-  AlignLeft,
+  TextAlignLeft as AlignLeft,
   Bookmark,
-  CaseSensitive,
-  ChevronDown,
-  ChevronUp,
-  ClipboardPaste,
+  TextAa as CaseSensitive,
+  CaretDown as ChevronDown,
+  CaretUp as ChevronUp,
+  ClipboardText as ClipboardPaste,
   Code,
   Copy,
   FileText,
-  Indent,
-  Outdent,
-  PenLine,
-  RotateCcw,
+  TextIndent as Indent,
+  TextOutdent as Outdent,
+  PencilLine as PenLine,
+  ArrowCounterClockwise as RotateCcw,
   Scissors,
-  Search,
-  Trash2,
-  Type,
-} from "lucide-react";
+  MagnifyingGlass as Search,
+  Trash as Trash2,
+  TextT as Type,
+} from "@phosphor-icons/react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { logger } from "@/features/editor/utils/logger";

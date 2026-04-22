@@ -1,14 +1,14 @@
 import {
-  Columns2,
+  Columns as Columns2,
   Copy,
   FolderOpen,
-  Pin,
-  PinOff,
-  RotateCcw,
-  Rows2,
-  Terminal,
+  PushPin as Pin,
+  PushPinSlash as PinOff,
+  ArrowCounterClockwise as RotateCcw,
+  Rows as Rows2,
+  TerminalWindow as Terminal,
   X,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import type { PaneContent } from "@/features/panes/types/pane-content";
 import { isVirtualContent } from "@/features/panes/types/pane-content";

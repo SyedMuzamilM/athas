@@ -1,11 +1,11 @@
 import {
   ArrowLeft,
   ArrowRight,
-  Maximize2,
-  Minimize2,
-  PanelLeftClose,
-  SplitSquareHorizontal,
-} from "lucide-react";
+  ArrowsOut as Maximize2,
+  ArrowsIn as Minimize2,
+  SidebarSimple as PanelLeftClose,
+  SplitHorizontal as SplitSquareHorizontal,
+} from "@phosphor-icons/react";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";

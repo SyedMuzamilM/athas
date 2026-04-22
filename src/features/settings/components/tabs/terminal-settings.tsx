@@ -1,4 +1,4 @@
-import { Info, Plus, Trash2 } from "lucide-react";
+import { Info, Plus, Trash as Trash2 } from "@phosphor-icons/react";
 import { useEffect } from "react";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
 import { useFontStore } from "@/features/settings/stores/font-store";

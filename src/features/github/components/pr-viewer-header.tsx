@@ -1,13 +1,13 @@
 import {
   Check,
-  CheckCircle2,
+  CheckCircle as CheckCircle2,
   Copy,
-  ExternalLink,
-  FileCode2,
+  ArrowSquareOut as ExternalLink,
+  FileCode as FileCode2,
   GitBranch,
   GitPullRequest,
-  RefreshCw,
-} from "lucide-react";
+  ArrowClockwise as RefreshCw,
+} from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import { Button } from "@/ui/button";
 import Tooltip from "@/ui/tooltip";

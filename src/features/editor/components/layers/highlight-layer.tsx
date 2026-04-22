@@ -1,5 +1,10 @@
 import { forwardRef, memo, type ReactNode, useMemo } from "react";
-import { ChevronDown, ChevronRight, FileJson2, FileText } from "lucide-react";
+import {
+  CaretDown as ChevronDown,
+  CaretRight as ChevronRight,
+  FileCode as FileJson2,
+  FileText,
+} from "@phosphor-icons/react";
 import { parseDiffAccordionLine } from "@/features/git/utils/diff-editor-content";
 import { buildLineOffsetMap, normalizeLineEndings, type Token } from "../../utils/html";
 

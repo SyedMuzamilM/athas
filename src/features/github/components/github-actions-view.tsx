@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { Activity, AlertCircle } from "lucide-react";
+import { Pulse as Activity, WarningCircle as AlertCircle } from "@phosphor-icons/react";
 import { GitHubCliStatusMessage } from "./github-cli-status";
 import {
   memo,

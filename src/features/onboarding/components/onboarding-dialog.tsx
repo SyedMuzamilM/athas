@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft } from "lucide-react";
+import { CaretLeft as ChevronLeft } from "@phosphor-icons/react";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import {
   type KeybindingPreset,

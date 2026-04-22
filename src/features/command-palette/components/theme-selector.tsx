@@ -1,4 +1,4 @@
-import { Monitor, Moon, Palette, Settings, Sun, Upload } from "lucide-react";
+import { Monitor, Moon, Palette, GearSix as Settings, Sun, Upload } from "@phosphor-icons/react";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { themeRegistry } from "@/extensions/themes/theme-registry";

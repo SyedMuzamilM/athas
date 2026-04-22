@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { AlertCircle, RefreshCw } from "lucide-react";
+import { WarningCircle as AlertCircle, ArrowClockwise as RefreshCw } from "@phosphor-icons/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEmbeddedWebview } from "../hooks/use-embedded-webview";

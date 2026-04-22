@@ -1,5 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
-import { ChevronDown, ChevronRight, Terminal } from "lucide-react";
+import {
+  CaretDown as ChevronDown,
+  CaretRight as ChevronRight,
+  TerminalWindow as Terminal,
+} from "@phosphor-icons/react";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import type { MarkdownRendererProps } from "@/features/ai/types/ai-chat";

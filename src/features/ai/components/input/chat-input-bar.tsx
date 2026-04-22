@@ -1,4 +1,4 @@
-import { Mic, Slash, X } from "lucide-react";
+import { Microphone as Mic, ProhibitInset as Slash, X } from "@phosphor-icons/react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { shouldIgnoreFile } from "@/features/quick-open/utils/file-filtering";
 import { getPrimarySessionConfigOption } from "@/features/ai/lib/session-config-option-classifier";

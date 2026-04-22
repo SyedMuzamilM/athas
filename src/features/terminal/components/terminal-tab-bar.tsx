@@ -1,22 +1,22 @@
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import {
-  AlignCenter,
+  TextAlignCenter as AlignCenter,
   ArrowDown,
   ArrowUp,
-  ChevronDown,
-  Maximize,
-  Maximize2,
-  Minimize2,
-  Pin,
+  CaretDown as ChevronDown,
+  ArrowsOut as Maximize,
+  ArrowsOut as Maximize2,
+  ArrowsIn as Minimize2,
+  PushPin as Pin,
   Plus,
-  Search,
-  SplitSquareHorizontal,
-  Terminal as TerminalIcon,
-  PanelLeft,
-  PanelRight,
-  Rows3,
-} from "lucide-react";
+  MagnifyingGlass as Search,
+  SplitHorizontal as SplitSquareHorizontal,
+  TerminalWindow as TerminalIcon,
+  SidebarSimple as PanelLeft,
+  SidebarSimple as PanelRight,
+  Rows as Rows3,
+} from "@phosphor-icons/react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";

@@ -1,4 +1,4 @@
-import { Globe, Plus, Trash2 } from "lucide-react";
+import { GlobeHemisphereWest as Globe, Plus, Trash as Trash2 } from "@phosphor-icons/react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/ui/button";
 import { CommandEmpty, CommandItem, CommandList } from "@/ui/command";

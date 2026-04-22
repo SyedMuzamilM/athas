@@ -1,5 +1,10 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { CreditCard, ExternalLink, LogIn, LogOut } from "lucide-react";
+import {
+  CreditCard,
+  ArrowSquareOut as ExternalLink,
+  SignIn as LogIn,
+  SignOut as LogOut,
+} from "@phosphor-icons/react";
 import { useProFeature } from "@/extensions/ui/hooks/use-pro-feature";
 import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
 import { useAuthStore } from "@/features/window/stores/auth-store";

@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import { create } from "zustand";
-import { AlertTriangle, CheckCircle2, Info, Loader2, X } from "lucide-react";
+import {
+  Warning as AlertTriangle,
+  CheckCircle as CheckCircle2,
+  Info,
+  SpinnerGap as Loader2,
+  X,
+} from "@phosphor-icons/react";
 import { Toaster as SonnerToaster, toast as sonnerToast } from "sonner";
 import { createSelectors } from "@/utils/zustand-selectors";
 

@@ -1,4 +1,9 @@
-import { Blocks, Plus, RefreshCw, Search } from "lucide-react";
+import {
+  SquaresFour as Blocks,
+  Plus,
+  ArrowClockwise as RefreshCw,
+  MagnifyingGlass as Search,
+} from "@phosphor-icons/react";
 import {
   Database,
   Package,

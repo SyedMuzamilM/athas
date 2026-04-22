@@ -1,17 +1,17 @@
 import {
-  AlertCircle,
-  ArrowLeftRight,
-  Globe,
-  Menu,
-  MessageSquare,
-  PanelBottom,
-  PanelLeft,
-  RotateCcw,
-  Search,
-  Terminal,
-  ZoomIn,
-  ZoomOut,
-} from "lucide-react";
+  WarningCircle as AlertCircle,
+  ArrowsLeftRight as ArrowLeftRight,
+  GlobeHemisphereWest as Globe,
+  List as Menu,
+  ChatCircleText as MessageSquare,
+  SidebarSimple as PanelBottom,
+  SidebarSimple as PanelLeft,
+  ArrowCounterClockwise as RotateCcw,
+  MagnifyingGlass as Search,
+  TerminalWindow as Terminal,
+  MagnifyingGlassPlus as ZoomIn,
+  MagnifyingGlassMinus as ZoomOut,
+} from "@phosphor-icons/react";
 import { useSettingsStore } from "@/features/settings/store";
 import type { BottomPaneTab } from "@/features/window/stores/ui-state/types";
 import type { Action } from "../models/action.types";

@@ -1,4 +1,13 @@
-import { Edit, FolderOpen, Loader2, Plus, Server, Trash2, Wifi, WifiOff } from "lucide-react";
+import {
+  PencilSimple as Edit,
+  FolderOpen,
+  SpinnerGap as Loader2,
+  Plus,
+  HardDrives as Server,
+  Trash as Trash2,
+  WifiHigh as Wifi,
+  WifiSlash as WifiOff,
+} from "@phosphor-icons/react";
 import type React from "react";
 import { Button } from "@/ui/button";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";

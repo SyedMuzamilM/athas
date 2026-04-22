@@ -1,4 +1,10 @@
-import { Check, ChevronDown, GitBranch, Plus, Trash2 } from "lucide-react";
+import {
+  Check,
+  CaretDown as ChevronDown,
+  GitBranch,
+  Plus,
+  Trash as Trash2,
+} from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useUIState } from "@/features/window/stores/ui-state-store";

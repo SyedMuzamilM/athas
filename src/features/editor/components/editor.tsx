@@ -1,5 +1,5 @@
 import "../styles/overlay-editor.css";
-import { CornerDownLeft, X } from "lucide-react";
+import { ArrowBendDownLeft as CornerDownLeft, X } from "@phosphor-icons/react";
 import {
   type ReactNode,
   type RefObject,

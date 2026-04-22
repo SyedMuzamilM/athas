@@ -1,4 +1,4 @@
-import { Download, RefreshCw } from "lucide-react";
+import { Download, ArrowClockwise as RefreshCw } from "@phosphor-icons/react";
 import { useEffect } from "react";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";

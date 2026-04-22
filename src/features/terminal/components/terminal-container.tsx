@@ -1,5 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
-import { Maximize2, Minimize2, Plus, Search, SplitSquareHorizontal } from "lucide-react";
+import {
+  ArrowsOut as Maximize2,
+  ArrowsIn as Minimize2,
+  Plus,
+  MagnifyingGlass as Search,
+  SplitHorizontal as SplitSquareHorizontal,
+} from "@phosphor-icons/react";
 import type React from "react";
 import { useCallback, useEffect, useRef } from "react";
 import { useSettingsStore } from "@/features/settings/store";

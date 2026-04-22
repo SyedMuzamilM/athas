@@ -1,15 +1,15 @@
 import {
-  AlertCircle,
-  CheckCircle2,
-  ChevronDown,
-  ChevronRight,
-  CircleDot,
+  WarningCircle as AlertCircle,
+  CheckCircle as CheckCircle2,
+  CaretDown as ChevronDown,
+  CaretRight as ChevronRight,
+  DotOutline as CircleDot,
   GitMerge,
-  Link2,
-  Loader2,
+  LinkSimple as Link2,
+  SpinnerGap as Loader2,
   User,
   XCircle,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import { memo, useMemo, useState } from "react";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";

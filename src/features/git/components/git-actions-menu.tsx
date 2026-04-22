@@ -3,13 +3,13 @@ import {
   Download,
   FolderOpen,
   GitPullRequest,
-  RefreshCw,
-  RotateCcw,
-  Server,
-  Settings,
+  ArrowClockwise as RefreshCw,
+  ArrowCounterClockwise as RotateCcw,
+  HardDrives as Server,
+  GearSix as Settings,
   Tag,
   Upload,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import { useState } from "react";
 import { useSettingsStore } from "@/features/settings/store";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";

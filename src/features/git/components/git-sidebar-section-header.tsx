@@ -1,5 +1,5 @@
-import type { LucideIcon } from "lucide-react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { type Icon as LucideIcon } from "@phosphor-icons/react";
+import { CaretDown as ChevronDown, CaretRight as ChevronRight } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import { Button } from "@/ui/button";
 import {

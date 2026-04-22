@@ -1,4 +1,4 @@
-import { Download, Trash2, Upload } from "lucide-react";
+import { Download, Trash as Trash2, Upload } from "@phosphor-icons/react";
 import { useState } from "react";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";

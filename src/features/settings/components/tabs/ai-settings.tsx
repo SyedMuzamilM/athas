@@ -1,16 +1,16 @@
 import { invoke } from "@tauri-apps/api/core";
 import {
-  AlertCircle,
+  WarningCircle as AlertCircle,
   CheckCircle,
   Cloud,
-  ExternalLink,
-  Globe,
+  ArrowSquareOut as ExternalLink,
+  GlobeHemisphereWest as Globe,
   Key,
   Laptop,
-  RefreshCw,
-  RotateCcw,
-  Trash2,
-} from "lucide-react";
+  ArrowClockwise as RefreshCw,
+  ArrowCounterClockwise as RotateCcw,
+  Trash as Trash2,
+} from "@phosphor-icons/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ProviderModelSelector } from "@/features/ai/components/selectors/provider-model-selector";
 import { useAIChatStore } from "@/features/ai/store/store";

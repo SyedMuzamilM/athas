@@ -1,4 +1,4 @@
-import { AlertCircle, Sparkles } from "lucide-react";
+import { WarningCircle as AlertCircle, Sparkle as Sparkles } from "@phosphor-icons/react";
 import type React from "react";
 import { useState } from "react";
 import { useSettingsStore } from "@/features/settings/store";

@@ -2,18 +2,18 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
-  Code2,
+  Code as Code2,
   Copy,
-  ExternalLink,
+  ArrowSquareOut as ExternalLink,
   Minus,
   Plus,
-  RefreshCw,
+  ArrowClockwise as RefreshCw,
   Lock,
   Shield,
-  ShieldAlert,
+  ShieldWarning as ShieldAlert,
   X,
-  ZoomIn,
-} from "lucide-react";
+  MagnifyingGlassPlus as ZoomIn,
+} from "@phosphor-icons/react";
 import { useRef, useState, type RefObject } from "react";
 import { Button } from "@/ui/button";
 import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";

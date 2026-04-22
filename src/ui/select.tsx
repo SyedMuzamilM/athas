@@ -1,5 +1,5 @@
 import { cva } from "class-variance-authority";
-import { Check, ChevronDown, Search } from "lucide-react";
+import { Check, CaretDown as ChevronDown, MagnifyingGlass as Search } from "@phosphor-icons/react";
 import type {
   AriaAttributes,
   ComponentType,

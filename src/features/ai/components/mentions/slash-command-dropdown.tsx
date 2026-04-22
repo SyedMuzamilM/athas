@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Command } from "lucide-react";
+import { Command } from "@phosphor-icons/react";
 import React, { useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useAIChatStore } from "@/features/ai/store/store";

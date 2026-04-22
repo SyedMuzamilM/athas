@@ -1,4 +1,4 @@
-import { RotateCcw } from "lucide-react";
+import { ArrowCounterClockwise as RotateCcw } from "@phosphor-icons/react";
 import React from "react";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";

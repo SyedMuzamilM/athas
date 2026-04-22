@@ -4,12 +4,12 @@ import {
   GitBranch,
   GitPullRequest,
   Icon,
-  MessageSquare,
-  Navigation,
-  Search,
-  Server,
-  Terminal as TerminalIcon,
-} from "lucide-react";
+  ChatCircleText as MessageSquare,
+  NavigationArrow as Navigation,
+  MagnifyingGlass as Search,
+  HardDrives as Server,
+  TerminalWindow as TerminalIcon,
+} from "@phosphor-icons/react";
 import type { CoreFeature, CoreFeaturesState } from "../types/feature";
 
 export const createCoreFeaturesList = (coreFeatures: CoreFeaturesState): CoreFeature[] => [

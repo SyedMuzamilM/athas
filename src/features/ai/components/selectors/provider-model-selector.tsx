@@ -1,4 +1,11 @@
-import { AlertCircle, Check, ChevronDown, Lock, RefreshCw, Search } from "lucide-react";
+import {
+  WarningCircle as AlertCircle,
+  Check,
+  CaretDown as ChevronDown,
+  Lock,
+  ArrowClockwise as RefreshCw,
+  MagnifyingGlass as Search,
+} from "@phosphor-icons/react";
 import {
   type KeyboardEvent as ReactKeyboardEvent,
   useCallback,

@@ -1,5 +1,5 @@
 import { memo, useCallback, useMemo } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { CaretDown as ChevronDown, CaretRight as ChevronRight } from "@phosphor-icons/react";
 import { parseDiffAccordionLine } from "@/features/git/utils/diff-editor-content";
 import { EDITOR_CONSTANTS } from "../../config/constants";
 import { useEditorStateStore } from "../../stores/state-store";

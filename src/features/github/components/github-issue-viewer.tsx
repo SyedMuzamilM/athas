@@ -1,6 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { Copy, ExternalLink, MessageSquare, RefreshCw } from "lucide-react";
+import {
+  Copy,
+  ArrowSquareOut as ExternalLink,
+  ChatCircleText as MessageSquare,
+  ArrowClockwise as RefreshCw,
+} from "@phosphor-icons/react";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { Button } from "@/ui/button";

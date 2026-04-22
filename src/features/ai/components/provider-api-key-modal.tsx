@@ -1,4 +1,9 @@
-import { AlertCircle, CheckCircle, ExternalLink, Key } from "lucide-react";
+import {
+  WarningCircle as AlertCircle,
+  CheckCircle,
+  ArrowSquareOut as ExternalLink,
+  Key,
+} from "@phosphor-icons/react";
 import { useCallback, useEffect, useState } from "react";
 import { getProviderById } from "@/features/ai/types/providers";
 import { Button } from "@/ui/button";

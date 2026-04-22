@@ -1,4 +1,4 @@
-import { AlertCircle, Download } from "lucide-react";
+import { WarningCircle as AlertCircle, Download } from "@phosphor-icons/react";
 import { platform } from "@tauri-apps/plugin-os";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { Button } from "@/ui/button";

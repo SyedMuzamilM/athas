@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { Search } from "lucide-react";
+import { MagnifyingGlass as Search } from "@phosphor-icons/react";
 import {
   ArrowLeft,
   CirclesThree,

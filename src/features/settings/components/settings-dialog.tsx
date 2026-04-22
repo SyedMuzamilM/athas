@@ -1,4 +1,4 @@
-import { Search } from "lucide-react";
+import { MagnifyingGlass as Search } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { useSettingsStore } from "@/features/settings/store";
 import { useAuthStore } from "@/features/window/stores/auth-store";

@@ -1,4 +1,4 @@
-import { Palette } from "lucide-react";
+import { Palette } from "@phosphor-icons/react";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";

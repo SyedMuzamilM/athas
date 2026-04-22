@@ -10,7 +10,11 @@ import {
   GitPullRequest,
   Lightning,
 } from "@phosphor-icons/react";
-import { AlertCircle, ChevronDown, RefreshCw } from "lucide-react";
+import {
+  WarningCircle as AlertCircle,
+  CaretDown as ChevronDown,
+  ArrowClockwise as RefreshCw,
+} from "@phosphor-icons/react";
 import {
   memo,
   type ReactNode,

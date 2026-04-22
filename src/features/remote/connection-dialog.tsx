@@ -1,4 +1,11 @@
-import { AlertCircle, CheckCircle, Eye, EyeOff, Loader2, Server } from "lucide-react";
+import {
+  WarningCircle as AlertCircle,
+  CheckCircle,
+  Eye,
+  EyeSlash as EyeOff,
+  SpinnerGap as Loader2,
+  HardDrives as Server,
+} from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";

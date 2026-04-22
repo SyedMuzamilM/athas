@@ -1,5 +1,5 @@
 import ignore from "ignore";
-import { AlertTriangle } from "lucide-react";
+import { Warning as AlertTriangle } from "@phosphor-icons/react";
 import type React from "react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useEventListener } from "usehooks-ts";

@@ -1,4 +1,4 @@
-import { Check, Search, Trash2 } from "lucide-react";
+import { Check, MagnifyingGlass as Search, Trash as Trash2 } from "@phosphor-icons/react";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { getRelativeTime } from "@/features/ai/lib/formatting";
 import type { Chat } from "@/features/ai/types/ai-chat";

@@ -1,4 +1,11 @@
-import { AlertCircle, CheckCircle2, Clock3, KeyRound, Sparkles, Wrench } from "lucide-react";
+import {
+  WarningCircle as AlertCircle,
+  CheckCircle as CheckCircle2,
+  Clock as Clock3,
+  Key as KeyRound,
+  Sparkle as Sparkles,
+  Wrench,
+} from "@phosphor-icons/react";
 import type { ChatAcpEvent } from "@/features/ai/types/chat-ui";
 import { cn } from "@/utils/cn";
 

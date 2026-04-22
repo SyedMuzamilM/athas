@@ -1,4 +1,10 @@
-import { Check, Copy, RefreshCw, RotateCcw, Undo2 } from "lucide-react";
+import {
+  Check,
+  Copy,
+  ArrowClockwise as RefreshCw,
+  ArrowCounterClockwise as RotateCcw,
+  ArrowCounterClockwise as Undo2,
+} from "@phosphor-icons/react";
 import { memo, useCallback, useState } from "react";
 import type { PlanStep } from "@/features/ai/lib/plan-parser";
 import { hasPlanBlock, parsePlan } from "@/features/ai/lib/plan-parser";

@@ -1,15 +1,15 @@
 import { cva } from "class-variance-authority";
 import {
-  CaseSensitive,
-  ChevronDown,
-  ChevronRight,
-  ChevronUp,
-  Regex,
-  Replace,
-  Search,
-  WholeWord,
+  TextAa as CaseSensitive,
+  CaretDown as ChevronDown,
+  CaretRight as ChevronRight,
+  CaretUp as ChevronUp,
+  BracketsCurly as Regex,
+  ArrowsLeftRight as Replace,
+  MagnifyingGlass as Search,
+  TextT as WholeWord,
   X,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import type { ReactNode, RefObject } from "react";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";

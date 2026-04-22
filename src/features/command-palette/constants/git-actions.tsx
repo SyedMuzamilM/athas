@@ -1,4 +1,4 @@
-import { ArrowUp, GitBranch, GitCommit, RefreshCw } from "lucide-react";
+import { ArrowUp, GitBranch, GitCommit, ArrowClockwise as RefreshCw } from "@phosphor-icons/react";
 import type { GitRemoteActionResult } from "@/features/git/api/git-remotes-api";
 import type { Action } from "../models/action.types";
 

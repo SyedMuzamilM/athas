@@ -1,4 +1,12 @@
-import { Copy, GitBranch, GitCommit, GitFork, Plus, RefreshCw, Trash2 } from "lucide-react";
+import {
+  Copy,
+  GitBranch,
+  GitCommit,
+  GitFork,
+  Plus,
+  ArrowClockwise as RefreshCw,
+  Trash as Trash2,
+} from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";

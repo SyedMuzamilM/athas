@@ -15,7 +15,7 @@ import { createPortal } from "react-dom";
 import { buttonVariants } from "@/ui/button";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
-import { Search } from "lucide-react";
+import { MagnifyingGlass as Search } from "@phosphor-icons/react";
 
 export const DROPDOWN_TRIGGER_BASE = cn(
   buttonVariants({

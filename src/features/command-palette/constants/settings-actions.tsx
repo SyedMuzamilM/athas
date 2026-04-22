@@ -1,22 +1,22 @@
 import {
-  AlertCircle,
-  ChevronRight,
+  WarningCircle as AlertCircle,
+  CaretRight as ChevronRight,
   Cloud,
-  Code2,
+  Code as Code2,
   GitBranch,
   Hash,
   Info,
-  Languages,
+  Translate as Languages,
   Lightbulb,
-  MessageSquare,
+  ChatCircleText as MessageSquare,
   Palette,
-  Save,
-  Search,
-  Settings,
-  Sparkles,
-  Terminal,
-  WrapText,
-} from "lucide-react";
+  FloppyDisk as Save,
+  MagnifyingGlass as Search,
+  GearSix as Settings,
+  Sparkle as Sparkles,
+  TerminalWindow as Terminal,
+  TextAlignJustify as WrapText,
+} from "@phosphor-icons/react";
 import { settingsSearchIndex } from "@/features/settings/config/search-index";
 import type { Settings as AppSettings } from "@/features/settings/store";
 import type { SettingsTab } from "@/features/window/stores/ui-state-store";
