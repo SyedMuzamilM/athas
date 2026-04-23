@@ -124,6 +124,40 @@ impl LspManager {
       );
    }
 
+   fn resolve_server_path_override(&self, path: &str) -> Result<PathBuf> {
+      let requested_path = PathBuf::from(path);
+      if requested_path.components().count() != 1 {
+         return Ok(requested_path);
+      }
+
+      if let Some(path_on_disk) = utils::find_in_path(path) {
+         log::info!(
+            "Resolved LSP bare command '{}' from PATH: {:?}",
+            path,
+            path_on_disk
+         );
+         return Ok(path_on_disk);
+      }
+
+      let tools_dir = self
+         .app_handle
+         .path()
+         .app_data_dir()
+         .context("Failed to resolve app data dir while resolving LSP tool path")?
+         .join("tools");
+
+      if let Some(managed_path) = utils::find_managed_binary(&tools_dir, path) {
+         log::info!(
+            "Resolved LSP bare command '{}' from managed tools: {:?}",
+            path,
+            managed_path
+         );
+         return Ok(managed_path);
+      }
+
+      Ok(requested_path)
+   }
+
    pub async fn start_lsp_for_workspace(
       &self,
       workspace_path: PathBuf,
@@ -138,9 +172,7 @@ impl LspManager {
          log::info!("Using provided server path override: {}", path);
          let args = server_args_override.unwrap_or_default();
          let name = path.split('/').next_back().unwrap_or("custom").to_string();
-
-         // Use the path directly - it should already be absolute from the frontend
-         let resolved_path = PathBuf::from(&path);
+         let resolved_path = self.resolve_server_path_override(&path)?;
 
          log::info!("Resolved LSP server path: {:?}", resolved_path);
          log::info!("Path exists: {}", resolved_path.exists());
@@ -228,7 +260,7 @@ impl LspManager {
          log::info!("Using provided server path override: {}", path);
          let args = server_args_override.unwrap_or_default();
          let name = path.split('/').next_back().unwrap_or("custom").to_string();
-         let resolved_path = PathBuf::from(&path);
+         let resolved_path = self.resolve_server_path_override(&path)?;
          (resolved_path, args, name)
       } else {
          let server_config = self
