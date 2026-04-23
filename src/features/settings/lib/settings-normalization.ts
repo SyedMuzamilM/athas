@@ -9,6 +9,7 @@ import {
   DEFAULT_MONO_FONT_FAMILY,
   DEFAULT_UI_FONT_FAMILY,
 } from "@/features/settings/config/typography-defaults";
+import { normalizeConfiguredFontFamily } from "@/features/settings/lib/font-family-resolution";
 import {
   FOOTER_LEADING_ITEM_IDS,
   FOOTER_TRAILING_ITEM_IDS,
@@ -44,26 +45,6 @@ const AI_MODEL_MIGRATIONS: Record<string, Record<string, string>> = {
 const AI_AUTOCOMPLETE_MODEL_MIGRATIONS: Record<string, string> = {
   "google/gemini-2.5-flash-lite": "google/gemini-3-flash-preview",
 };
-
-const LEGACY_FONT_MIGRATIONS: Record<string, string> = {
-  geist: DEFAULT_UI_FONT_FAMILY,
-  "geist sans": DEFAULT_UI_FONT_FAMILY,
-  "geist mono": DEFAULT_MONO_FONT_FAMILY,
-};
-
-function normalizeFontFamily(fontFamily: string, fallback: string): string {
-  const firstFamily = fontFamily
-    .split(",")[0]
-    ?.trim()
-    .replace(/^['"]+|['"]+$/g, "")
-    .toLowerCase();
-
-  if (!firstFamily) {
-    return fallback;
-  }
-
-  return LEGACY_FONT_MIGRATIONS[firstFamily] ?? fontFamily;
-}
 
 function normalizeAISettings(settings: Settings): Settings {
   const normalizedSettings = { ...settings };
@@ -115,15 +96,15 @@ export function normalizeSettings(settings: Settings): Settings {
   }
 
   normalizedSettings.uiFontSize = normalizeUiFontSize(normalizedSettings.uiFontSize);
-  normalizedSettings.fontFamily = normalizeFontFamily(
+  normalizedSettings.fontFamily = normalizeConfiguredFontFamily(
     normalizedSettings.fontFamily,
     DEFAULT_MONO_FONT_FAMILY,
   );
-  normalizedSettings.terminalFontFamily = normalizeFontFamily(
+  normalizedSettings.terminalFontFamily = normalizeConfiguredFontFamily(
     normalizedSettings.terminalFontFamily,
     DEFAULT_MONO_FONT_FAMILY,
   );
-  normalizedSettings.uiFontFamily = normalizeFontFamily(
+  normalizedSettings.uiFontFamily = normalizeConfiguredFontFamily(
     normalizedSettings.uiFontFamily,
     DEFAULT_UI_FONT_FAMILY,
   );
@@ -168,15 +149,15 @@ export function normalizeSettingValue<K extends keyof Settings>(
   }
 
   if (key === "fontFamily") {
-    return normalizeFontFamily(value as string, DEFAULT_MONO_FONT_FAMILY) as Settings[K];
+    return normalizeConfiguredFontFamily(value as string, DEFAULT_MONO_FONT_FAMILY) as Settings[K];
   }
 
   if (key === "terminalFontFamily") {
-    return normalizeFontFamily(value as string, DEFAULT_MONO_FONT_FAMILY) as Settings[K];
+    return normalizeConfiguredFontFamily(value as string, DEFAULT_MONO_FONT_FAMILY) as Settings[K];
   }
 
   if (key === "uiFontFamily") {
-    return normalizeFontFamily(value as string, DEFAULT_UI_FONT_FAMILY) as Settings[K];
+    return normalizeConfiguredFontFamily(value as string, DEFAULT_UI_FONT_FAMILY) as Settings[K];
   }
 
   if (key === "iconTheme" && (value === "colorful-material" || value === "seti")) {
