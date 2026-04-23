@@ -76,7 +76,21 @@ export class DesktopAuthError extends Error {
   }
 }
 
+export class AuthApiError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "AuthApiError";
+    this.status = status;
+  }
+}
+
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+export function isAuthInvalidError(error: unknown): boolean {
+  return error instanceof AuthApiError && (error.status === 401 || error.status === 403);
+}
 
 function getApiBaseUnavailableMessage(): string {
   if (API_BASE.includes("localhost") || API_BASE.includes("127.0.0.1")) {
@@ -96,14 +110,13 @@ export const getAuthToken = async (): Promise<string | null> => {
     authTokenCache = await invoke<string | null>("get_auth_token");
     return authTokenCache;
   } catch {
-    authTokenCache = null;
     return null;
   }
 };
 
 export const storeAuthToken = async (token: string): Promise<void> => {
-  authTokenCache = token;
   await invoke("store_auth_token", { token });
+  authTokenCache = token;
 };
 
 export const removeAuthToken = async (): Promise<void> => {
@@ -135,16 +148,19 @@ async function authenticatedFetch(
 export async function fetchCurrentUser(tokenOverride?: string): Promise<AuthUser> {
   const response = await authenticatedFetch("/api/auth/me", {}, tokenOverride);
   if (!response.ok) {
-    throw new Error(`Failed to fetch user: ${response.status}`);
+    throw new AuthApiError(`Failed to fetch user: ${response.status}`, response.status);
   }
   const data = await response.json();
+  if (!data.user) {
+    throw new AuthApiError("Authentication token did not resolve to a user.", 401);
+  }
   return data.user;
 }
 
 export async function fetchSubscriptionStatus(tokenOverride?: string): Promise<SubscriptionInfo> {
   const response = await authenticatedFetch("/api/auth/subscription", {}, tokenOverride);
   if (!response.ok) {
-    throw new Error(`Failed to fetch subscription: ${response.status}`);
+    throw new AuthApiError(`Failed to fetch subscription: ${response.status}`, response.status);
   }
   return await response.json();
 }
