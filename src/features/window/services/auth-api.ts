@@ -54,6 +54,12 @@ export interface EnterprisePolicy {
   updatedAt: string | null;
 }
 
+export interface CloudSettingsSyncSnapshot {
+  schemaVersion: number;
+  updatedAt: string;
+  settings: Record<string, unknown>;
+}
+
 type DesktopAuthPollResponse =
   | { status: "pending" }
   | { status: "ready"; token: string }
@@ -183,6 +189,47 @@ export async function updateEnterprisePolicy(
   }
 
   return payload.policy;
+}
+
+export async function fetchSettingsSyncSnapshot(
+  tokenOverride?: string,
+): Promise<CloudSettingsSyncSnapshot | null> {
+  const response = await authenticatedFetch("/api/account/settings-sync", {}, tokenOverride);
+  if (!response.ok) {
+    throw new AuthApiError(
+      `Failed to fetch settings sync snapshot: ${response.status}`,
+      response.status,
+    );
+  }
+
+  const data = (await response.json()) as {
+    snapshot?: CloudSettingsSyncSnapshot | null;
+  };
+  return data.snapshot ?? null;
+}
+
+export async function pushSettingsSyncSnapshot(input: {
+  schemaVersion: number;
+  settings: Record<string, unknown>;
+}): Promise<CloudSettingsSyncSnapshot> {
+  const response = await authenticatedFetch("/api/account/settings-sync", {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
+
+  const data = (await response.json().catch(() => null)) as {
+    snapshot?: CloudSettingsSyncSnapshot;
+    error?: string;
+  } | null;
+
+  if (!response.ok || !data?.snapshot) {
+    throw new AuthApiError(
+      data?.error || `Failed to update settings sync snapshot: ${response.status}`,
+      response.status,
+    );
+  }
+
+  return data.snapshot;
 }
 
 export async function logoutFromServer(): Promise<void> {

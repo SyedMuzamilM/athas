@@ -16,11 +16,13 @@ import {
 } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import ProviderApiKeyModal from "@/features/ai/components/provider-api-key-modal";
+import { canUseProviderWithoutApiKey } from "@/features/ai/lib/provider-access";
 import { useAIChatStore } from "@/features/ai/store/store";
 import { getAvailableProviders, getProviderById } from "@/features/ai/types/providers";
 import { useProFeature } from "@/extensions/ui/hooks/use-pro-feature";
 import { ProBadge } from "@/extensions/ui/components/pro-badge";
 import { getProviderApiToken } from "@/features/ai/services/ai-token-service";
+import { useAuthStore } from "@/features/window/stores/auth-store";
 import Input from "@/ui/input";
 import { Button } from "@/ui/button";
 import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
@@ -67,6 +69,7 @@ export function ProviderModelSelector({
   const [modelFetchError, setModelFetchError] = useState<string | null>(null);
 
   const { isPro } = useProFeature();
+  const subscription = useAuthStore((state) => state.subscription);
   const { dynamicModels, setDynamicModels } = useAIChatStore();
   const hasProviderApiKey = useAIChatStore((state) => state.hasProviderApiKey);
   const saveApiKey = useAIChatStore((state) => state.saveApiKey);
@@ -91,7 +94,13 @@ export function ProviderModelSelector({
     }
 
     const apiKey = config?.requiresApiKey ? await getProviderApiToken(providerId) : undefined;
-    if (config?.requiresApiKey && !apiKey) {
+    const canUseWithoutApiKey = canUseProviderWithoutApiKey({
+      providerId,
+      subscription,
+      hasStoredKey: !!apiKey,
+      requiresApiKey: config?.requiresApiKey ?? true,
+    });
+    if (config?.requiresApiKey && !canUseWithoutApiKey) {
       return;
     }
 
@@ -136,9 +145,14 @@ export function ProviderModelSelector({
         name: provider.name,
         providerId: provider.id,
         requiresApiKey: provider.requiresApiKey,
-        hasKey: !provider.requiresApiKey || hasProviderApiKey(provider.id),
+        hasKey: canUseProviderWithoutApiKey({
+          providerId: provider.id,
+          subscription,
+          hasStoredKey: hasProviderApiKey(provider.id),
+          requiresApiKey: provider.requiresApiKey,
+        }),
       }));
-  }, [hasProviderApiKey, providers, search]);
+  }, [hasProviderApiKey, providers, search, subscription]);
 
   const availableModels = useMemo(() => {
     const staticModels = currentProvider?.models || [];
@@ -242,7 +256,13 @@ export function ProviderModelSelector({
   const handleProviderItemClick = useCallback(
     (selectedProviderId: string) => {
       const provider = getProviderById(selectedProviderId);
-      if (provider?.requiresApiKey && !hasProviderApiKey(selectedProviderId)) {
+      const canUseWithoutApiKey = canUseProviderWithoutApiKey({
+        providerId: selectedProviderId,
+        subscription,
+        hasStoredKey: hasProviderApiKey(selectedProviderId),
+        requiresApiKey: provider?.requiresApiKey ?? true,
+      });
+      if (provider?.requiresApiKey && !canUseWithoutApiKey) {
         setIsOpen(false);
         setApiKeyModalProviderId(selectedProviderId);
         return;
@@ -250,7 +270,7 @@ export function ProviderModelSelector({
 
       handleProviderSelect(selectedProviderId);
     },
-    [handleProviderSelect, hasProviderApiKey],
+    [handleProviderSelect, hasProviderApiKey, subscription],
   );
 
   const handleModelSelect = useCallback(

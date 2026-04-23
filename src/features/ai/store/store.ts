@@ -3,6 +3,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import type { AgentType, Chat } from "@/features/ai/types/ai-chat";
+import { canUseProviderWithoutApiKey } from "@/features/ai/lib/provider-access";
 import {
   getProviderApiToken,
   removeProviderApiToken,
@@ -18,6 +19,7 @@ import {
   loadChatFromDb,
   saveChatToDb,
 } from "@/features/ai/services/ai-chat-history-service";
+import { useAuthStore } from "@/features/window/stores/auth-store";
 import type { AIChatActions, AIChatState } from "./types";
 
 export const useAIChatStore = create<AIChatState & AIChatActions>()(
@@ -418,6 +420,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
         checkApiKey: async (providerId) => {
           try {
             const provider = AI_PROVIDERS.find((p) => p.id === providerId);
+            const subscription = useAuthStore.getState().subscription;
 
             // If provider doesn't require an API key, set hasApiKey to true
             if (provider && !provider.requiresApiKey) {
@@ -429,7 +432,12 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
 
             const token = await getProviderApiToken(providerId);
             set((state) => {
-              state.hasApiKey = !!token;
+              state.hasApiKey = canUseProviderWithoutApiKey({
+                providerId,
+                subscription,
+                hasStoredKey: !!token,
+                requiresApiKey: provider?.requiresApiKey ?? true,
+              });
             });
           } catch (error) {
             console.error("Error checking API key:", error);
@@ -441,6 +449,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
 
         checkAllProviderApiKeys: async () => {
           const newApiKeyMap = new Map<string, boolean>();
+          const subscription = useAuthStore.getState().subscription;
 
           for (const provider of AI_PROVIDERS) {
             try {
@@ -451,7 +460,15 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
               }
 
               const token = await getProviderApiToken(provider.id);
-              newApiKeyMap.set(provider.id, !!token);
+              newApiKeyMap.set(
+                provider.id,
+                canUseProviderWithoutApiKey({
+                  providerId: provider.id,
+                  subscription,
+                  hasStoredKey: !!token,
+                  requiresApiKey: provider.requiresApiKey,
+                }),
+              );
             } catch {
               newApiKeyMap.set(provider.id, false);
             }
@@ -467,6 +484,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             const isValid = await validateProviderApiKey(providerId, apiKey);
             if (isValid) {
               await storeProviderApiToken(providerId, apiKey);
+              const subscription = useAuthStore.getState().subscription;
 
               // Manually update provider keys after saving
               const newApiKeyMap = new Map<string, boolean>();
@@ -477,7 +495,15 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
                     continue;
                   }
                   const token = await getProviderApiToken(provider.id);
-                  newApiKeyMap.set(provider.id, !!token);
+                  newApiKeyMap.set(
+                    provider.id,
+                    canUseProviderWithoutApiKey({
+                      providerId: provider.id,
+                      subscription,
+                      hasStoredKey: !!token,
+                      requiresApiKey: provider.requiresApiKey,
+                    }),
+                  );
                 } catch {
                   newApiKeyMap.set(provider.id, false);
                 }
@@ -495,7 +521,12 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
               } else {
                 const token = await getProviderApiToken(providerId);
                 set((state) => {
-                  state.hasApiKey = !!token;
+                  state.hasApiKey = canUseProviderWithoutApiKey({
+                    providerId,
+                    subscription,
+                    hasStoredKey: !!token,
+                    requiresApiKey: currentProvider?.requiresApiKey ?? true,
+                  });
                 });
               }
 
@@ -511,6 +542,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
         removeApiKey: async (providerId) => {
           try {
             await removeProviderApiToken(providerId);
+            const subscription = useAuthStore.getState().subscription;
 
             // Manually update provider keys after removing
             const newApiKeyMap = new Map<string, boolean>();
@@ -521,7 +553,15 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
                   continue;
                 }
                 const token = await getProviderApiToken(provider.id);
-                newApiKeyMap.set(provider.id, !!token);
+                newApiKeyMap.set(
+                  provider.id,
+                  canUseProviderWithoutApiKey({
+                    providerId: provider.id,
+                    subscription,
+                    hasStoredKey: !!token,
+                    requiresApiKey: provider.requiresApiKey,
+                  }),
+                );
               } catch {
                 newApiKeyMap.set(provider.id, false);
               }
@@ -538,7 +578,12 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
               });
             } else {
               set((state) => {
-                state.hasApiKey = false;
+                state.hasApiKey = canUseProviderWithoutApiKey({
+                  providerId,
+                  subscription,
+                  hasStoredKey: false,
+                  requiresApiKey: currentProvider?.requiresApiKey ?? true,
+                });
               });
             }
           } catch (error) {

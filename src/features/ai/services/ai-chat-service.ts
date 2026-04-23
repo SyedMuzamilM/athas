@@ -10,7 +10,11 @@ import { getProvider } from "@/features/ai/services/providers/ai-provider-regist
 import { isOllamaCloudUrl } from "@/features/ai/services/providers/ollama-provider";
 import { processStreamingResponse } from "@/utils/stream-utils";
 import { getProviderApiToken } from "@/features/ai/services/ai-token-service";
+import { canUseHostedProvider } from "@/features/ai/lib/provider-access";
 import { useSettingsStore } from "@/features/settings/store";
+import { getAuthToken } from "@/features/window/services/auth-api";
+import { useAuthStore } from "@/features/window/stores/auth-store";
+import { getApiBase } from "@/utils/api-base";
 import { AcpStreamHandler } from "./acp-stream-handler";
 import { buildContextPrompt, buildSystemPrompt } from "../utils/ai-context-builder";
 
@@ -87,7 +91,9 @@ export const getChatCompletionStream = async (
     }
 
     const apiKey = await getProviderApiToken(providerId);
-    if (!apiKey && provider.requiresApiKey) {
+    const subscription = useAuthStore.getState().subscription;
+    const useHostedOpenRouter = !apiKey && canUseHostedProvider(providerId, subscription);
+    if (!apiKey && provider.requiresApiKey && !useHostedOpenRouter) {
       throw new Error(`${provider.name} API key not found`);
     }
 
@@ -121,6 +127,34 @@ export const getChatCompletionStream = async (
       role: "user" as const,
       content: userMessage,
     });
+
+    if (useHostedOpenRouter) {
+      const token = await getAuthToken();
+      if (!token) {
+        throw new Error("Not authenticated");
+      }
+
+      const response = await tauriFetch(`${getApiBase()}/api/ai/chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          model: modelId,
+          messages,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        onError(errorText || `Hosted Athas Agent request failed (${response.status})`);
+        return;
+      }
+
+      await processStreamingResponse(response, onChunk, onComplete, onError);
+      return;
+    }
 
     // Use provider abstraction
     const providerImpl = getProvider(providerId);
