@@ -1,5 +1,5 @@
 use crate::{ToolConfig, ToolError, ToolRuntime};
-use athas_runtime::{RuntimeManager, RuntimeType};
+use athas_runtime::{RuntimeManager, RuntimeType, process::configure_background_command};
 use flate2::read::GzDecoder;
 use futures_util::StreamExt;
 use serde_json::Value;
@@ -307,7 +307,8 @@ impl ToolInstaller {
 
       log::info!("Installing {} via Bun to {:?}", package, package_dir);
 
-      let output = Command::new(&bun_path)
+      let mut command = Command::new(&bun_path);
+      let output = configure_background_command(&mut command)
          .args(["add", package])
          .current_dir(&package_dir)
          .output()
@@ -367,7 +368,8 @@ impl ToolInstaller {
 
       log::info!("Installing {} via npm to {:?}", package, package_dir);
 
-      let output = Command::new(&npm_path)
+      let mut command = Command::new(&npm_path);
+      let output = configure_background_command(&mut command)
          .args(["install", package])
          .current_dir(&package_dir)
          .output()
@@ -425,7 +427,8 @@ impl ToolInstaller {
       );
 
       // Create virtual environment
-      let output = Command::new(&python_path)
+      let mut command = Command::new(&python_path);
+      let output = configure_background_command(&mut command)
          .args(["-m", "venv", venv_dir.to_string_lossy().as_ref()])
          .output()
          .map_err(|e| ToolError::InstallationFailed(e.to_string()))?;
@@ -445,7 +448,8 @@ impl ToolInstaller {
          venv_dir.join("bin").join("pip")
       };
 
-      let output = Command::new(&pip_path)
+      let mut command = Command::new(&pip_path);
+      let output = configure_background_command(&mut command)
          .args(["install", package])
          .output()
          .map_err(|e| ToolError::InstallationFailed(e.to_string()))?;
@@ -487,7 +491,8 @@ impl ToolInstaller {
 
       log::info!("Installing {} via go install", package);
 
-      let output = Command::new(&go_path)
+      let mut command = Command::new(&go_path);
+      let output = configure_background_command(&mut command)
          .args(["install", &format!("{}@latest", package)])
          .env("GOPATH", &gopath)
          .output()
@@ -527,7 +532,8 @@ impl ToolInstaller {
 
       log::info!("Installing {} via cargo install", package);
 
-      let output = Command::new(&cargo_path)
+      let mut command = Command::new(&cargo_path);
+      let output = configure_background_command(&mut command)
          .args(["install", package])
          .env("CARGO_HOME", &cargo_home)
          .output()

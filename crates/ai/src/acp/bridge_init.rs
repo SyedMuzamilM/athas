@@ -130,6 +130,14 @@ where
    io_handle: &'a tokio::task::JoinHandle<()>,
 }
 
+fn configure_background_agent_command(command: &mut Command) {
+   #[cfg(target_os = "windows")]
+   {
+      use std::os::windows::process::CommandExt;
+      command.creation_flags(0x08000000);
+   }
+}
+
 fn spawn_agent_process(
    config: &AgentConfig,
    workspace_path: Option<&str>,
@@ -144,6 +152,7 @@ fn spawn_agent_process(
    );
 
    let mut cmd = Command::new(binary);
+   configure_background_agent_command(&mut cmd);
    cmd.args(&config.args)
       .stdin(Stdio::piped())
       .stdout(Stdio::piped())

@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use athas_runtime::process::configure_background_command;
 use std::{
    fs,
    path::{Path, PathBuf},
@@ -30,7 +31,8 @@ impl PackageManager {
 }
 
 fn is_command_available(cmd: &str) -> bool {
-   Command::new("which")
+   let mut command = Command::new("which");
+   configure_background_command(&mut command)
       .arg(cmd)
       .output()
       .map(|output| output.status.success())
@@ -38,7 +40,8 @@ fn is_command_available(cmd: &str) -> bool {
 }
 
 fn get_bun_global_bin() -> Result<PathBuf> {
-   let output = Command::new("bun")
+   let mut command = Command::new("bun");
+   let output = configure_background_command(&mut command)
       .args(["pm", "bin", "-g"])
       .output()
       .context("Failed to get bun global bin")?;
@@ -52,7 +55,8 @@ fn get_bun_global_bin() -> Result<PathBuf> {
 }
 
 fn get_npm_global_bin() -> Result<PathBuf> {
-   let output = Command::new("npm")
+   let mut command = Command::new("npm");
+   let output = configure_background_command(&mut command)
       .args(["bin", "-g"])
       .output()
       .context("Failed to get npm global bin")?;
@@ -78,7 +82,11 @@ pub fn find_global_binary(binary_name: &str) -> Option<PathBuf> {
 }
 
 pub fn find_in_path(binary_name: &str) -> Option<PathBuf> {
-   let output = Command::new("which").arg(binary_name).output().ok()?;
+   let mut command = Command::new("which");
+   let output = configure_background_command(&mut command)
+      .arg(binary_name)
+      .output()
+      .ok()?;
 
    if output.status.success() {
       let path_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
