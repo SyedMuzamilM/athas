@@ -17,7 +17,10 @@ pub enum GitHubCliStatus {
    NotInstalled,
 }
 
-pub fn github_check_cli_status(app: AppHandle) -> Result<GitHubCliStatus, String> {
+pub fn github_check_cli_status(
+   app: AppHandle,
+   github_token: Option<String>,
+) -> Result<GitHubCliStatus, String> {
    let binary = resolve_gh_binary();
    let exe_name = if cfg!(target_os = "windows") {
       "gh.exe"
@@ -35,7 +38,7 @@ pub fn github_check_cli_status(app: AppHandle) -> Result<GitHubCliStatus, String
       return Ok(GitHubCliStatus::NotInstalled);
    }
 
-   let output = gh_command(&app, None)
+   let output = gh_command(&app, None, github_token.as_deref())
       .args(["auth", "status"])
       .output()
       .map_err(|e| format!("Failed to execute gh command: {}", e))?;
@@ -51,6 +54,7 @@ pub fn github_list_prs(
    app: AppHandle,
    repo_path: String,
    filter: String,
+   github_token: Option<String>,
 ) -> Result<Vec<PullRequest>, String> {
    let repo_dir = Path::new(&repo_path);
    let json_fields = "number,title,state,author,createdAt,updatedAt,isDraft,reviewDecision,url,\
@@ -58,7 +62,7 @@ pub fn github_list_prs(
    let mut args = vec!["pr", "list", "--json", json_fields];
 
    let username = if filter == "my-prs" {
-      get_github_username(&app).ok()
+      get_github_username(&app, github_token.as_deref()).ok()
    } else {
       None
    };
@@ -77,7 +81,7 @@ pub fn github_list_prs(
       _ => {}
    }
 
-   let output = gh_command(&app, Some(repo_dir))
+   let output = gh_command(&app, Some(repo_dir), github_token.as_deref())
       .args(&args)
       .output()
       .map_err(|e| format!("Failed to execute gh command: {}", e))?;
@@ -93,15 +97,22 @@ pub fn github_list_prs(
       .map_err(|e| format!("Failed to parse PR data: {}", e))
 }
 
-pub fn github_get_current_user(app: AppHandle) -> Result<String, String> {
-   get_github_username(&app)
+pub fn github_get_current_user(
+   app: AppHandle,
+   github_token: Option<String>,
+) -> Result<String, String> {
+   get_github_username(&app, github_token.as_deref())
 }
 
-pub fn github_list_issues(app: AppHandle, repo_path: String) -> Result<Vec<IssueListItem>, String> {
+pub fn github_list_issues(
+   app: AppHandle,
+   repo_path: String,
+   github_token: Option<String>,
+) -> Result<Vec<IssueListItem>, String> {
    let repo_dir = Path::new(&repo_path);
    let json_fields = "number,title,state,author,updatedAt,url,labels";
 
-   let output = gh_command(&app, Some(repo_dir))
+   let output = gh_command(&app, Some(repo_dir), github_token.as_deref())
       .args([
          "issue",
          "list",
@@ -129,12 +140,13 @@ pub fn github_list_issues(app: AppHandle, repo_path: String) -> Result<Vec<Issue
 pub fn github_list_workflow_runs(
    app: AppHandle,
    repo_path: String,
+   github_token: Option<String>,
 ) -> Result<Vec<WorkflowRunListItem>, String> {
    let repo_dir = Path::new(&repo_path);
    let json_fields = "databaseId,displayTitle,name,workflowName,event,status,conclusion,updatedAt,\
                       url,headBranch,headSha";
 
-   let output = gh_command(&app, Some(repo_dir))
+   let output = gh_command(&app, Some(repo_dir), github_token.as_deref())
       .args(["run", "list", "--limit", "50", "--json", json_fields])
       .output()
       .map_err(|e| format!("Failed to execute gh command: {}", e))?;
@@ -154,9 +166,10 @@ pub fn github_open_pr_in_browser(
    app: AppHandle,
    repo_path: String,
    pr_number: i64,
+   github_token: Option<String>,
 ) -> Result<(), String> {
    let repo_dir = Path::new(&repo_path);
-   let output = gh_command(&app, Some(repo_dir))
+   let output = gh_command(&app, Some(repo_dir), github_token.as_deref())
       .args(["pr", "view", &pr_number.to_string(), "--web"])
       .output()
       .map_err(|e| format!("Failed to open PR: {}", e))?;
@@ -171,9 +184,14 @@ pub fn github_open_pr_in_browser(
    Ok(())
 }
 
-pub fn github_checkout_pr(app: AppHandle, repo_path: String, pr_number: i64) -> Result<(), String> {
+pub fn github_checkout_pr(
+   app: AppHandle,
+   repo_path: String,
+   pr_number: i64,
+   github_token: Option<String>,
+) -> Result<(), String> {
    let repo_dir = Path::new(&repo_path);
-   let output = gh_command(&app, Some(repo_dir))
+   let output = gh_command(&app, Some(repo_dir), github_token.as_deref())
       .args(["pr", "checkout", &pr_number.to_string()])
       .output()
       .map_err(|e| format!("Failed to checkout PR: {}", e))?;
@@ -192,13 +210,14 @@ pub fn github_get_pr_details(
    app: AppHandle,
    repo_path: String,
    pr_number: i64,
+   github_token: Option<String>,
 ) -> Result<PullRequestDetails, String> {
    let repo_dir = Path::new(&repo_path);
    let json_fields = "number,title,body,state,author,createdAt,updatedAt,isDraft,reviewDecision,\
                       url,headRefName,baseRefName,additions,deletions,changedFiles,commits,\
                       statusCheckRollup,reviewRequests,mergeStateStatus,mergeable,labels,assignees";
 
-   let output = gh_command(&app, Some(repo_dir))
+   let output = gh_command(&app, Some(repo_dir), github_token.as_deref())
       .args(["pr", "view", &pr_number.to_string(), "--json", json_fields])
       .output()
       .map_err(|e| format!("Failed to execute gh command: {}", e))?;
@@ -218,9 +237,10 @@ pub fn github_get_pr_diff(
    app: AppHandle,
    repo_path: String,
    pr_number: i64,
+   github_token: Option<String>,
 ) -> Result<String, String> {
    let repo_dir = Path::new(&repo_path);
-   let output = gh_command(&app, Some(repo_dir))
+   let output = gh_command(&app, Some(repo_dir), github_token.as_deref())
       .args(["pr", "diff", &pr_number.to_string()])
       .output()
       .map_err(|e| format!("Failed to execute gh command: {}", e))?;
@@ -239,6 +259,7 @@ pub fn github_get_pr_files(
    app: AppHandle,
    repo_path: String,
    pr_number: i64,
+   github_token: Option<String>,
 ) -> Result<Vec<PullRequestFile>, String> {
    #[derive(Deserialize)]
    struct FilesResponse {
@@ -246,7 +267,7 @@ pub fn github_get_pr_files(
    }
 
    let repo_dir = Path::new(&repo_path);
-   let output = gh_command(&app, Some(repo_dir))
+   let output = gh_command(&app, Some(repo_dir), github_token.as_deref())
       .args(["pr", "view", &pr_number.to_string(), "--json", "files"])
       .output()
       .map_err(|e| format!("Failed to execute gh command: {}", e))?;
@@ -267,6 +288,7 @@ pub fn github_get_pr_comments(
    app: AppHandle,
    repo_path: String,
    pr_number: i64,
+   github_token: Option<String>,
 ) -> Result<Vec<PullRequestComment>, String> {
    #[derive(Deserialize)]
    struct CommentsResponse {
@@ -274,7 +296,7 @@ pub fn github_get_pr_comments(
    }
 
    let repo_dir = Path::new(&repo_path);
-   let output = gh_command(&app, Some(repo_dir))
+   let output = gh_command(&app, Some(repo_dir), github_token.as_deref())
       .args(["pr", "view", &pr_number.to_string(), "--json", "comments"])
       .output()
       .map_err(|e| format!("Failed to execute gh command: {}", e))?;
@@ -295,12 +317,13 @@ pub fn github_get_issue_details(
    app: AppHandle,
    repo_path: String,
    issue_number: i64,
+   github_token: Option<String>,
 ) -> Result<IssueDetails, String> {
    let repo_dir = Path::new(&repo_path);
    let json_fields =
       "number,title,body,state,author,createdAt,updatedAt,url,labels,assignees,comments";
 
-   let output = gh_command(&app, Some(repo_dir))
+   let output = gh_command(&app, Some(repo_dir), github_token.as_deref())
       .args([
          "issue",
          "view",
@@ -326,12 +349,13 @@ pub fn github_get_workflow_run_details(
    app: AppHandle,
    repo_path: String,
    run_id: i64,
+   github_token: Option<String>,
 ) -> Result<WorkflowRunDetails, String> {
    let repo_dir = Path::new(&repo_path);
    let json_fields = "databaseId,name,displayTitle,workflowName,event,status,conclusion,createdAt,\
                       updatedAt,url,headBranch,headSha,jobs";
 
-   let output = gh_command(&app, Some(repo_dir))
+   let output = gh_command(&app, Some(repo_dir), github_token.as_deref())
       .args(["run", "view", &run_id.to_string(), "--json", json_fields])
       .output()
       .map_err(|e| format!("Failed to execute gh command: {}", e))?;

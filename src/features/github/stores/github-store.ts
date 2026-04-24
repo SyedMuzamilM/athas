@@ -8,6 +8,10 @@ import type {
   PullRequestDetails,
   PullRequestFile,
 } from "../types/github";
+import {
+  syncGitHubTokenFromAccount,
+  type GitHubTokenSyncStatus,
+} from "../services/github-token-service";
 
 const PR_LIST_CACHE_TTL_MS = 5 * 60_000;
 const PR_DETAILS_CACHE_TTL_MS = 120_000;
@@ -30,6 +34,7 @@ interface PRDetailsCacheEntry {
 }
 
 type GitHubCliStatus = "authenticated" | "notAuthenticated" | "notInstalled";
+type GitHubAccountStatus = "unknown" | "notSignedIn" | "notConnected" | "connected";
 
 interface GitHubState {
   prs: PullRequest[];
@@ -39,6 +44,7 @@ interface GitHubState {
   activeRepoPath: string | null;
   isAuthenticated: boolean;
   cliStatus: GitHubCliStatus;
+  githubAccountStatus: GitHubAccountStatus;
   currentUser: string | null;
   // Selected PR state
   selectedPRNumber: number | null;
@@ -62,6 +68,7 @@ const initialState: GitHubState = {
   activeRepoPath: null,
   isAuthenticated: false,
   cliStatus: "notAuthenticated" as GitHubCliStatus,
+  githubAccountStatus: "unknown" as GitHubAccountStatus,
   currentUser: null,
   // Selected PR state
   selectedPRNumber: null,
@@ -94,6 +101,12 @@ function getPRDetailsCacheKey(repoPath: string, prNumber: number): string {
 
 function isFresh(timestamp: number, ttlMs: number): boolean {
   return Date.now() - timestamp < ttlMs;
+}
+
+function getAccountStatus(syncStatus: GitHubTokenSyncStatus): GitHubAccountStatus {
+  if (syncStatus === "synced") return "connected";
+  if (syncStatus === "notSignedIn") return "notSignedIn";
+  return "notConnected";
 }
 
 function normalizePullRequestFiles(files: unknown): PullRequestFile[] {
@@ -161,8 +174,8 @@ function normalizePullRequestDetails(details: PullRequestDetails): PullRequestDe
 export const useGitHubStore = create(
   combine(initialState, (set, get) => ({
     actions: {
-      checkAuth: async () => {
-        if (authCheckedAt && isFresh(authCheckedAt, AUTH_CACHE_TTL_MS)) {
+      checkAuth: async (options?: { force?: boolean }) => {
+        if (!options?.force && authCheckedAt && isFresh(authCheckedAt, AUTH_CACHE_TTL_MS)) {
           return;
         }
 
@@ -170,13 +183,66 @@ export const useGitHubStore = create(
           const status = await invoke<GitHubCliStatus>("github_check_cli_auth");
           if (status === "authenticated") {
             const user = await invoke<string>("github_get_current_user");
-            set({ isAuthenticated: true, cliStatus: status, currentUser: user, error: null });
+            set({
+              isAuthenticated: true,
+              cliStatus: status,
+              githubAccountStatus: "connected",
+              currentUser: user,
+              error: null,
+            });
           } else {
-            set({ isAuthenticated: false, cliStatus: status, currentUser: null });
+            let githubAccountStatus = get().githubAccountStatus;
+
+            if (status === "notAuthenticated") {
+              try {
+                const syncResult = await syncGitHubTokenFromAccount();
+                githubAccountStatus = getAccountStatus(syncResult.status);
+
+                if (syncResult.status === "synced") {
+                  const syncedStatus = await invoke<GitHubCliStatus>("github_check_cli_auth");
+
+                  if (syncedStatus === "authenticated") {
+                    const user = await invoke<string>("github_get_current_user");
+                    set({
+                      isAuthenticated: true,
+                      cliStatus: syncedStatus,
+                      githubAccountStatus,
+                      currentUser: user,
+                      error: null,
+                    });
+                    authCheckedAt = Date.now();
+                    return;
+                  }
+
+                  set({
+                    isAuthenticated: false,
+                    cliStatus: syncedStatus,
+                    githubAccountStatus,
+                    currentUser: null,
+                  });
+                  authCheckedAt = Date.now();
+                  return;
+                }
+              } catch (error) {
+                console.warn("Failed to sync GitHub account token:", error);
+              }
+            }
+
+            set({
+              isAuthenticated: false,
+              cliStatus: status,
+              githubAccountStatus,
+              currentUser: null,
+            });
           }
           authCheckedAt = Date.now();
         } catch {
-          set({ isAuthenticated: false, cliStatus: "notInstalled", currentUser: null });
+          set({
+            isAuthenticated: false,
+            cliStatus: "notInstalled",
+            githubAccountStatus: get().githubAccountStatus,
+            currentUser: null,
+          });
           authCheckedAt = Date.now();
         }
       },
@@ -229,7 +295,13 @@ export const useGitHubStore = create(
           const isAuthError = /unauthorized|forbidden|401|403|credential|auth|token/i.test(message);
 
           if (isAuthError) {
-            set({ isAuthenticated: false, currentUser: null, isLoading: false, error: null });
+            authCheckedAt = 0;
+            set({
+              isAuthenticated: false,
+              currentUser: null,
+              isLoading: false,
+              error: null,
+            });
             return;
           }
 

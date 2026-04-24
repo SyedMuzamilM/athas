@@ -59,11 +59,19 @@ pub(crate) fn resolve_gh_binary() -> String {
    exe.to_string()
 }
 
-pub(crate) fn gh_command(app: &AppHandle, repo_dir: Option<&Path>) -> Command {
+pub(crate) fn gh_command(
+   app: &AppHandle,
+   repo_dir: Option<&Path>,
+   github_token: Option<&str>,
+) -> Command {
    let mut command = Command::new(resolve_gh_binary());
 
    if let Some(dir) = repo_dir {
       command.current_dir(dir);
+   }
+
+   if let Some(token) = github_token.filter(|token| !token.trim().is_empty()) {
+      command.env("GH_TOKEN", token);
    }
 
    let has_explicit_config_dir =
@@ -76,8 +84,11 @@ pub(crate) fn gh_command(app: &AppHandle, repo_dir: Option<&Path>) -> Command {
    command
 }
 
-pub(crate) fn get_github_username(app: &AppHandle) -> Result<String, String> {
-   let output = gh_command(app, None)
+pub(crate) fn get_github_username(
+   app: &AppHandle,
+   github_token: Option<&str>,
+) -> Result<String, String> {
+   let output = gh_command(app, None, github_token)
       .args(["api", "user", "--jq", ".login"])
       .output()
       .map_err(|e| format!("Failed to get GitHub username: {}", e))?;
