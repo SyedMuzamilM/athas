@@ -20,6 +20,8 @@ interface FlowLineNumbersProps {
   onLineClick?: (lineNumber: number) => void;
   foldMapping?: LineMapping;
   filePath?: string;
+  lineNumberStart?: number;
+  lineNumberMap?: Array<number | null>;
 }
 
 function FlowLineNumbersComponent({
@@ -31,12 +33,21 @@ function FlowLineNumbersComponent({
   onLineClick,
   foldMapping,
   filePath,
+  lineNumberStart = 1,
+  lineNumberMap,
 }: FlowLineNumbersProps) {
   const actualCursorLine = useEditorStateStore.use.cursorPosition().line;
   const foldsByFile = useFoldStore((state) => state.foldsByFile);
   const foldActions = useFoldStore.use.actions();
   const isDiffAccordionBuffer = filePath?.startsWith("diff-editor://") ?? false;
-  const lineNumberWidth = calculateLineNumberWidth(lines.length);
+  const mappedLargestLine = lineNumberMap?.reduce<number>(
+    (largest, lineNumber) =>
+      typeof lineNumber === "number" ? Math.max(largest, lineNumber) : largest,
+    0,
+  );
+  const lineNumberWidth = calculateLineNumberWidth(
+    Math.max(lineNumberStart + lines.length - 1, mappedLargestLine ?? 0),
+  );
   const lineNumberOffset =
     GUTTER_CONFIG.GIT_LANE_WIDTH +
     GUTTER_CONFIG.DIAGNOSTIC_LANE_WIDTH +
@@ -70,6 +81,9 @@ function FlowLineNumbersComponent({
     >
       {lines.map((line, i) => {
         const actualLineNumber = foldMapping?.virtualToActual.get(i) ?? i;
+        const mappedLineNumber = lineNumberMap?.[actualLineNumber];
+        const displayedLineNumber = mappedLineNumber ?? lineNumberStart + actualLineNumber;
+        const hasDisplayedLineNumber = mappedLineNumber !== null;
         const isActive = i === visualCursorLine;
         const isAccordionLine = isDiffAccordionBuffer && parseDiffAccordionLine(line) !== null;
 
@@ -83,7 +97,7 @@ function FlowLineNumbersComponent({
               userSelect: "none",
             }}
             onClick={() => onLineClick?.(i)}
-            title={`Line ${actualLineNumber + 1}`}
+            title={hasDisplayedLineNumber ? `Line ${displayedLineNumber}` : undefined}
           >
             <div
               aria-hidden
@@ -152,7 +166,7 @@ function FlowLineNumbersComponent({
                 textAlign: "right",
                 paddingRight: "12px",
                 position: "relative",
-                visibility: isAccordionLine ? "hidden" : "visible",
+                visibility: isAccordionLine || !hasDisplayedLineNumber ? "hidden" : "visible",
                 color: isActive
                   ? "var(--text, #d4d4d4)"
                   : "var(--text-light, rgba(255, 255, 255, 0.5))",
@@ -161,7 +175,7 @@ function FlowLineNumbersComponent({
               }}
             >
               {isAccordionLine ? <div className="diff-accordion-gutter-card" /> : null}
-              {actualLineNumber + 1}
+              {hasDisplayedLineNumber ? displayedLineNumber : ""}
             </div>
             {/* Hidden mirror text — drives the row height via word wrapping */}
             <div

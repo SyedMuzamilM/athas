@@ -80,6 +80,11 @@ interface EditorProps {
   onMouseLeave?: () => void;
   onMouseEnter?: () => void;
   onClick?: (e: React.MouseEvent<HTMLDivElement>) => void;
+  highlightMatches?: Array<{ start: number; end: number }>;
+  currentHighlightIndex?: number;
+  lineNumberStart?: number;
+  lineNumberMap?: Array<number | null>;
+  onContentChange?: (content: string) => void;
 }
 
 const LARGE_FILE_SCROLL_OPTIMIZATION_THRESHOLD = 20000;
@@ -99,6 +104,11 @@ export function Editor({
   onMouseLeave,
   onMouseEnter,
   onClick,
+  highlightMatches,
+  currentHighlightIndex,
+  lineNumberStart = 1,
+  lineNumberMap,
+  onContentChange,
 }: EditorProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const contentContainerRef = useRef<HTMLDivElement>(null);
@@ -153,6 +163,7 @@ export function Editor({
   const content = buffer?.content || "";
   const filePath = buffer?.path;
   const languageIdOverride = buffer?.languageOverride;
+  const useGlobalEditorState = isActiveSurface;
 
   const resolvedSettings = useResolvedEditorSettings(filePath ?? null);
   const tabSize = resolvedSettings.tabSize;
@@ -376,7 +387,13 @@ export function Editor({
       }
 
       updateBufferContent(bufferId, newActualContent);
-      onChange(newActualContent);
+      if (onContentChange) {
+        onContentChange(newActualContent);
+      } else {
+        onChange(newActualContent);
+      }
+
+      if (!useGlobalEditorState) return;
 
       const selectionStart = inputRef.current.selectionStart;
       const virtualLines = splitLines(newVirtualContent);
@@ -402,7 +419,17 @@ export function Editor({
       const timestamp = Date.now();
       useEditorUIStore.getState().actions.setLastInputTimestamp(timestamp);
     },
-    [bufferId, updateBufferContent, setCursorPosition, content, foldTransform, onChange, readOnly],
+    [
+      bufferId,
+      updateBufferContent,
+      setCursorPosition,
+      content,
+      foldTransform,
+      onContentChange,
+      onChange,
+      readOnly,
+      useGlobalEditorState,
+    ],
   );
 
   const editorOps = useEditorOperations({
@@ -595,7 +622,7 @@ export function Editor({
         return;
       }
 
-      if (readOnly && onReadonlySurfaceClick) {
+      if ((readOnly || (!useGlobalEditorState && e.detail >= 2)) && onReadonlySurfaceClick) {
         onReadonlySurfaceClick({
           line: clickedPosition.line,
           column: clickedPosition.column,
@@ -616,6 +643,7 @@ export function Editor({
       foldActions,
       onReadonlySurfaceClick,
       readOnly,
+      useGlobalEditorState,
     ],
   );
 
@@ -702,11 +730,12 @@ export function Editor({
   }, [initializeViewport, lines.length]);
 
   useEffect(() => {
+    if (!isActiveSurface) return;
     editorAPI.setTextareaRef(inputRef.current);
     return () => {
       editorAPI.setTextareaRef(null);
     };
-  }, [inputRef]);
+  }, [inputRef, isActiveSurface]);
 
   // Non-macOS wheel forwarding
   useEffect(() => {
@@ -715,7 +744,9 @@ export function Editor({
 
     if (!scrollable) {
       const handleWheel = (e: WheelEvent) => {
-        const scrollContainer = textarea.closest("[data-diff-stack-scroll-container]");
+        const scrollContainer =
+          textarea.closest("[data-editor-outer-scroll]") ??
+          textarea.closest("[data-diff-stack-scroll-container]");
         if (!(scrollContainer instanceof HTMLDivElement)) return;
 
         const canScrollY =
@@ -822,6 +853,19 @@ export function Editor({
       };
     }
 
+    if (!useGlobalEditorState) {
+      tokenizeTimeoutRef.current = setTimeout(() => {
+        tokenize(contentToTokenize, targetViewportRange);
+        tokenizeTimeoutRef.current = null;
+      }, 120);
+
+      return () => {
+        if (tokenizeTimeoutRef.current !== null) {
+          clearTimeout(tokenizeTimeoutRef.current);
+        }
+      };
+    }
+
     tokenizeRafRef.current = requestAnimationFrame(() => {
       tokenize(contentToTokenize, targetViewportRange);
       tokenizeRafRef.current = null;
@@ -847,11 +891,17 @@ export function Editor({
     viewportRange?.startLine,
     viewportRange?.endLine,
     isScrollingRef,
+    useGlobalEditorState,
   ]);
 
   const handleLineClick = useCallback(
     (lineIndex: number) => {
       if (!inputRef.current) return;
+
+      if (!useGlobalEditorState && onReadonlySurfaceClick) {
+        onReadonlySurfaceClick({ line: lineIndex, column: 0 });
+        return;
+      }
 
       const lineStart = calculateLineOffset(lines, lineIndex);
       const lineEnd = lineStart + lines[lineIndex].length;
@@ -887,7 +937,15 @@ export function Editor({
       setCursorPosition(startPos);
       setSelection({ start: startPos, end: endPos });
     },
-    [lines, foldTransform, actualLines, setCursorPosition, setSelection],
+    [
+      lines,
+      foldTransform,
+      actualLines,
+      setCursorPosition,
+      setSelection,
+      useGlobalEditorState,
+      onReadonlySurfaceClick,
+    ],
   );
 
   const handleRevertChange = useCallback(
@@ -953,6 +1011,8 @@ export function Editor({
           wordWrap={wordWrap}
           lines={lines}
           contentWidth={contentWidth}
+          lineNumberStart={lineNumberStart}
+          lineNumberMap={lineNumberMap}
         />
       )}
 
@@ -984,11 +1044,13 @@ export function Editor({
           content={displayContent}
           filePath={filePath}
           onInput={handleInput}
-          onKeyDown={readOnly ? undefined : handleKeyDown}
+          onKeyDown={readOnly || !useGlobalEditorState ? undefined : handleKeyDown}
           onScroll={handleScroll}
-          onSelect={handleCursorChange}
-          onClick={handleClick}
-          onContextMenu={contextMenu.open}
+          onSelect={useGlobalEditorState ? handleCursorChange : undefined}
+          onClick={
+            useGlobalEditorState || readOnly || onReadonlySurfaceClick ? handleClick : undefined
+          }
+          onContextMenu={useGlobalEditorState ? contextMenu.open : undefined}
           fontSize={fontSize}
           fontFamily={fontFamily}
           lineHeight={lineHeight}
@@ -999,16 +1061,18 @@ export function Editor({
           bufferId={bufferId || undefined}
           showText={!hasSyntaxHighlighting}
         />
-        <SelectionLayer
-          ref={selectionLayerRef}
-          textareaRef={inputRef}
-          content={displayContent}
-          fontSize={fontSize}
-          fontFamily={fontFamily}
-          lineHeight={lineHeight}
-          tabSize={tabSize}
-          wordWrap={wordWrap}
-        />
+        {useGlobalEditorState && (
+          <SelectionLayer
+            ref={selectionLayerRef}
+            textareaRef={inputRef}
+            content={displayContent}
+            fontSize={fontSize}
+            fontFamily={fontFamily}
+            lineHeight={lineHeight}
+            tabSize={tabSize}
+            wordWrap={wordWrap}
+          />
+        )}
         {inlineEditState.inlineEditVisible && inlineEditState.popoverPosition && (
           <div ref={inlineEditOverlayRef} className="pointer-events-none absolute inset-0 z-[200]">
             <div
@@ -1157,7 +1221,7 @@ export function Editor({
             Tab to accept AI suggestion
           </div>
         )}
-        {multiCursorState && (
+        {useGlobalEditorState && multiCursorState && (
           <MultiCursorLayer
             ref={multiCursorRef}
             cursors={multiCursorState.cursors}
@@ -1169,7 +1233,7 @@ export function Editor({
           />
         )}
 
-        {vimModeEnabled && (
+        {useGlobalEditorState && vimModeEnabled && (
           <VimCursorLayer
             ref={vimCursorRef}
             fontSize={fontSize}
@@ -1181,11 +1245,11 @@ export function Editor({
           />
         )}
 
-        {searchMatches.length > 0 && (
+        {(highlightMatches?.length || searchMatches.length > 0) && (
           <SearchHighlightLayer
             ref={searchHighlightRef}
-            searchMatches={searchMatches}
-            currentMatchIndex={currentMatchIndex}
+            searchMatches={highlightMatches ?? searchMatches}
+            currentMatchIndex={currentHighlightIndex ?? currentMatchIndex}
             fontSize={fontSize}
             fontFamily={fontFamily}
             lineHeight={lineHeight}
@@ -1195,29 +1259,34 @@ export function Editor({
           />
         )}
 
-        <DefinitionLinkLayer
-          fontSize={fontSize}
-          fontFamily={fontFamily}
-          lineHeight={lineHeight}
-          content={displayContent}
-          textareaRef={inputRef}
-        />
-
-        {filePath && inlineGitBlameEnabled && !inlineEditState.inlineEditVisible && (
-          <GitBlameLayer
-            ref={gitBlameRef}
-            filePath={filePath}
-            cursorLine={cursorPosition.line}
-            cursorColumn={cursorPosition.column}
-            visualCursorLine={visualCursorLine}
-            visualContent={displayContent}
+        {useGlobalEditorState && (
+          <DefinitionLinkLayer
             fontSize={fontSize}
             fontFamily={fontFamily}
             lineHeight={lineHeight}
-            tabSize={tabSize}
-            wordWrap={wordWrap}
+            content={displayContent}
+            textareaRef={inputRef}
           />
         )}
+
+        {useGlobalEditorState &&
+          filePath &&
+          inlineGitBlameEnabled &&
+          !inlineEditState.inlineEditVisible && (
+            <GitBlameLayer
+              ref={gitBlameRef}
+              filePath={filePath}
+              cursorLine={cursorPosition.line}
+              cursorColumn={cursorPosition.column}
+              visualCursorLine={visualCursorLine}
+              visualContent={displayContent}
+              fontSize={fontSize}
+              fontFamily={fontFamily}
+              lineHeight={lineHeight}
+              tabSize={tabSize}
+              wordWrap={wordWrap}
+            />
+          )}
 
         {inlineDiff.state.isOpen && (
           <div

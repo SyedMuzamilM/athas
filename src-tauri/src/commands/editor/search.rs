@@ -4,11 +4,20 @@ use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, State};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SearchMatchRange {
+   pub start: usize,
+   pub end: usize,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SearchMatch {
    pub line_number: usize,
    pub line_content: String,
    pub column_start: usize,
    pub column_end: usize,
+   pub match_ranges: Vec<SearchMatchRange>,
+   pub context_before: Vec<String>,
+   pub context_after: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -26,6 +35,7 @@ pub struct SearchFilesRequest {
    pub whole_word: Option<bool>,
    pub use_regex: Option<bool>,
    pub max_results: Option<usize>,
+   pub context_lines: Option<usize>,
 }
 
 fn build_fff_grep_pattern(request: &SearchFilesRequest) -> (String, GrepMode) {
@@ -82,6 +92,7 @@ pub fn search_files_content(
 
    let (pattern, mode) = build_fff_grep_pattern(&request);
    let parsed_query = parse_grep_query(&pattern);
+   let context_lines = request.context_lines.unwrap_or(0).min(10);
    let grep_result = picker.grep(
       &parsed_query,
       &GrepSearchOptions {
@@ -92,8 +103,8 @@ pub fn search_files_content(
          page_limit: request.max_results.unwrap_or(100).max(1),
          mode,
          time_budget_ms: 250,
-         before_context: 0,
-         after_context: 0,
+         before_context: context_lines,
+         after_context: context_lines,
          classify_definitions: false,
       },
    );
@@ -112,12 +123,23 @@ pub fn search_files_content(
          .first()
          .map(|(start, end)| (*start as usize, *end as usize))
          .unwrap_or((grep_match.col, grep_match.col + request.query.len()));
+      let match_ranges = grep_match
+         .match_byte_offsets
+         .iter()
+         .map(|(start, end)| SearchMatchRange {
+            start: *start as usize,
+            end: *end as usize,
+         })
+         .collect();
 
       let search_match = SearchMatch {
          line_number: grep_match.line_number as usize,
          line_content: grep_match.line_content,
          column_start: start_end.0,
          column_end: start_end.1,
+         match_ranges,
+         context_before: grep_match.context_before,
+         context_after: grep_match.context_after,
       };
 
       let grouped_index = if let Some(existing_index) = file_index_map.get(&grep_match.file_index) {

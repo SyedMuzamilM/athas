@@ -124,6 +124,7 @@ export const InputLayer = memo(InputLayerComponent, (prev, next) => {
     prev.onKeyUp === next.onKeyUp &&
     prev.onClick === next.onClick &&
     prev.onMouseUp === next.onMouseUp &&
-    prev.onContextMenu === next.onContextMenu
+    prev.onContextMenu === next.onContextMenu &&
+    prev.readOnly === next.readOnly
   );
 });

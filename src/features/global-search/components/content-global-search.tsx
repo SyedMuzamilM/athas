@@ -32,6 +32,10 @@ const ContentGlobalSearch = () => {
     rootFolderPath,
     searchOptions,
     setSearchOption,
+    includeQuery,
+    setIncludeQuery,
+    excludeQuery,
+    setExcludeQuery,
   } = useContentSearch(isVisible);
 
   const debouncedSetPreview = useDebouncedCallback(
@@ -231,6 +235,20 @@ const ContentGlobalSearch = () => {
                   {option.icon}
                 </Button>
               ))}
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <CommandInput
+                value={includeQuery}
+                onChange={setIncludeQuery}
+                placeholder="Files to include"
+                className="ui-font h-7 rounded-md border border-border/70 bg-primary-bg/65 px-2"
+              />
+              <CommandInput
+                value={excludeQuery}
+                onChange={setExcludeQuery}
+                placeholder="Files to exclude"
+                className="ui-font h-7 rounded-md border border-border/70 bg-primary-bg/65 px-2"
+              />
             </div>
           </div>
         </CommandHeader>

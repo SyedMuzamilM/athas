@@ -1,20 +1,31 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MagnifyingGlass } from "@phosphor-icons/react";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { Button } from "@/ui/button";
 import { CommandInput } from "@/ui/command";
-import { SEARCH_TOGGLE_ICONS } from "@/ui/search";
+import { SEARCH_TOGGLE_ICONS, SearchReplaceRow, SearchReplaceToggle } from "@/ui/search";
 import { TabsList } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
 import { useContentSearch } from "../hooks/use-content-search";
 import { useKeyboardNavigation } from "../hooks/use-keyboard-navigation";
-import { ContentSearchResult } from "./content-search-result";
+import { buildSearchExcerpts } from "../utils/search-excerpts";
+import { replaceAllInSources, replaceNextInSource } from "../utils/source-replace";
+import { SearchExcerptResults } from "./search-excerpt-results";
 
 const MAX_DISPLAYED_MATCHES = 500;
+const MAX_MARKERS = 160;
+const DEFAULT_CONTEXT_LINES = 2;
+const EXPANDED_CONTEXT_LINES = 7;
 
 const GlobalSearchBuffer = () => {
   const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
   const inputRef = useRef<HTMLInputElement>(null);
+  const replaceInputRef = useRef<HTMLInputElement>(null);
+  const [isReplaceVisible, setIsReplaceVisible] = useState(false);
+  const [replaceQuery, setReplaceQuery] = useState("");
+  const [contextLinesByFile, setContextLinesByFile] = useState<Record<string, number>>({});
+  const [sourceContentByPath, setSourceContentByPath] = useState<Record<string, string>>({});
   const {
     query,
     setQuery,
@@ -25,65 +36,170 @@ const GlobalSearchBuffer = () => {
     rootFolderPath,
     searchOptions,
     setSearchOption,
+    includeQuery,
+    setIncludeQuery,
+    excludeQuery,
+    setExcludeQuery,
+    refreshSearch,
   } = useContentSearch(true);
 
-  const handleFileClick = (filePath: string, lineNumber?: number) => {
-    void handleFileSelect(filePath, false, lineNumber);
-  };
+  const handleFileClick = useCallback(
+    (filePath: string, lineNumber?: number, columnNumber?: number) => {
+      void handleFileSelect(filePath, false, lineNumber, columnNumber);
+    },
+    [handleFileSelect],
+  );
 
-  const flattenedMatches = useMemo(() => {
-    const matches: Array<{
-      filePath: string;
-      displayPath: string;
-      match: {
-        line_number: number;
-        line_content: string;
-        column_start: number;
-        column_end: number;
-      };
-    }> = [];
-
-    for (const result of results) {
-      const displayPath = rootFolderPath
-        ? result.file_path.replace(rootFolderPath, "").replace(/^\//, "")
-        : result.file_path;
-
-      for (const match of result.matches) {
-        matches.push({
-          filePath: result.file_path,
-          displayPath,
-          match,
-        });
-
-        if (matches.length >= MAX_DISPLAYED_MATCHES) {
-          return matches;
-        }
-      }
-    }
-
-    return matches;
-  }, [results, rootFolderPath]);
+  const excerpts = useMemo(
+    () =>
+      buildSearchExcerpts(results, rootFolderPath, MAX_DISPLAYED_MATCHES, {
+        contextLinesByFile,
+        sourceContentByPath,
+      }),
+    [contextLinesByFile, results, rootFolderPath, sourceContentByPath],
+  );
 
   const navigationItems = useMemo(
     () =>
-      flattenedMatches.map((item) => ({
-        path: `${item.filePath}:${item.match.line_number}`,
-        name: item.filePath.split("/").pop() || "",
-        isDir: false,
-      })),
-    [flattenedMatches],
+      excerpts.flatMap((excerpt) =>
+        excerpt.matches.map((match) => ({
+          path: match.itemKey,
+          name: excerpt.fileName,
+          isDir: false,
+        })),
+      ),
+    [excerpts],
   );
+
+  const matchIndex = useMemo(() => {
+    const index = new Map<
+      string,
+      {
+        excerptIndex: number;
+        filePath: string;
+        targetLine: number;
+        targetColumn: number;
+      }
+    >();
+
+    excerpts.forEach((excerpt, excerptIndex) => {
+      excerpt.matches.forEach((match) => {
+        index.set(match.itemKey, {
+          excerptIndex,
+          filePath: excerpt.filePath,
+          targetLine: match.targetLine,
+          targetColumn: match.targetColumn,
+        });
+      });
+    });
+
+    return index;
+  }, [excerpts]);
 
   const { selectedIndex, scrollContainerRef } = useKeyboardNavigation({
     isVisible: true,
     allResults: navigationItems,
     onClose: () => {},
     onSelect: (path) => {
-      const [filePath, lineStr] = path.split(":");
-      const lineNumber = parseInt(lineStr, 10);
-      handleFileClick(filePath, lineNumber);
+      const match = matchIndex.get(path);
+      if (match) {
+        handleFileClick(match.filePath, match.targetLine, match.targetColumn);
+      }
+    },
+    scrollToIndex: (index) => {
+      const itemKey = navigationItems[index]?.path;
+      const match = itemKey ? matchIndex.get(itemKey) : null;
+      const container = scrollContainerRef.current;
+      if (!match || !container) return;
+
+      const selectedElement = container.querySelector(
+        `[data-excerpt-index="${match.excerptIndex}"]`,
+      ) as HTMLElement | null;
+      selectedElement?.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+      });
     },
   });
+
+  const selectedItemKey =
+    selectedIndex >= 0 && selectedIndex < navigationItems.length
+      ? (navigationItems[selectedIndex]?.path ?? null)
+      : null;
+  const selectedMatch =
+    selectedItemKey && matchIndex.has(selectedItemKey) ? matchIndex.get(selectedItemKey) : null;
+
+  const filePathsWithResults = useMemo(
+    () => Array.from(new Set(results.map((result) => result.file_path))),
+    [results],
+  );
+  const markerItems = useMemo(() => {
+    if (navigationItems.length <= MAX_MARKERS) {
+      return navigationItems.map((item, index) => ({ item, markerIndex: index }));
+    }
+
+    const step = Math.ceil(navigationItems.length / MAX_MARKERS);
+    return navigationItems
+      .map((item, index) => ({ item, markerIndex: index }))
+      .filter(({ markerIndex }) => markerIndex % step === 0 || markerIndex === selectedIndex);
+  }, [navigationItems, selectedIndex]);
+
+  const handleExpandContext = useCallback(async (filePath: string) => {
+    const content = await readFileContent(filePath);
+    setSourceContentByPath((prev) => ({ ...prev, [filePath]: content }));
+    setContextLinesByFile((prev) => ({
+      ...prev,
+      [filePath]: Math.max(prev[filePath] ?? DEFAULT_CONTEXT_LINES, EXPANDED_CONTEXT_LINES),
+    }));
+  }, []);
+
+  const handleCollapseContext = useCallback((filePath: string) => {
+    setContextLinesByFile((prev) => {
+      const next = { ...prev };
+      delete next[filePath];
+      return next;
+    });
+  }, []);
+
+  const isContextExpanded = useCallback(
+    (filePath: string) =>
+      (contextLinesByFile[filePath] ?? DEFAULT_CONTEXT_LINES) > DEFAULT_CONTEXT_LINES,
+    [contextLinesByFile],
+  );
+
+  const replaceNext = useCallback(async () => {
+    if (!selectedMatch || !debouncedQuery) return;
+
+    const didReplace = await replaceNextInSource(
+      {
+        filePath: selectedMatch.filePath,
+        line: selectedMatch.targetLine,
+        column: selectedMatch.targetColumn,
+      },
+      debouncedQuery,
+      replaceQuery,
+      searchOptions,
+    );
+
+    if (didReplace) {
+      await refreshSearch();
+    }
+  }, [debouncedQuery, refreshSearch, replaceQuery, searchOptions, selectedMatch]);
+
+  const replaceAll = useCallback(async () => {
+    if (!debouncedQuery || filePathsWithResults.length === 0) return;
+
+    const count = await replaceAllInSources(
+      filePathsWithResults,
+      debouncedQuery,
+      replaceQuery,
+      searchOptions,
+    );
+
+    if (count > 0) {
+      await refreshSearch();
+    }
+  }, [debouncedQuery, filePathsWithResults, refreshSearch, replaceQuery, searchOptions]);
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
@@ -94,24 +210,14 @@ const GlobalSearchBuffer = () => {
     return () => cancelAnimationFrame(frame);
   }, []);
 
-  const matchIndexMap = useMemo(
-    () => new Map(navigationItems.map((item, index) => [item.path, index])),
-    [navigationItems],
-  );
-
   const hasResults = results.length > 0;
   const totalMatches = results.reduce((sum, r) => sum + r.total_matches, 0);
-  const displayedCount = flattenedMatches.length;
+  const displayedCount = navigationItems.length;
   const hasMore = totalMatches > displayedCount;
   const resultLabel =
     debouncedQuery && !isSearching
       ? `${displayedCount} ${displayedCount === 1 ? "result" : "results"}${hasMore ? ` (${totalMatches} total)` : ""}`
       : null;
-  const selectedMatchKey =
-    selectedIndex >= 0 && selectedIndex < navigationItems.length
-      ? navigationItems[selectedIndex]?.path
-      : null;
-
   const searchOptionsButtons = [
     {
       id: "case-sensitive",
@@ -135,11 +241,16 @@ const GlobalSearchBuffer = () => {
       onToggle: () => setSearchOption("useRegex", !searchOptions.useRegex),
     },
   ];
+  const canReplace = Boolean(debouncedQuery && displayedCount > 0);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="border-border/70 border-b bg-secondary-bg/55 px-3 py-2">
         <div className="flex min-w-0 items-center gap-2">
+          <SearchReplaceToggle
+            isExpanded={isReplaceVisible}
+            onToggle={() => setIsReplaceVisible((visible) => !visible)}
+          />
           <div className="flex h-7 min-w-0 flex-1 items-center gap-2 rounded-lg border border-border/70 bg-primary-bg/65 px-2">
             <MagnifyingGlass className="size-4 shrink-0 text-text-lighter" weight="duotone" />
             <CommandInput
@@ -176,11 +287,38 @@ const GlobalSearchBuffer = () => {
             </span>
           ) : null}
         </div>
+        {isReplaceVisible ? (
+          <div className="mt-2">
+            <SearchReplaceRow
+              value={replaceQuery}
+              onChange={setReplaceQuery}
+              inputRef={replaceInputRef}
+              onReplace={replaceNext}
+              onReplaceAll={replaceAll}
+              canReplace={canReplace}
+            />
+          </div>
+        ) : null}
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <CommandInput
+            value={includeQuery}
+            onChange={setIncludeQuery}
+            placeholder="Files to include"
+            className="ui-font h-7 rounded-md border border-border/70 bg-primary-bg/65 px-2"
+          />
+          <CommandInput
+            value={excludeQuery}
+            onChange={setExcludeQuery}
+            placeholder="Files to exclude"
+            className="ui-font h-7 rounded-md border border-border/70 bg-primary-bg/65 px-2"
+          />
+        </div>
       </div>
 
       <div
         ref={scrollContainerRef}
-        className="custom-scrollbar-thin min-h-0 flex-1 overflow-y-auto bg-primary-bg"
+        data-editor-outer-scroll
+        className="custom-scrollbar-thin relative min-h-0 flex-1 overflow-y-auto bg-primary-bg"
       >
         {!debouncedQuery ? (
           <div className="flex h-full min-h-[320px] items-center justify-center px-6">
@@ -215,27 +353,48 @@ const GlobalSearchBuffer = () => {
         ) : null}
 
         {hasResults ? (
-          <div className="mx-auto w-full max-w-5xl px-3 py-3">
-            <div className="space-y-2">
-              {results.map((result) => (
-                <ContentSearchResult
-                  key={result.file_path}
-                  result={result}
-                  rootFolderPath={rootFolderPath}
-                  onFileClick={handleFileClick}
-                  selectedMatchKey={selectedMatchKey}
-                  getMatchIndex={(lineNumber) =>
-                    matchIndexMap.get(`${result.file_path}:${lineNumber}`)
-                  }
-                />
-              ))}
+          <>
+            <SearchExcerptResults
+              excerpts={excerpts}
+              selectedItemKey={selectedItemKey}
+              onOpen={handleFileClick}
+              onExpandContext={handleExpandContext}
+              onCollapseContext={handleCollapseContext}
+              isContextExpanded={isContextExpanded}
+            />
+            <div className="pointer-events-none absolute top-0 right-1 bottom-0 w-2">
+              {markerItems.map(({ item, markerIndex }) => {
+                const match = matchIndex.get(item.path);
+                if (!match) return null;
+
+                return (
+                  <button
+                    key={item.path}
+                    type="button"
+                    aria-label={`Result ${markerIndex + 1}`}
+                    className={cn(
+                      "pointer-events-auto absolute right-0 h-1.5 w-1.5 rounded-full bg-text-lighter/45 hover:bg-accent",
+                      selectedItemKey === item.path && "bg-accent",
+                    )}
+                    style={{
+                      top: `${navigationItems.length <= 1 ? 0 : (markerIndex / (navigationItems.length - 1)) * 100}%`,
+                    }}
+                    onClick={() => {
+                      const selectedElement = scrollContainerRef.current?.querySelector(
+                        `[data-excerpt-index="${match.excerptIndex}"]`,
+                      ) as HTMLElement | null;
+                      selectedElement?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                    }}
+                  />
+                );
+              })}
             </div>
             {hasMore ? (
               <div className="ui-text-sm px-3 py-3 text-center text-text-lighter">
                 Showing first {displayedCount} of {totalMatches} results
               </div>
             ) : null}
-          </div>
+          </>
         ) : null}
       </div>
     </div>
