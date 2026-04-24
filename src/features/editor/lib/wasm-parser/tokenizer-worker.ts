@@ -3,10 +3,10 @@
 import type { Node, QueryCapture, Tree } from "web-tree-sitter";
 import { logger } from "../../utils/logger";
 import { getDefaultParserWasmUrl } from "./extension-assets";
+import { getLanguageOverlayTokens } from "./language-overlays";
 import { wasmParserLoader } from "./loader";
 import type { HighlightToken, LoadedParser, ParserConfig } from "./types";
 import { calculateEdit, isSimpleEdit } from "../../utils/tree-sitter-edit";
-import { angularTemplateTokens, ANGULAR_TEMPLATE_LANGUAGE_ID } from "./angular-template";
 
 interface WorkerSession {
   bufferId: string;
@@ -489,9 +489,7 @@ async function handleTokenize(message: TokenizeMessage): Promise<WorkerSuccessRe
     }
   }
 
-  if (message.languageId === ANGULAR_TEMPLATE_LANGUAGE_ID) {
-    tokens.push(...angularTemplateTokens(normalizedContent));
-  }
+  tokens.push(...getLanguageOverlayTokens(message.languageId, normalizedContent));
 
   const nextSession = upsertTree(existing, message.languageId, normalizedContent, tree);
   nextSession.bufferId = message.bufferId;

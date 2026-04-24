@@ -7,7 +7,7 @@ import type { Node, Tree } from "web-tree-sitter";
 import { logger } from "../../utils/logger";
 import { getDefaultParserWasmUrl } from "./extension-assets";
 import { wasmParserLoader } from "./loader";
-import { angularTemplateTokens, ANGULAR_TEMPLATE_LANGUAGE_ID } from "./angular-template";
+import { getLanguageOverlayTokens } from "./language-overlays";
 import type {
   HighlightToken,
   IncrementalParseOptions,
@@ -406,9 +406,7 @@ export async function tokenizeCodeWithTree(
       }
     }
 
-    if (languageId === ANGULAR_TEMPLATE_LANGUAGE_ID) {
-      tokens.push(...angularTemplateTokens(content));
-    }
+    tokens.push(...getLanguageOverlayTokens(languageId, content));
 
     // Deduplicate tokens at the same range. Tree-sitter returns captures in
     // pattern order for same-position nodes; later patterns are more specific

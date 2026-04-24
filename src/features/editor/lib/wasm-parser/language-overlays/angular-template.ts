@@ -1,4 +1,4 @@
-import type { HighlightToken } from "./types";
+import type { HighlightToken } from "../types";
 
 export const ANGULAR_TEMPLATE_LANGUAGE_ID = "angular";
 
