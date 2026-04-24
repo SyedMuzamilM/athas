@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { detectLanguageFromPath } from "@/features/editor/utils/language-detection";
 import type { EditorContent } from "@/features/panes/types/pane-content";
+import { getBaseName } from "@/utils/path-helpers";
 
 interface UseSearchExcerptBufferOptions {
   id: string;
@@ -15,7 +16,7 @@ export function useSearchExcerptBuffer({
   content,
 }: UseSearchExcerptBufferOptions): string {
   const bufferId = useMemo(() => `search_excerpt_${id.replace(/[^a-zA-Z0-9_]/g, "_")}`, [id]);
-  const name = filePath.split("/").pop() || filePath;
+  const name = getBaseName(filePath, filePath);
 
   useEffect(() => {
     const nextBuffer: EditorContent = {

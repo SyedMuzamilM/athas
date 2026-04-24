@@ -13,6 +13,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import type { PaneContent } from "@/features/panes/types/pane-content";
 import { isVirtualContent } from "@/features/panes/types/pane-content";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
+import { getBaseName, getDirName } from "@/utils/path-helpers";
 import Keybinding from "@/ui/keybinding";
 import { IS_MAC } from "@/utils/platform";
 
@@ -123,8 +124,8 @@ const TabContextMenu = ({
             label: "Open in Terminal",
             icon: <Terminal />,
             onClick: () => {
-              const dirPath = buffer.path.substring(0, buffer.path.lastIndexOf("/"));
-              const dirName = dirPath.split("/").pop() || "terminal";
+              const dirPath = getDirName(buffer.path);
+              const dirName = getBaseName(dirPath, "terminal");
               const { openTerminalBuffer } = useBufferStore.getState().actions;
               openTerminalBuffer({
                 name: dirName,

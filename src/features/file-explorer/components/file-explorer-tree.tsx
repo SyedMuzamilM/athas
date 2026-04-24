@@ -17,7 +17,12 @@ import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
 import { cn } from "@/utils/cn";
 import { frontendTrace } from "@/utils/frontend-trace";
-import { getRelativePath } from "@/utils/path-helpers";
+import {
+  getDirName,
+  getRelativePath,
+  joinPath,
+  stripTrailingPathSeparators,
+} from "@/utils/path-helpers";
 import { useFileExplorerContextMenu } from "../hooks/use-file-explorer-context-menu";
 import { useFileExplorerDragDrop } from "../hooks/use-file-explorer-drag-drop";
 import { useFileExplorerSync } from "../hooks/use-file-explorer-sync";
@@ -133,7 +138,7 @@ function FileExplorerTreeComponent({
       }
 
       try {
-        const content = await readFile(`${rootFolderPath}/.gitignore`);
+        const content = await readFile(joinPath(rootFolderPath, ".gitignore"));
         const ig = ignore();
         ig.add(
           content
@@ -297,7 +302,7 @@ function FileExplorerTreeComponent({
       });
     };
 
-    if (parentPath === files[0]?.path.split("/").slice(0, -1).join("/") || !parentPath) {
+    if (parentPath === getDirName(files[0]?.path ?? "") || !parentPath) {
       onUpdateFiles([...files, newItem]);
     } else {
       onUpdateFiles(addNewItemToTree(files, parentPath));
@@ -318,7 +323,7 @@ function FileExplorerTreeComponent({
     if (!onUpdateFiles) return;
 
     if (newName.trim()) {
-      let parentPath = item.path.endsWith("/") ? item.path.slice(0, -1) : item.path;
+      let parentPath = stripTrailingPathSeparators(item.path);
       if (!parentPath && rootFolderPath) parentPath = rootFolderPath;
 
       if (!parentPath) {
@@ -332,14 +337,14 @@ function FileExplorerTreeComponent({
       }
 
       if (item.isDir) {
-        const folder = findFileInTree(files, `${parentPath}/${newName.trim()}`);
+        const folder = findFileInTree(files, joinPath(parentPath, newName.trim()));
         if (folder) {
           alert("Folder already exists");
           return;
         }
         onCreateNewFolderInDirectory?.(parentPath, newName.trim());
       } else {
-        const file = findFileInTree(files, `${parentPath}/${newName.trim()}`);
+        const file = findFileInTree(files, joinPath(parentPath, newName.trim()));
         if (file) {
           alert("File already exists");
           return;

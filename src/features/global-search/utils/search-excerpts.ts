@@ -1,4 +1,5 @@
 import type { FileSearchResult, SearchMatch } from "../lib/rust-api/search";
+import { getBaseName, getDirectoryPath, getRelativePath } from "@/utils/path-helpers";
 
 export interface SearchExcerptHighlight {
   start: number;
@@ -73,13 +74,9 @@ export function buildSearchExcerpts(
   for (const result of results) {
     if (visibleMatchCount >= limit) break;
 
-    const displayPath = rootFolderPath
-      ? result.file_path.replace(rootFolderPath, "").replace(/^\//, "")
-      : result.file_path;
-    const fileName = result.file_path.split("/").pop() || result.file_path;
-    const directoryPath = displayPath.includes("/")
-      ? displayPath.slice(0, displayPath.lastIndexOf("/") + 1)
-      : "";
+    const displayPath = getRelativePath(result.file_path, rootFolderPath);
+    const fileName = getBaseName(result.file_path, result.file_path);
+    const directoryPath = getDirectoryPath(result.file_path, rootFolderPath);
     const sourceContent = options.sourceContentByPath?.[result.file_path];
     const sourceLines = sourceContent?.split("\n");
     const expandedContextLines = options.contextLinesByFile?.[result.file_path];

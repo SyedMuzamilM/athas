@@ -2,6 +2,7 @@ import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { moveFile } from "@/features/file-system/controllers/platform";
 import type { FileEntry } from "@/features/file-system/types/app";
+import { getDirName, getPathSeparator, joinPath } from "@/utils/path-helpers";
 
 interface DragState {
   isDragging: boolean;
@@ -79,11 +80,11 @@ export function useFileExplorerDragDrop(
       if (fileTreeItem) {
         const path = fileTreeItem.getAttribute("data-file-path");
         const isDir = fileTreeItem.getAttribute("data-is-dir") === "true";
+        const draggedItem = dragState.draggedItem;
 
-        if (path && path !== dragState.draggedItem?.path) {
-          const separator = dragState.draggedItem?.path.includes("\\") ? "\\" : "/";
-          const isDropIntoSelf =
-            dragState.draggedItem?.isDir && path.startsWith(dragState.draggedItem.path + separator);
+        if (path && draggedItem && path !== draggedItem.path) {
+          const separator = getPathSeparator(draggedItem.path);
+          const isDropIntoSelf = draggedItem.isDir && path.startsWith(draggedItem.path + separator);
 
           setDragState((prev) => ({
             ...prev,
@@ -147,14 +148,11 @@ export function useFileExplorerDragDrop(
           }
         }
 
-        const pathSeparator = sourcePath.includes("\\") ? "\\" : "/";
         if (!dragState.dragOverIsDir && targetPath !== "__ROOT__") {
-          const pathParts = targetPath.split(pathSeparator);
-          pathParts.pop();
-          targetPath = pathParts.join(pathSeparator) || rootFolderPath || "";
+          targetPath = getDirName(targetPath) || rootFolderPath || "";
         }
 
-        const newPath = targetPath + pathSeparator + sourceName;
+        const newPath = joinPath(targetPath, sourceName);
 
         try {
           await moveFile(sourcePath, newPath);

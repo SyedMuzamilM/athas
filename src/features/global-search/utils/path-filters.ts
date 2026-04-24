@@ -1,3 +1,5 @@
+import { getRelativePath } from "@/utils/path-helpers";
+
 function globToRegExp(glob: string): RegExp | null {
   const trimmed = glob.trim();
   if (!trimmed) return null;
@@ -46,7 +48,7 @@ export function matchesPathFilters(
   includeQuery: string,
   excludeQuery: string,
 ): boolean {
-  const relativePath = rootFolderPath ? path.replace(rootFolderPath, "").replace(/^\//, "") : path;
+  const relativePath = getRelativePath(path, rootFolderPath);
   const includeGlobs = splitGlobQuery(includeQuery);
   const excludeGlobs = splitGlobQuery(excludeQuery);
 

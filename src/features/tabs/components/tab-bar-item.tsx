@@ -18,6 +18,7 @@ import { FileExplorerIcon } from "@/features/file-explorer/components/file-explo
 import type { PaneContent } from "@/features/panes/types/pane-content";
 import { Button } from "@/ui/button";
 import { Tab } from "@/ui/tabs";
+import { getBaseName } from "@/utils/path-helpers";
 import { cn } from "@/utils/cn";
 import type { MultiFileDiff } from "@/features/git/types/git-diff-types";
 import type { GitDiff } from "@/features/git/types/git-types";
@@ -219,7 +220,7 @@ function isMultiFileDiff(diffData: GitDiff | MultiFileDiff | undefined): diffDat
 
 function getDiffFileName(diff: GitDiff): string {
   const filePath = diff.new_path || diff.old_path || diff.file_path || "";
-  return filePath.split("/").pop() || filePath || "diff";
+  return getBaseName(filePath, filePath || "diff");
 }
 
 export default TabBarItem;

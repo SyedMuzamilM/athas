@@ -1,6 +1,7 @@
 import { File, MagnifyingGlass } from "@phosphor-icons/react";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
+import { getRelativePath } from "@/utils/path-helpers";
 import type { FileSearchResult, SearchMatch } from "@/features/global-search/lib/rust-api/search";
 
 interface ContentSearchResultProps {
@@ -67,9 +68,7 @@ export const ContentSearchResult = ({
   selectedMatchKey,
   getMatchIndex,
 }: ContentSearchResultProps) => {
-  const displayPath = rootFolderPath
-    ? result.file_path.replace(rootFolderPath, "").replace(/^\//, "")
-    : result.file_path;
+  const displayPath = getRelativePath(result.file_path, rootFolderPath);
 
   return (
     <div className="overflow-hidden rounded-lg border border-border/70 bg-secondary-bg/35">

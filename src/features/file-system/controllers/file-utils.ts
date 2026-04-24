@@ -1,5 +1,6 @@
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import type { DatabaseType } from "@/features/database/models/provider.types";
+import { getBaseName, getDirName } from "@/utils/path-helpers";
 
 /**
  * Get the programming language from a filename based on its extension
@@ -200,16 +201,14 @@ export const isBinaryContent = (data: Uint8Array, sampleSize = 8192): boolean =>
  * Extract filename from a path
  */
 export const getFilenameFromPath = (path: string): string => {
-  return path.split("/").pop() || "Untitled";
+  return getBaseName(path, "Untitled");
 };
 
 /**
  * Get the directory path from a file path
  */
 const getDirectoryFromPath = (filePath: string): string => {
-  const pathParts = filePath.split("/");
-  pathParts.pop(); // Remove the filename
-  return pathParts.join("/");
+  return getDirName(filePath);
 };
 
 /**

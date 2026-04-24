@@ -26,6 +26,7 @@ import { useTerminalStore } from "@/features/terminal/stores/terminal-store";
 import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-dialog";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { Button } from "@/ui/button";
+import { getRelativePath } from "@/utils/path-helpers";
 import { calculateDisplayNames } from "../utils/path-shortener";
 import {
   clearInternalTabDragData,
@@ -526,17 +527,7 @@ const TabBar = ({
         return;
       }
 
-      // Calculate relative path
-      let relativePath = path;
-      if (path.startsWith(rootFolderPath)) {
-        relativePath = path.slice(rootFolderPath.length);
-        // Remove leading slash if present
-        if (relativePath.startsWith("/") || relativePath.startsWith("\\")) {
-          relativePath = relativePath.slice(1);
-        }
-      }
-
-      await writeText(relativePath);
+      await writeText(getRelativePath(path, rootFolderPath));
     },
     [rootFolderPath, writeText],
   );
