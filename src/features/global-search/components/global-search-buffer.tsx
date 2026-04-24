@@ -2,8 +2,9 @@ import { useEffect, useMemo, useRef } from "react";
 import { MagnifyingGlass } from "@phosphor-icons/react";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { Button } from "@/ui/button";
-import { CommandInput, CommandList } from "@/ui/command";
+import { CommandInput } from "@/ui/command";
 import { SEARCH_TOGGLE_ICONS } from "@/ui/search";
+import { TabsList } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
 import { useContentSearch } from "../hooks/use-content-search";
 import { useKeyboardNavigation } from "../hooks/use-keyboard-navigation";
@@ -137,104 +138,105 @@ const GlobalSearchBuffer = () => {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="border-border border-b px-4 py-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-md border border-border bg-secondary-bg text-text-lighter">
-            <MagnifyingGlass className="size-[18px]" weight="duotone" />
+      <div className="border-border/70 border-b bg-secondary-bg/55 px-3 py-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="flex h-7 min-w-0 flex-1 items-center gap-2 rounded-lg border border-border/70 bg-primary-bg/65 px-2">
+            <MagnifyingGlass className="size-4 shrink-0 text-text-lighter" weight="duotone" />
+            <CommandInput
+              ref={inputRef}
+              value={query}
+              onChange={setQuery}
+              placeholder="Search in files..."
+              className="ui-font min-w-0"
+            />
           </div>
-          <CommandInput
-            ref={inputRef}
-            value={query}
-            onChange={setQuery}
-            placeholder="Search in files..."
-            className="ui-font"
-          />
+          <TabsList variant="segmented" className="shrink-0">
+            {searchOptionsButtons.map((option) => (
+              <Button
+                key={option.id}
+                type="button"
+                onClick={option.onToggle}
+                variant="ghost"
+                size="icon-sm"
+                className={cn(
+                  "h-full w-7 rounded-none border-0 text-text-lighter hover:bg-hover/60 hover:text-text focus-visible:rounded-none",
+                  option.active && "bg-hover/80 text-text",
+                )}
+                tooltip={option.label}
+                aria-label={option.label}
+                aria-pressed={option.active}
+              >
+                {option.icon}
+              </Button>
+            ))}
+          </TabsList>
           {resultLabel ? (
-            <span className="ui-font ui-text-xs shrink-0 text-text-lighter">{resultLabel}</span>
+            <span className="ui-font ui-text-xs shrink-0 rounded-md border border-border/60 bg-primary-bg/65 px-2 py-1 text-text-lighter">
+              {resultLabel}
+            </span>
           ) : null}
-        </div>
-        <div className="mt-2 flex flex-wrap items-center gap-1.5">
-          {searchOptionsButtons.map((option) => (
-            <Button
-              key={option.id}
-              type="button"
-              onClick={option.onToggle}
-              variant="ghost"
-              size="icon-xs"
-              className={cn(
-                "rounded-md border border-transparent text-text-lighter transition-colors",
-                option.active
-                  ? "border-border/70 bg-hover text-text"
-                  : "hover:border-border/70 hover:bg-hover hover:text-text",
-              )}
-              tooltip={option.label}
-              aria-label={option.label}
-              aria-pressed={option.active}
-            >
-              {option.icon}
-            </Button>
-          ))}
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 bg-primary-bg">
-        <CommandList ref={scrollContainerRef}>
-          {!debouncedQuery ? (
-            <div className="flex h-full min-h-[320px] items-center justify-center px-6">
-              <div className="flex max-w-md flex-col items-center text-center">
-                <div className="mb-3 flex size-11 items-center justify-center rounded-lg border border-border bg-secondary-bg text-text-lighter">
-                  <MagnifyingGlass className="size-6" weight="duotone" />
-                </div>
-                <div className="ui-text-sm font-medium text-text">Search across your project</div>
-                <div className="ui-text-sm mt-1 text-text-lighter">
-                  Type a query to see matching files and lines in a single vertical result stream.
-                </div>
+      <div
+        ref={scrollContainerRef}
+        className="custom-scrollbar-thin min-h-0 flex-1 overflow-y-auto bg-primary-bg"
+      >
+        {!debouncedQuery ? (
+          <div className="flex h-full min-h-[320px] items-center justify-center px-6">
+            <div className="flex max-w-md flex-col items-center text-center">
+              <div className="mb-3 flex size-11 items-center justify-center rounded-lg border border-border bg-secondary-bg text-text-lighter">
+                <MagnifyingGlass className="size-6" weight="duotone" />
+              </div>
+              <div className="ui-text-sm font-medium text-text">Search across your project</div>
+              <div className="ui-text-sm mt-1 text-text-lighter">
+                Type a query to see matching files and lines in a single vertical result stream.
               </div>
             </div>
-          ) : null}
+          </div>
+        ) : null}
 
-          {debouncedQuery && isSearching ? (
-            <div className="ui-text-sm flex min-h-[240px] items-center justify-center text-center text-text-lighter">
-              Searching...
+        {debouncedQuery && isSearching ? (
+          <div className="ui-text-sm flex min-h-[240px] items-center justify-center text-center text-text-lighter">
+            Searching...
+          </div>
+        ) : null}
+
+        {debouncedQuery && !isSearching && !hasResults && !error ? (
+          <div className="ui-text-sm flex min-h-[240px] items-center justify-center text-center text-text-lighter">
+            No results found for "{debouncedQuery}"
+          </div>
+        ) : null}
+
+        {error ? (
+          <div className="ui-text-sm flex min-h-[240px] items-center justify-center text-center text-red-500">
+            {error}
+          </div>
+        ) : null}
+
+        {hasResults ? (
+          <div className="mx-auto w-full max-w-5xl px-3 py-3">
+            <div className="space-y-2">
+              {results.map((result) => (
+                <ContentSearchResult
+                  key={result.file_path}
+                  result={result}
+                  rootFolderPath={rootFolderPath}
+                  onFileClick={handleFileClick}
+                  selectedMatchKey={selectedMatchKey}
+                  getMatchIndex={(lineNumber) =>
+                    matchIndexMap.get(`${result.file_path}:${lineNumber}`)
+                  }
+                />
+              ))}
             </div>
-          ) : null}
-
-          {debouncedQuery && !isSearching && !hasResults && !error ? (
-            <div className="ui-text-sm flex min-h-[240px] items-center justify-center text-center text-text-lighter">
-              No results found for "{debouncedQuery}"
-            </div>
-          ) : null}
-
-          {error ? (
-            <div className="ui-text-sm flex min-h-[240px] items-center justify-center text-center text-red-500">
-              {error}
-            </div>
-          ) : null}
-
-          {hasResults ? (
-            <div className="mx-auto w-full max-w-5xl px-3 py-3">
-              <div className="space-y-2">
-                {results.map((result) => (
-                  <ContentSearchResult
-                    key={result.file_path}
-                    result={result}
-                    rootFolderPath={rootFolderPath}
-                    onFileClick={handleFileClick}
-                    selectedMatchKey={selectedMatchKey}
-                    getMatchIndex={(lineNumber) =>
-                      matchIndexMap.get(`${result.file_path}:${lineNumber}`)
-                    }
-                  />
-                ))}
+            {hasMore ? (
+              <div className="ui-text-sm px-3 py-3 text-center text-text-lighter">
+                Showing first {displayedCount} of {totalMatches} results
               </div>
-              {hasMore ? (
-                <div className="ui-text-sm px-3 py-3 text-center text-text-lighter">
-                  Showing first {displayedCount} of {totalMatches} results
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-        </CommandList>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </div>
   );
