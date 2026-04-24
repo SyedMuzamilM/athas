@@ -3,13 +3,18 @@ import {
   CaretDown,
   CaretUp,
   Check,
+  ClipboardText,
+  Copy,
   Info,
+  Trash,
   WarningCircle,
   XCircle,
 } from "@phosphor-icons/react";
+import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { Button } from "@/ui/button";
+import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import { Dropdown } from "@/ui/dropdown";
 import { TabsList } from "@/ui/tabs";
 import { useToastStore, type NotificationEntry } from "@/ui/toast";
@@ -47,7 +52,23 @@ function formatNotificationAge(timestamp: number) {
   return `${diffDays}d ago`;
 }
 
-function NotificationItem({ notification }: { notification: NotificationEntry }) {
+function formatNotificationText(notification: NotificationEntry) {
+  return [
+    notification.message,
+    notification.description,
+    `${notification.type} - ${formatNotificationAge(notification.updatedAt)}`,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+function NotificationItem({
+  notification,
+  onContextMenu,
+}: {
+  notification: NotificationEntry;
+  onContextMenu: (event: React.MouseEvent, notification: NotificationEntry) => void;
+}) {
   const [expanded, setExpanded] = useState(false);
   const hasDescription = !!notification.description;
 
@@ -59,6 +80,7 @@ function NotificationItem({ notification }: { notification: NotificationEntry })
         hasDescription && "cursor-pointer",
       )}
       onClick={hasDescription ? () => setExpanded((v) => !v) : undefined}
+      onContextMenu={(event) => onContextMenu(event, notification)}
     >
       <div className="flex items-start gap-2">
         <span className="mt-0.5 shrink-0">{getNotificationIcon(notification.type)}</span>
@@ -101,6 +123,7 @@ export const NotificationsMenu = ({ className }: NotificationsMenuProps) => {
   );
 
   const [isOpen, setIsOpen] = useState(false);
+  const notificationContextMenu = useContextMenu<NotificationEntry>();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const unreadCount = useMemo(
     () =>
@@ -119,6 +142,47 @@ export const NotificationsMenu = ({ className }: NotificationsMenuProps) => {
     markAllNotificationsRead();
   }, [isOpen, unreadCount, markAllNotificationsRead]);
 
+  const notificationContextMenuItems = useMemo<ContextMenuItem[]>(() => {
+    const notification = notificationContextMenu.data;
+    if (!notification) return [];
+
+    const copyText = async (text: string) => {
+      await navigator.clipboard.writeText(text);
+    };
+
+    return [
+      {
+        id: "copy-message",
+        label: "Copy Message",
+        icon: <Copy />,
+        onClick: () => void copyText(notification.message),
+      },
+      ...(notification.description
+        ? [
+            {
+              id: "copy-details",
+              label: "Copy Details",
+              icon: <ClipboardText />,
+              onClick: () => void copyText(notification.description || ""),
+            },
+          ]
+        : []),
+      {
+        id: "copy-notification",
+        label: "Copy Notification",
+        icon: <ClipboardText />,
+        onClick: () => void copyText(formatNotificationText(notification)),
+      },
+      { id: "sep-clear", label: "", separator: true, onClick: () => {} },
+      {
+        id: "clear-all",
+        label: "Clear All",
+        icon: <Trash />,
+        onClick: () => clearNotifications(),
+      },
+    ];
+  }, [clearNotifications, notificationContextMenu.data]);
+
   return (
     <>
       <Tooltip content="Notifications" side="bottom">
@@ -131,7 +195,7 @@ export const NotificationsMenu = ({ className }: NotificationsMenuProps) => {
             size="sm"
             className={cn(
               "h-full rounded-none border-0 text-text-lighter hover:bg-hover/60 hover:text-text focus-visible:rounded-none",
-              unreadCount > 0 ? "min-w-9 px-1.5" : "w-7 px-0",
+              unreadCount > 0 ? "min-w-10 gap-1 px-1.5" : "w-7 px-0",
             )}
             aria-expanded={isOpen}
             aria-haspopup="menu"
@@ -139,8 +203,8 @@ export const NotificationsMenu = ({ className }: NotificationsMenuProps) => {
           >
             <Bell className="size-4" weight="duotone" />
             {unreadCount > 0 && (
-              <span className="pointer-events-none flex h-3 min-w-3 items-center justify-center rounded-full bg-accent px-0.5 text-[8px] leading-3 text-primary-bg">
-                {unreadCount > 9 ? "9+" : unreadCount}
+              <span className="ui-font ui-text-sm pointer-events-none font-medium tabular-nums text-current">
+                {unreadCount}
               </span>
             )}
           </Button>
@@ -172,11 +236,21 @@ export const NotificationsMenu = ({ className }: NotificationsMenuProps) => {
         ) : (
           <div className="max-h-[360px] overflow-y-auto p-1">
             {notifications.map((notification) => (
-              <NotificationItem key={notification.id} notification={notification} />
+              <NotificationItem
+                key={notification.id}
+                notification={notification}
+                onContextMenu={notificationContextMenu.open}
+              />
             ))}
           </div>
         )}
       </Dropdown>
+      <ContextMenu
+        isOpen={notificationContextMenu.isOpen}
+        position={notificationContextMenu.position}
+        items={notificationContextMenuItems}
+        onClose={notificationContextMenu.close}
+      />
     </>
   );
 };

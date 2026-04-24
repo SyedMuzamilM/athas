@@ -509,8 +509,8 @@ const Footer = () => {
             >
               <WarningCircle weight="duotone" />
               {diagnosticsCount > 0 && (
-                <span className={cn(FOOTER_COUNT_PILL_CLASS_NAME, "bg-warning text-primary-bg")}>
-                  {diagnosticsCount > 9 ? "9+" : diagnosticsCount}
+                <span className="ui-font ui-text-sm font-medium tabular-nums text-current">
+                  {diagnosticsCount}
                 </span>
               )}
             </FooterTabControl>
