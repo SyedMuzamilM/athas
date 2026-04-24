@@ -35,6 +35,9 @@ interface BackendLanguageToolConfigSet {
 
 const MARKSMAN_LATEST_RELEASE_BASE =
   "https://github.com/artempyanykh/marksman/releases/latest/download";
+const LUA_LANGUAGE_SERVER_VERSION = "3.18.2";
+const LUA_LANGUAGE_SERVER_RELEASE_BASE =
+  "https://github.com/LuaLS/lua-language-server/releases/download";
 
 interface ResolvedToolPathsResult {
   toolPaths: ToolPathMap;
@@ -132,9 +135,21 @@ function getMarksmanDownloadUrl(): string {
   return `${MARKSMAN_LATEST_RELEASE_BASE}/marksman-linux-${getArchToken()}`;
 }
 
+function getLuaLanguageServerDownloadUrl(): string {
+  const platformArch =
+    NODE_PLATFORM === "win32" ? "win32-x64" : `${NODE_PLATFORM}-${getArchToken()}`;
+  const archiveExtension = NODE_PLATFORM === "win32" ? "zip" : "tar.gz";
+
+  return `${LUA_LANGUAGE_SERVER_RELEASE_BASE}/${LUA_LANGUAGE_SERVER_VERSION}/lua-language-server-${LUA_LANGUAGE_SERVER_VERSION}-${platformArch}.${archiveExtension}`;
+}
+
 function getKnownToolDownloadUrl(name: string): string | undefined {
   if (name === "marksman") {
     return getMarksmanDownloadUrl();
+  }
+
+  if (name === "lua-language-server") {
+    return getLuaLanguageServerDownloadUrl();
   }
 
   return undefined;

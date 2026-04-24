@@ -36,6 +36,21 @@ describe("extension-store runtime manifest", () => {
     );
   });
 
+  it("uses the known Lua language server release asset instead of stale package URLs", () => {
+    const url = resolveToolDownloadUrlForManifest(
+      {
+        name: "lua-language-server",
+        downloadUrl: "https://athas.dev/extensions/packages/lua/lua-${os}-${arch}.tar.gz",
+      },
+      "1.0.0",
+    );
+
+    expect(url).toContain("https://github.com/LuaLS/lua-language-server/releases/download/3.18.2/");
+    expect(url).toMatch(
+      /lua-language-server-3\.18\.2-((darwin|linux)-(arm64|x64)\.tar\.gz|win32-x64\.zip)$/,
+    );
+  });
+
   it("strips unresolved managed tools from the runtime manifest", () => {
     const manifest = createManifest({
       lsp: {
