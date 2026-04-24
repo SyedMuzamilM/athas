@@ -70,6 +70,7 @@ pub fn search_files_content(
       return Ok(Vec::new());
    }
 
+   state.ensure_workspace(&app, std::path::Path::new(&request.root_path))?;
    let fff = state.get_or_init(&app)?;
    let picker_guard = fff
       .picker

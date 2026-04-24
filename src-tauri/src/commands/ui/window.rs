@@ -87,7 +87,7 @@ pub fn configure_app_window(window: &WebviewWindow) {
 
    #[cfg(target_os = "windows")]
    {
-      let _ = window.set_decorations(true);
+      let _ = window.set_decorations(false);
    }
 
    #[cfg(target_os = "linux")]
@@ -114,6 +114,9 @@ pub fn create_app_window_internal(
       .decorations(true)
       .resizable(true)
       .shadow(true);
+
+   #[cfg(any(target_os = "windows", target_os = "linux"))]
+   let builder = builder.decorations(false);
 
    #[cfg(target_os = "macos")]
    let builder = builder

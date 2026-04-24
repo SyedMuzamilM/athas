@@ -28,38 +28,59 @@ pub async fn rebuild_menu_themes(
 
 #[tauri::command]
 pub async fn toggle_menu_bar(app: tauri::AppHandle, toggle: Option<bool>) -> Result<(), String> {
-   let is_menu_present = app.menu().is_some();
-   let should_show_menu = match toggle {
-      Some(t) => t,
-      None => !is_menu_present,
-   };
+   #[cfg(target_os = "windows")]
+   {
+      let _ = toggle;
 
-   if should_show_menu {
-      // Show menu by recreating it
-      let new_menu = create_menu_with_themes(&app, None)
-         .map_err(|e| format!("Failed to create menu: {}", e))?;
-      app.set_menu(new_menu)
-         .map_err(|e| format!("Failed to show menu: {}", e))?;
-      log::info!("Menu bar shown via command");
-
-      // Update the store to persist the setting
-      if let Ok(store) = app.store("settings.json") {
-         store.set("nativeMenuBar", true);
-         let _ = store.save();
+      if app.menu().is_some() {
+         app.remove_menu()
+            .map_err(|e| format!("Failed to hide menu: {}", e))?;
       }
-   } else {
-      // Hide menu by setting it to None
-      app.remove_menu()
-         .map_err(|e| format!("Failed to hide menu: {}", e))?;
-      log::info!("Menu bar hidden via command");
 
-      // Update the store to persist the setting
       if let Ok(store) = app.store("settings.json") {
          store.set("nativeMenuBar", false);
          let _ = store.save();
       }
+
+      log::info!("Native menu bar is disabled on Windows");
+      return Ok(());
    }
-   Ok(())
+
+   #[cfg(not(target_os = "windows"))]
+   {
+      let is_menu_present = app.menu().is_some();
+      let should_show_menu = match toggle {
+         Some(t) => t,
+         None => !is_menu_present,
+      };
+
+      if should_show_menu {
+         // Show menu by recreating it
+         let new_menu = create_menu_with_themes(&app, None)
+            .map_err(|e| format!("Failed to create menu: {}", e))?;
+         app.set_menu(new_menu)
+            .map_err(|e| format!("Failed to show menu: {}", e))?;
+         log::info!("Menu bar shown via command");
+
+         // Update the store to persist the setting
+         if let Ok(store) = app.store("settings.json") {
+            store.set("nativeMenuBar", true);
+            let _ = store.save();
+         }
+      } else {
+         // Hide menu by setting it to None
+         app.remove_menu()
+            .map_err(|e| format!("Failed to hide menu: {}", e))?;
+         log::info!("Menu bar hidden via command");
+
+         // Update the store to persist the setting
+         if let Ok(store) = app.store("settings.json") {
+            store.set("nativeMenuBar", false);
+            let _ = store.save();
+         }
+      }
+      Ok(())
+   }
 }
 
 fn build_theme_submenu<R: tauri::Runtime>(

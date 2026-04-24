@@ -11,12 +11,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { Button } from "@/ui/button";
 import { Dropdown } from "@/ui/dropdown";
+import { TabsList } from "@/ui/tabs";
 import { useToastStore, type NotificationEntry } from "@/ui/toast";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 
 interface NotificationsMenuProps {
-  iconSize?: number;
   className?: string;
 }
 
@@ -84,7 +84,7 @@ function NotificationItem({ notification }: { notification: NotificationEntry })
   );
 }
 
-export const NotificationsMenu = ({ iconSize = 16, className }: NotificationsMenuProps) => {
+export const NotificationsMenu = ({ className }: NotificationsMenuProps) => {
   const notifications = useToastStore.use.notifications();
   const markAllNotificationsRead = useToastStore((state) => state.actions.markAllNotificationsRead);
   const clearNotifications = useToastStore((state) => state.actions.clearNotifications);
@@ -122,26 +122,29 @@ export const NotificationsMenu = ({ iconSize = 16, className }: NotificationsMen
   return (
     <>
       <Tooltip content="Notifications" side="bottom">
-        <div className="relative">
+        <TabsList variant="segmented" className={cn("pointer-events-auto", className)}>
           <Button
             ref={buttonRef}
             onClick={() => setIsOpen((open) => !open)}
             type="button"
-            variant="secondary"
-            size="icon-md"
-            className={className}
+            variant="ghost"
+            size="sm"
+            className={cn(
+              "h-full rounded-none border-0 text-text-lighter hover:bg-hover/60 hover:text-text focus-visible:rounded-none",
+              unreadCount > 0 ? "min-w-9 px-1.5" : "w-7 px-0",
+            )}
             aria-expanded={isOpen}
             aria-haspopup="menu"
             aria-label="Notifications"
           >
-            <Bell size={iconSize} weight="duotone" />
+            <Bell className="size-4" weight="duotone" />
+            {unreadCount > 0 && (
+              <span className="pointer-events-none flex h-3 min-w-3 items-center justify-center rounded-full bg-accent px-0.5 text-[8px] leading-3 text-primary-bg">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
           </Button>
-          {unreadCount > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 flex min-w-[14px] items-center justify-center rounded-full bg-accent px-1 text-[10px] leading-4 text-primary-bg">
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </span>
-          )}
-        </div>
+        </TabsList>
       </Tooltip>
       <Dropdown
         isOpen={isOpen}

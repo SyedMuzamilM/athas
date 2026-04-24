@@ -4,7 +4,10 @@ use nucleo_matcher::{
    pattern::{Atom, AtomKind, CaseMatching, Normalization},
 };
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::{
+   path::{Path, PathBuf},
+   sync::{Mutex, OnceLock},
+};
 use tauri::{AppHandle, Manager, State};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -201,15 +204,21 @@ pub fn filter_completions(request: CompletionFilterRequest) -> Vec<FilteredCompl
    filtered
 }
 
-pub struct FffSearchState(pub std::sync::OnceLock<FffSearch>);
+pub struct FffSearchState {
+   fff: OnceLock<FffSearch>,
+   workspace_path: Mutex<Option<PathBuf>>,
+}
 
 impl FffSearchState {
    pub fn new() -> Self {
-      Self(std::sync::OnceLock::new())
+      Self {
+         fff: OnceLock::new(),
+         workspace_path: Mutex::new(None),
+      }
    }
 
    pub(crate) fn get_or_init(&self, app: &AppHandle) -> Result<&FffSearch, String> {
-      if let Some(fff) = self.0.get() {
+      if let Some(fff) = self.fff.get() {
          return Ok(fff);
       }
 
@@ -219,8 +228,26 @@ impl FffSearchState {
          .map_err(|e| format!("app_data_dir: {e}"))?;
       let db_path: PathBuf = data_dir.join("fff-frecency.lmdb");
       let fff = FffSearch::new(db_path).map_err(|e| format!("fff init: {e}"))?;
-      let _ = self.0.set(fff);
-      Ok(self.0.get().unwrap())
+      let _ = self.fff.set(fff);
+      Ok(self.fff.get().unwrap())
+   }
+
+   pub(crate) fn ensure_workspace(&self, app: &AppHandle, base_path: &Path) -> Result<(), String> {
+      let fff = self.get_or_init(app)?;
+      let next_path = base_path.to_path_buf();
+      let mut workspace_path = self
+         .workspace_path
+         .lock()
+         .map_err(|e| format!("fff workspace lock: {e}"))?;
+
+      if workspace_path.as_ref() == Some(&next_path) {
+         return Ok(());
+      }
+
+      fff.set_workspace(base_path)
+         .map_err(|e| format!("fff set_workspace: {e}"))?;
+      *workspace_path = Some(next_path);
+      Ok(())
    }
 }
 
@@ -230,9 +257,7 @@ pub fn fff_set_workspace(
    state: State<'_, FffSearchState>,
    base_path: String,
 ) -> Result<(), String> {
-   let fff = state.get_or_init(&app)?;
-   fff.set_workspace(std::path::Path::new(&base_path))
-      .map_err(|e| format!("fff set_workspace: {e}"))
+   state.ensure_workspace(&app, Path::new(&base_path))
 }
 
 #[tauri::command]

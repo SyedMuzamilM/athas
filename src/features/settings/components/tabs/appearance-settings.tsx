@@ -18,7 +18,7 @@ import Section, { SETTINGS_CONTROL_WIDTHS, SettingRow } from "../settings-sectio
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import { cn } from "@/utils/cn";
-import { IS_MAC } from "@/utils/platform";
+import { IS_MAC, IS_WINDOWS } from "@/utils/platform";
 import { FontSelector } from "../font-selector";
 
 export const AppearanceSettings = () => {
@@ -313,7 +313,7 @@ export const AppearanceSettings = () => {
           />
         </SettingRow>
 
-        {!IS_MAC && (
+        {!IS_MAC && !IS_WINDOWS && (
           <SettingRow
             label="Native Menu Bar"
             description="Use the native menu bar or a custom UI menu bar"

@@ -11,6 +11,7 @@ use athas_project::FileWatcher;
 use log::{debug, info};
 use std::sync::Arc;
 use tauri::{Emitter, Manager, Wry};
+#[cfg(not(target_os = "windows"))]
 use tauri_plugin_os::platform;
 use tauri_plugin_store::StoreExt;
 use tokio::sync::Mutex;
@@ -32,18 +33,28 @@ pub fn configure_app(app: &mut tauri::App<Wry>) -> Result<(), Box<dyn std::error
 fn configure_menu(app: &mut tauri::App<Wry>) -> Result<(), Box<dyn std::error::Error>> {
    let store = app.store("settings.json")?;
 
-   let native_menu_bar = store
-      .get("nativeMenuBar")
-      .and_then(|v| v.as_bool())
-      .unwrap_or_else(|| {
-         let default = platform() == "macos";
-         store.set("nativeMenuBar", default);
-         default
-      });
+   #[cfg(target_os = "windows")]
+   {
+      store.set("nativeMenuBar", false);
+      let _ = store.save();
+      return Ok(());
+   }
 
-   if native_menu_bar {
-      let menu = menu::create_menu(app.handle())?;
-      app.set_menu(menu)?;
+   #[cfg(not(target_os = "windows"))]
+   {
+      let native_menu_bar = store
+         .get("nativeMenuBar")
+         .and_then(|v| v.as_bool())
+         .unwrap_or_else(|| {
+            let default = platform() == "macos";
+            store.set("nativeMenuBar", default);
+            default
+         });
+
+      if native_menu_bar {
+         let menu = menu::create_menu(app.handle())?;
+         app.set_menu(menu)?;
+      }
    }
 
    Ok(())
