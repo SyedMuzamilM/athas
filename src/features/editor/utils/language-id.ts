@@ -1,4 +1,8 @@
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
+import {
+  ANGULAR_TEMPLATE_LANGUAGE_ID,
+  isAngularTemplatePath,
+} from "@/features/editor/lib/wasm-parser/angular-template";
 
 const EXTENSION_TO_LANGUAGE: Record<string, string> = {
   js: "javascript",
@@ -94,6 +98,7 @@ export function getLanguageIdFromExtension(extension: string): string | null {
 }
 
 export const LANGUAGE_DISPLAY_NAMES: Record<string, string> = {
+  [ANGULAR_TEMPLATE_LANGUAGE_ID]: "Angular Template",
   javascript: "JavaScript",
   javascriptreact: "JSX",
   typescript: "TypeScript",
@@ -165,6 +170,10 @@ export function getAllLanguages(): Array<{ id: string; displayName: string }> {
 }
 
 export function getLanguageIdFromPath(filePath: string): string | null {
+  if (isAngularTemplatePath(filePath)) {
+    return ANGULAR_TEMPLATE_LANGUAGE_ID;
+  }
+
   const fromRegistry = extensionRegistry.getLanguageId(filePath);
   if (fromRegistry) {
     return normalizeLanguageId(fromRegistry);

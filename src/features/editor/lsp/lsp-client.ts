@@ -482,6 +482,7 @@ export class LspClient {
       ruby: "Ruby",
       php: "PHP",
       html: "HTML",
+      angular: "Angular Template",
       css: "CSS",
       json: "JSON",
       yaml: "YAML",

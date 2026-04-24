@@ -7,6 +7,7 @@ import type { Node, Tree } from "web-tree-sitter";
 import { logger } from "../../utils/logger";
 import { getDefaultParserWasmUrl } from "./extension-assets";
 import { wasmParserLoader } from "./loader";
+import { angularTemplateTokens, ANGULAR_TEMPLATE_LANGUAGE_ID } from "./angular-template";
 import type {
   HighlightToken,
   IncrementalParseOptions,
@@ -25,6 +26,10 @@ interface InjectionRule {
 }
 
 const LANGUAGE_INJECTIONS: Record<string, InjectionRule[]> = {
+  angular: [
+    { parentType: "script_element", contentType: "raw_text", language: "javascript" },
+    { parentType: "style_element", contentType: "raw_text", language: "css" },
+  ],
   html: [
     { parentType: "script_element", contentType: "raw_text", language: "javascript" },
     { parentType: "style_element", contentType: "raw_text", language: "css" },
@@ -399,6 +404,10 @@ export async function tokenizeCodeWithTree(
           );
         }
       }
+    }
+
+    if (languageId === ANGULAR_TEMPLATE_LANGUAGE_ID) {
+      tokens.push(...angularTemplateTokens(content));
     }
 
     // Deduplicate tokens at the same range. Tree-sitter returns captures in

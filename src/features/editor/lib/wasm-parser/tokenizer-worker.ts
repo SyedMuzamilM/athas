@@ -6,6 +6,7 @@ import { getDefaultParserWasmUrl } from "./extension-assets";
 import { wasmParserLoader } from "./loader";
 import type { HighlightToken, LoadedParser, ParserConfig } from "./types";
 import { calculateEdit, isSimpleEdit } from "../../utils/tree-sitter-edit";
+import { angularTemplateTokens, ANGULAR_TEMPLATE_LANGUAGE_ID } from "./angular-template";
 
 interface WorkerSession {
   bufferId: string;
@@ -67,6 +68,10 @@ type WorkerResponse = WorkerSuccessResponse | WorkerErrorResponse;
 const sessions = new Map<string, WorkerSession>();
 
 const LANGUAGE_INJECTIONS: Record<string, InjectionRule[]> = {
+  angular: [
+    { parentType: "script_element", contentType: "raw_text", language: "javascript" },
+    { parentType: "style_element", contentType: "raw_text", language: "css" },
+  ],
   html: [
     { parentType: "script_element", contentType: "raw_text", language: "javascript" },
     { parentType: "style_element", contentType: "raw_text", language: "css" },
@@ -482,6 +487,10 @@ async function handleTokenize(message: TokenizeMessage): Promise<WorkerSuccessRe
         );
       }
     }
+  }
+
+  if (message.languageId === ANGULAR_TEMPLATE_LANGUAGE_ID) {
+    tokens.push(...angularTemplateTokens(normalizedContent));
   }
 
   const nextSession = upsertTree(existing, message.languageId, normalizedContent, tree);
