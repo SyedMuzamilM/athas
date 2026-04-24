@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { ExtensionManifest } from "../types/extension-manifest";
-import { buildRuntimeManifest, resolveToolDownloadUrlForManifest } from "./extension-store-runtime";
+import {
+  buildRuntimeManifest,
+  resolveToolCommandForManifest,
+  resolveToolDownloadUrlForManifest,
+} from "./extension-store-runtime";
 
 function createManifest(overrides: Partial<ExtensionManifest> = {}): ExtensionManifest {
   return {
@@ -49,6 +53,10 @@ describe("extension-store runtime manifest", () => {
     expect(url).toMatch(
       /lua-language-server-3\.18\.2-((darwin|linux)-(arm64|x64)\.tar\.gz|win32-x64\.zip)$/,
     );
+  });
+
+  it("uses the pyright language server executable for the pyright package", () => {
+    expect(resolveToolCommandForManifest({ name: "pyright" })).toBe("pyright-langserver");
   });
 
   it("strips unresolved managed tools from the runtime manifest", () => {

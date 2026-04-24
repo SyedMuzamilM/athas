@@ -20,6 +20,7 @@ type BackendToolRuntime = Extract<
 
 interface BackendToolConfig {
   name: string;
+  command?: string;
   runtime: BackendToolRuntime;
   package?: string;
   downloadUrl?: string;
@@ -177,6 +178,15 @@ export function resolveToolDownloadUrlForManifest(
     : undefined;
 }
 
+export function resolveToolCommandForManifest(input: { name?: string }): string | undefined {
+  const name = input.name?.trim();
+  if (name === "pyright") {
+    return "pyright-langserver";
+  }
+
+  return undefined;
+}
+
 function toBackendToolConfig(
   input: {
     name?: string;
@@ -195,6 +205,7 @@ function toBackendToolConfig(
 
   if (!input.runtime) {
     const downloadUrl = resolveToolDownloadUrlForManifest(input, extensionVersion);
+    const command = resolveToolCommandForManifest(input);
 
     if (!downloadUrl) {
       return undefined;
@@ -202,6 +213,7 @@ function toBackendToolConfig(
 
     return {
       name,
+      ...(command ? { command } : {}),
       runtime: "binary",
       downloadUrl,
       ...(input.args ? { args: input.args } : {}),
@@ -210,9 +222,11 @@ function toBackendToolConfig(
   }
 
   const downloadUrl = resolveToolDownloadUrlForManifest(input, extensionVersion);
+  const command = resolveToolCommandForManifest(input);
 
   return {
     name,
+    ...(command ? { command } : {}),
     runtime: input.runtime,
     ...(input.package ? { package: input.package } : {}),
     ...(downloadUrl ? { downloadUrl } : {}),
