@@ -33,6 +33,9 @@ interface BackendLanguageToolConfigSet {
   linter?: BackendToolConfig;
 }
 
+const MARKSMAN_LATEST_RELEASE_BASE =
+  "https://github.com/artempyanykh/marksman/releases/latest/download";
+
 interface ResolvedToolPathsResult {
   toolPaths: ToolPathMap;
   issues: ExtensionRuntimeIssue[];
@@ -117,6 +120,48 @@ function resolveDownloadUrlTemplate(template: string, extensionVersion: string):
     .replace(/\$\{version\}/g, extensionVersion || "latest");
 }
 
+function getMarksmanDownloadUrl(): string {
+  if (NODE_PLATFORM === "darwin") {
+    return `${MARKSMAN_LATEST_RELEASE_BASE}/marksman-macos`;
+  }
+
+  if (NODE_PLATFORM === "win32") {
+    return `${MARKSMAN_LATEST_RELEASE_BASE}/marksman.exe`;
+  }
+
+  return `${MARKSMAN_LATEST_RELEASE_BASE}/marksman-linux-${getArchToken()}`;
+}
+
+function getKnownToolDownloadUrl(name: string): string | undefined {
+  if (name === "marksman") {
+    return getMarksmanDownloadUrl();
+  }
+
+  return undefined;
+}
+
+export function resolveToolDownloadUrlForManifest(
+  input: {
+    name?: string;
+    downloadUrl?: string;
+  },
+  extensionVersion: string,
+): string | undefined {
+  const name = input.name?.trim();
+  if (!name) {
+    return undefined;
+  }
+
+  const knownToolUrl = getKnownToolDownloadUrl(name);
+  if (knownToolUrl) {
+    return knownToolUrl;
+  }
+
+  return input.downloadUrl
+    ? resolveDownloadUrlTemplate(input.downloadUrl, extensionVersion)
+    : undefined;
+}
+
 function toBackendToolConfig(
   input: {
     name?: string;
@@ -129,13 +174,27 @@ function toBackendToolConfig(
   extensionVersion: string,
 ): BackendToolConfig | undefined {
   const name = input.name?.trim();
-  if (!name || !input.runtime) {
+  if (!name) {
     return undefined;
   }
 
-  const downloadUrl = input.downloadUrl
-    ? resolveDownloadUrlTemplate(input.downloadUrl, extensionVersion)
-    : undefined;
+  if (!input.runtime) {
+    const downloadUrl = resolveToolDownloadUrlForManifest(input, extensionVersion);
+
+    if (!downloadUrl) {
+      return undefined;
+    }
+
+    return {
+      name,
+      runtime: "binary",
+      downloadUrl,
+      ...(input.args ? { args: input.args } : {}),
+      ...(input.env ? { env: input.env } : {}),
+    };
+  }
+
+  const downloadUrl = resolveToolDownloadUrlForManifest(input, extensionVersion);
 
   return {
     name,
@@ -341,6 +400,7 @@ export function buildRuntimeManifest(
   manifest: ExtensionManifest,
   toolPaths: ToolPathMap,
 ): ExtensionManifest {
+  const managedTools = getLanguageToolConfigSet(manifest);
   const runtimeManifest: ExtensionManifest = {
     ...manifest,
     languages: manifest.languages?.map((lang) => ({
@@ -351,7 +411,7 @@ export function buildRuntimeManifest(
     })),
   };
 
-  if (runtimeManifest.lsp) {
+  if (runtimeManifest.lsp && managedTools?.lsp) {
     if (toolPaths.lsp) {
       runtimeManifest.lsp = {
         ...runtimeManifest.lsp,
@@ -359,10 +419,12 @@ export function buildRuntimeManifest(
           default: toolPaths.lsp,
         },
       };
+    } else {
+      delete runtimeManifest.lsp;
     }
   }
 
-  if (runtimeManifest.formatter) {
+  if (runtimeManifest.formatter && managedTools?.formatter) {
     if (toolPaths.formatter) {
       runtimeManifest.formatter = {
         ...runtimeManifest.formatter,
@@ -370,10 +432,12 @@ export function buildRuntimeManifest(
           default: toolPaths.formatter,
         },
       };
+    } else {
+      delete runtimeManifest.formatter;
     }
   }
 
-  if (runtimeManifest.linter) {
+  if (runtimeManifest.linter && managedTools?.linter) {
     if (toolPaths.linter) {
       runtimeManifest.linter = {
         ...runtimeManifest.linter,
@@ -381,6 +445,8 @@ export function buildRuntimeManifest(
           default: toolPaths.linter,
         },
       };
+    } else {
+      delete runtimeManifest.linter;
     }
   }
 
