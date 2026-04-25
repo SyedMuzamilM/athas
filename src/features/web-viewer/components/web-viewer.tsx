@@ -58,6 +58,10 @@ function getWebViewerErrorMessage(error: unknown) {
   return "Couldn't open this page.";
 }
 
+function isWebviewNotFoundError(error: unknown) {
+  return typeof error === "string" && error.includes("Webview not found:");
+}
+
 export function WebViewer({
   url: initialUrl,
   bufferId,
@@ -87,7 +91,11 @@ export function WebViewer({
   const webViewerBuffer = buffers.find(
     (buffer) => buffer.id === bufferId && buffer.type === "webViewer",
   );
-  const { error: webviewError, webviewLabel } = useEmbeddedWebview({
+  const {
+    error: webviewError,
+    resetWebview,
+    webviewLabel,
+  } = useEmbeddedWebview({
     bufferId,
     initialUrl: currentUrl,
     containerRef,
@@ -387,14 +395,19 @@ export function WebViewer({
           url: normalizedUrl,
         });
       } catch (error) {
-        console.error("Failed to navigate:", error);
         pendingNavigationActionRef.current = null;
         setIsLoading(false);
+        if (isWebviewNotFoundError(error)) {
+          resetWebview(webviewLabel);
+          setIsLoading(true);
+          return;
+        }
+        console.error("Failed to navigate:", error);
         setPageError(getWebViewerErrorMessage(error));
         return;
       }
     },
-    [webviewLabel],
+    [resetWebview, webviewLabel],
   );
 
   const handleGoBack = useCallback(() => {
