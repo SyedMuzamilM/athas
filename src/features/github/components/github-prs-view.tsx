@@ -1,5 +1,5 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { GitHubCliStatusMessage } from "./github-cli-status";
+import { GitHubAuthStatusMessage } from "./github-auth-status";
 import {
   ArrowSquareOut,
   ChatCircleText,
@@ -410,7 +410,7 @@ const GitHubPRsView = memo(() => {
         <div className="flex items-center justify-between px-0.5 py-0.5">
           <span className="ui-text-sm font-medium text-text">GitHub</span>
         </div>
-        <GitHubCliStatusMessage />
+        <GitHubAuthStatusMessage />
       </div>
     );
   }

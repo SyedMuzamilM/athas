@@ -23,11 +23,11 @@ fn get_stored_github_token(app: &tauri::AppHandle) -> Option<String> {
 }
 
 #[tauri::command]
-pub async fn github_check_cli_auth(
+pub async fn github_check_auth(
    app: tauri::AppHandle,
-) -> Result<athas_github::GitHubCliStatus, String> {
+) -> Result<athas_github::GitHubAuthStatus, String> {
    let github_token = get_stored_github_token(&app);
-   run_blocking(move || athas_github::github_check_cli_status(app, github_token)).await
+   run_blocking(move || athas_github::github_check_auth(github_token)).await
 }
 
 #[tauri::command]
@@ -37,13 +37,13 @@ pub async fn github_list_prs(
    filter: String,
 ) -> Result<Vec<PullRequest>, String> {
    let github_token = get_stored_github_token(&app);
-   run_blocking(move || athas_github::github_list_prs(app, repo_path, filter, github_token)).await
+   run_blocking(move || athas_github::github_list_prs(repo_path, filter, github_token)).await
 }
 
 #[tauri::command]
 pub async fn github_get_current_user(app: tauri::AppHandle) -> Result<String, String> {
    let github_token = get_stored_github_token(&app);
-   run_blocking(move || athas_github::github_get_current_user(app, github_token)).await
+   run_blocking(move || athas_github::github_get_current_user(github_token)).await
 }
 
 #[tauri::command]
@@ -52,7 +52,7 @@ pub async fn github_list_issues(
    repo_path: String,
 ) -> Result<Vec<IssueListItem>, String> {
    let github_token = get_stored_github_token(&app);
-   run_blocking(move || athas_github::github_list_issues(app, repo_path, github_token)).await
+   run_blocking(move || athas_github::github_list_issues(repo_path, github_token)).await
 }
 
 #[tauri::command]
@@ -61,20 +61,7 @@ pub async fn github_list_workflow_runs(
    repo_path: String,
 ) -> Result<Vec<WorkflowRunListItem>, String> {
    let github_token = get_stored_github_token(&app);
-   run_blocking(move || athas_github::github_list_workflow_runs(app, repo_path, github_token)).await
-}
-
-#[tauri::command]
-pub async fn github_open_pr_in_browser(
-   app: tauri::AppHandle,
-   repo_path: String,
-   pr_number: i64,
-) -> Result<(), String> {
-   let github_token = get_stored_github_token(&app);
-   run_blocking(move || {
-      athas_github::github_open_pr_in_browser(app, repo_path, pr_number, github_token)
-   })
-   .await
+   run_blocking(move || athas_github::github_list_workflow_runs(repo_path, github_token)).await
 }
 
 #[tauri::command]
@@ -84,8 +71,7 @@ pub async fn github_checkout_pr(
    pr_number: i64,
 ) -> Result<(), String> {
    let github_token = get_stored_github_token(&app);
-   run_blocking(move || athas_github::github_checkout_pr(app, repo_path, pr_number, github_token))
-      .await
+   run_blocking(move || athas_github::github_checkout_pr(repo_path, pr_number, github_token)).await
 }
 
 #[tauri::command]
@@ -95,10 +81,8 @@ pub async fn github_get_pr_details(
    pr_number: i64,
 ) -> Result<PullRequestDetails, String> {
    let github_token = get_stored_github_token(&app);
-   run_blocking(move || {
-      athas_github::github_get_pr_details(app, repo_path, pr_number, github_token)
-   })
-   .await
+   run_blocking(move || athas_github::github_get_pr_details(repo_path, pr_number, github_token))
+      .await
 }
 
 #[tauri::command]
@@ -108,8 +92,7 @@ pub async fn github_get_pr_diff(
    pr_number: i64,
 ) -> Result<String, String> {
    let github_token = get_stored_github_token(&app);
-   run_blocking(move || athas_github::github_get_pr_diff(app, repo_path, pr_number, github_token))
-      .await
+   run_blocking(move || athas_github::github_get_pr_diff(repo_path, pr_number, github_token)).await
 }
 
 #[tauri::command]
@@ -119,8 +102,7 @@ pub async fn github_get_pr_files(
    pr_number: i64,
 ) -> Result<Vec<PullRequestFile>, String> {
    let github_token = get_stored_github_token(&app);
-   run_blocking(move || athas_github::github_get_pr_files(app, repo_path, pr_number, github_token))
-      .await
+   run_blocking(move || athas_github::github_get_pr_files(repo_path, pr_number, github_token)).await
 }
 
 #[tauri::command]
@@ -130,10 +112,8 @@ pub async fn github_get_pr_comments(
    pr_number: i64,
 ) -> Result<Vec<PullRequestComment>, String> {
    let github_token = get_stored_github_token(&app);
-   run_blocking(move || {
-      athas_github::github_get_pr_comments(app, repo_path, pr_number, github_token)
-   })
-   .await
+   run_blocking(move || athas_github::github_get_pr_comments(repo_path, pr_number, github_token))
+      .await
 }
 
 #[tauri::command]
@@ -144,7 +124,7 @@ pub async fn github_get_issue_details(
 ) -> Result<IssueDetails, String> {
    let github_token = get_stored_github_token(&app);
    run_blocking(move || {
-      athas_github::github_get_issue_details(app, repo_path, issue_number, github_token)
+      athas_github::github_get_issue_details(repo_path, issue_number, github_token)
    })
    .await
 }
@@ -157,7 +137,7 @@ pub async fn github_get_workflow_run_details(
 ) -> Result<WorkflowRunDetails, String> {
    let github_token = get_stored_github_token(&app);
    run_blocking(move || {
-      athas_github::github_get_workflow_run_details(app, repo_path, run_id, github_token)
+      athas_github::github_get_workflow_run_details(repo_path, run_id, github_token)
    })
    .await
 }

@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { create } from "zustand";
 import { combine } from "zustand/middleware";
 import type {
@@ -33,7 +34,7 @@ interface PRDetailsCacheEntry {
   contentFetchedAt?: number;
 }
 
-type GitHubCliStatus = "authenticated" | "notAuthenticated" | "notInstalled";
+type GitHubAuthStatus = "authenticated" | "notAuthenticated";
 type GitHubAccountStatus = "unknown" | "notSignedIn" | "notConnected" | "connected";
 
 interface GitHubState {
@@ -43,7 +44,7 @@ interface GitHubState {
   error: string | null;
   activeRepoPath: string | null;
   isAuthenticated: boolean;
-  cliStatus: GitHubCliStatus;
+  authStatus: GitHubAuthStatus;
   githubAccountStatus: GitHubAccountStatus;
   currentUser: string | null;
   // Selected PR state
@@ -67,7 +68,7 @@ const initialState: GitHubState = {
   error: null,
   activeRepoPath: null,
   isAuthenticated: false,
-  cliStatus: "notAuthenticated" as GitHubCliStatus,
+  authStatus: "notAuthenticated" as GitHubAuthStatus,
   githubAccountStatus: "unknown" as GitHubAccountStatus,
   currentUser: null,
   // Selected PR state
@@ -180,12 +181,12 @@ export const useGitHubStore = create(
         }
 
         try {
-          const status = await invoke<GitHubCliStatus>("github_check_cli_auth");
+          const status = await invoke<GitHubAuthStatus>("github_check_auth");
           if (status === "authenticated") {
             const user = await invoke<string>("github_get_current_user");
             set({
               isAuthenticated: true,
-              cliStatus: status,
+              authStatus: status,
               githubAccountStatus: "connected",
               currentUser: user,
               error: null,
@@ -199,13 +200,13 @@ export const useGitHubStore = create(
                 githubAccountStatus = getAccountStatus(syncResult.status);
 
                 if (syncResult.status === "synced") {
-                  const syncedStatus = await invoke<GitHubCliStatus>("github_check_cli_auth");
+                  const syncedStatus = await invoke<GitHubAuthStatus>("github_check_auth");
 
                   if (syncedStatus === "authenticated") {
                     const user = await invoke<string>("github_get_current_user");
                     set({
                       isAuthenticated: true,
-                      cliStatus: syncedStatus,
+                      authStatus: syncedStatus,
                       githubAccountStatus,
                       currentUser: user,
                       error: null,
@@ -216,7 +217,7 @@ export const useGitHubStore = create(
 
                   set({
                     isAuthenticated: false,
-                    cliStatus: syncedStatus,
+                    authStatus: syncedStatus,
                     githubAccountStatus,
                     currentUser: null,
                   });
@@ -230,7 +231,7 @@ export const useGitHubStore = create(
 
             set({
               isAuthenticated: false,
-              cliStatus: status,
+              authStatus: status,
               githubAccountStatus,
               currentUser: null,
             });
@@ -239,7 +240,7 @@ export const useGitHubStore = create(
         } catch {
           set({
             isAuthenticated: false,
-            cliStatus: "notInstalled",
+            authStatus: "notAuthenticated",
             githubAccountStatus: get().githubAccountStatus,
             currentUser: null,
           });
@@ -323,7 +324,20 @@ export const useGitHubStore = create(
 
       openPRInBrowser: async (repoPath: string, prNumber: number) => {
         try {
-          await invoke("github_open_pr_in_browser", { repoPath, prNumber });
+          const cacheKey = getPRDetailsCacheKey(repoPath, prNumber);
+          const cachedUrl = get().prDetailsCache[cacheKey]?.details?.url;
+          const url =
+            cachedUrl ||
+            (
+              await invoke<PullRequestDetails>("github_get_pr_details", {
+                repoPath,
+                prNumber,
+              })
+            ).url;
+
+          if (url.startsWith("https://github.com/")) {
+            await openUrl(url);
+          }
         } catch (err) {
           console.error("Failed to open PR:", err);
         }

@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { Pulse as Activity, WarningCircle as AlertCircle } from "@phosphor-icons/react";
-import { GitHubCliStatusMessage } from "./github-cli-status";
+import { GitHubAuthStatusMessage } from "./github-auth-status";
 import {
   memo,
   startTransition,
@@ -170,7 +170,7 @@ const GitHubActionsView = memo(({ refreshNonce = 0 }: GitHubActionsViewProps) =>
   if (!isAuthenticated) {
     return (
       <div className="flex h-full items-center justify-center p-4">
-        <GitHubCliStatusMessage />
+        <GitHubAuthStatusMessage />
       </div>
     );
   }

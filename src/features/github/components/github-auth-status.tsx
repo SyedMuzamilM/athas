@@ -1,85 +1,28 @@
-import { WarningCircle as AlertCircle, Download } from "@phosphor-icons/react";
-import { platform } from "@tauri-apps/plugin-os";
+import { WarningCircle as AlertCircle } from "@phosphor-icons/react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { Button } from "@/ui/button";
-import { getApiBase } from "@/utils/api-base";
 import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
 import { useAuthStore } from "@/features/window/stores/auth-store";
+import { GITHUB_ACCOUNT_API_BASE, GITHUB_CONNECTION_URL } from "../services/github-token-service";
 import { useGitHubStore } from "../stores/github-store";
 
-function getInstallHint(): { label: string; action: () => void } {
-  const os = platform();
-
-  if (os === "macos") {
-    return {
-      label: "brew install gh",
-      action: () => void openUrl("https://github.com/cli/cli#macos"),
-    };
-  }
-  if (os === "windows") {
-    return {
-      label: "winget install GitHub.cli",
-      action: () => void openUrl("https://github.com/cli/cli#windows"),
-    };
-  }
-  return {
-    label: "Install GitHub CLI",
-    action: () => void openUrl("https://github.com/cli/cli#linux--bsd"),
-  };
-}
-
-export function GitHubCliStatusMessage() {
-  const cliStatus = useGitHubStore((s) => s.cliStatus);
+export function GitHubAuthStatusMessage() {
   const githubAccountStatus = useGitHubStore((s) => s.githubAccountStatus);
   const checkAuth = useGitHubStore((s) => s.actions.checkAuth);
   const isAthasAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const { signIn, isSigningIn } = useDesktopSignIn({
+    apiBase: GITHUB_ACCOUNT_API_BASE,
     onSuccess: () => void checkAuth({ force: true }),
   });
-  const install = getInstallHint();
 
   const retry = () => void checkAuth({ force: true });
-  const openGitHubConnection = () =>
-    void openUrl(`${getApiBase()}/dashboard/settings/integrations`);
-
-  if (cliStatus === "notInstalled") {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-border/60 bg-secondary-bg/60 p-4 text-center">
-        <Download className="mb-2 text-text-lighter" />
-        <p className="ui-text-sm text-text">GitHub CLI not installed</p>
-        <p className="ui-text-sm mt-1 text-text-lighter">
-          Install it with <code className="rounded bg-hover px-1 py-0.5">{install.label}</code>
-        </p>
-        <div className="mt-2 flex items-center gap-2">
-          <Button
-            onClick={install.action}
-            variant="ghost"
-            size="xs"
-            className="h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
-            aria-label="Open install instructions"
-          >
-            Install guide
-          </Button>
-          <span className="text-border">|</span>
-          <Button
-            onClick={retry}
-            variant="ghost"
-            size="xs"
-            className="h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
-            aria-label="Retry"
-          >
-            Retry
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  const openGitHubConnection = () => void openUrl(GITHUB_CONNECTION_URL);
 
   if (!isAthasAuthenticated || githubAccountStatus === "notSignedIn") {
     return (
       <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-border/60 bg-secondary-bg/60 p-4 text-center">
         <AlertCircle className="mb-2 text-text-lighter" />
-        <p className="ui-text-sm text-text">GitHub CLI not authenticated</p>
+        <p className="ui-text-sm text-text">GitHub account required</p>
         <p className="ui-text-sm mt-1 text-text-lighter">
           Sign in to Athas to use your connected GitHub account.
         </p>
@@ -133,19 +76,31 @@ export function GitHubCliStatusMessage() {
   return (
     <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-border/60 bg-secondary-bg/60 p-4 text-center">
       <AlertCircle className="mb-2 text-text-lighter" />
-      <p className="ui-text-sm text-text">GitHub CLI not authenticated</p>
+      <p className="ui-text-sm text-text">GitHub account not authenticated</p>
       <p className="ui-text-sm mt-1 text-text-lighter">
-        Run <code className="rounded bg-hover px-1 py-0.5">gh auth login</code> in terminal
+        Connect GitHub in Athas, then retry this view.
       </p>
-      <Button
-        onClick={retry}
-        variant="ghost"
-        size="xs"
-        className="mt-2 h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
-        aria-label="Retry authentication check"
-      >
-        Retry
-      </Button>
+      <div className="mt-2 flex items-center gap-2">
+        <Button
+          onClick={openGitHubConnection}
+          variant="ghost"
+          size="xs"
+          className="h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
+          aria-label="Connect GitHub"
+        >
+          Connect GitHub
+        </Button>
+        <span className="text-border">|</span>
+        <Button
+          onClick={retry}
+          variant="ghost"
+          size="xs"
+          className="h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
+          aria-label="Retry authentication check"
+        >
+          Retry
+        </Button>
+      </div>
     </div>
   );
 }

@@ -1,7 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { getAuthToken } from "@/features/window/services/auth-api";
-import { getApiBase } from "@/utils/api-base";
+
+export const GITHUB_ACCOUNT_API_BASE = "https://athas.dev";
+export const GITHUB_CONNECTION_URL = `${GITHUB_ACCOUNT_API_BASE}/dashboard/settings/integrations`;
 
 export type GitHubTokenSyncStatus = "synced" | "notSignedIn" | "notConnected";
 
@@ -41,7 +43,7 @@ export const syncGitHubTokenFromAccount = async (): Promise<GitHubTokenSyncResul
     return { status: "notSignedIn" };
   }
 
-  const response = await tauriFetch(`${getApiBase()}/api/desktop/github/token`, {
+  const response = await tauriFetch(`${GITHUB_ACCOUNT_API_BASE}/api/desktop/github/token`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },

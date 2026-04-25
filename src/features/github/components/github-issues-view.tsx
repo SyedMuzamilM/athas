@@ -3,7 +3,7 @@ import {
   WarningCircle as AlertCircle,
   ChatCircleText as MessageSquare,
 } from "@phosphor-icons/react";
-import { GitHubCliStatusMessage } from "./github-cli-status";
+import { GitHubAuthStatusMessage } from "./github-auth-status";
 import {
   memo,
   startTransition,
@@ -173,7 +173,7 @@ const GitHubIssuesView = memo(({ refreshNonce = 0 }: GitHubIssuesViewProps) => {
   if (!isAuthenticated) {
     return (
       <div className="flex h-full items-center justify-center p-4">
-        <GitHubCliStatusMessage />
+        <GitHubAuthStatusMessage />
       </div>
     );
   }
