@@ -18,6 +18,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
 import { getGitStatus } from "@/features/git/api/git-status-api";
 import GitBranchManager from "@/features/git/components/git-branch-manager";
+import GitWorktreeSwitcher from "@/features/git/components/git-worktree-switcher";
 import { useGitStore } from "@/features/git/stores/git-store";
 import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
 import { useUpdater } from "@/features/settings/hooks/use-updater";
@@ -220,10 +221,10 @@ const AiUsageStatusIndicator = () => {
   const indicatorLabel = !isAuthenticated ? "Guest" : planLabel;
 
   const modeToneClass = (() => {
-    if (!isAuthenticated || !aiAllowedByPolicy) return "text-red-400";
-    if (usesByok && !hasOpenRouterKey) return "text-yellow-400";
-    if (usesByok) return "text-blue-400";
-    return "text-emerald-400";
+    if (!isAuthenticated || !aiAllowedByPolicy) return "text-error";
+    if (usesByok && !hasOpenRouterKey) return "text-warning";
+    if (usesByok) return "text-accent";
+    return "text-accent";
   })();
 
   const refreshAll = async () => {
@@ -292,7 +293,12 @@ const AiUsageStatusIndicator = () => {
           <div className="flex items-center gap-2">
             <span className="ui-font ui-text-md font-medium text-text">AI</span>
             {isPro ? (
-              <Badge variant="accent" shape="pill" size="compact" className="text-emerald-300">
+              <Badge
+                variant="default"
+                shape="pill"
+                size="compact"
+                className="border-accent/30 bg-accent/10 text-accent"
+              >
                 Pro
               </Badge>
             ) : null}
@@ -357,7 +363,7 @@ const AiUsageStatusIndicator = () => {
                   </div>
                   <div className="h-1.5 overflow-hidden rounded-full bg-primary-bg/80">
                     <div
-                      className="h-full rounded-full bg-emerald-400/90 transition-[width] duration-200"
+                      className="h-full rounded-full bg-accent transition-[width] duration-200"
                       style={{ width: `${usageProgress}%` }}
                     />
                   </div>
@@ -396,6 +402,7 @@ const Footer = () => {
   );
   const { rootFolderPath } = useFileSystemStore();
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
+  const selectRepository = useRepositoryStore.use.actions().selectRepository;
   const gitStatus = useGitStore((state) => state.gitStatus);
   const workspaceGitStatus = useGitStore((state) => state.workspaceGitStatus);
   const currentRepoPath = useGitStore((state) => state.currentRepoPath);
@@ -425,19 +432,33 @@ const Footer = () => {
           id: "branch",
           label: "Git branch",
           content: (
-            <GitBranchManager
-              currentBranch={footerBranch}
-              repoPath={footerRepoPath}
-              paletteTarget
-              placement="up"
-              onBranchChange={async () => {
-                const status = await getGitStatus(footerRepoPath);
-                actions.setWorkspaceGitStatus(status, footerRepoPath);
-                if (currentRepoPath === footerRepoPath) {
-                  actions.setGitStatus(status);
-                }
-              }}
-            />
+            <div className="flex shrink-0 items-center gap-1">
+              <GitBranchManager
+                currentBranch={footerBranch}
+                repoPath={footerRepoPath}
+                paletteTarget
+                placement="up"
+                onBranchChange={async () => {
+                  const status = await getGitStatus(footerRepoPath);
+                  actions.setWorkspaceGitStatus(status, footerRepoPath);
+                  if (currentRepoPath === footerRepoPath) {
+                    actions.setGitStatus(status);
+                  }
+                }}
+              />
+              <GitWorktreeSwitcher
+                repoPath={footerRepoPath}
+                placement="up"
+                onWorktreeChange={async (worktreePath) => {
+                  selectRepository(worktreePath);
+                  const status = await getGitStatus(worktreePath);
+                  actions.setWorkspaceGitStatus(status, worktreePath);
+                  if (currentRepoPath === footerRepoPath) {
+                    actions.setGitStatus(status);
+                  }
+                }}
+              />
+            </div>
           ),
         }
       : null,

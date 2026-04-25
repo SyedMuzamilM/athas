@@ -1,4 +1,5 @@
 import type { CoreFeaturesState } from "./feature";
+import type { AIChatSkill } from "@/features/ai/types/skills";
 import type {
   FooterLeadingItemId,
   FooterTrailingItemId,
@@ -58,6 +59,7 @@ export interface Settings {
   aiCompletion: boolean;
   aiAutocompleteModelId: string;
   aiDefaultSessionMode: string;
+  aiSkills: AIChatSkill[];
   ollamaBaseUrl: string;
   // Layout
   sidebarWidth: number;

@@ -333,6 +333,7 @@ export function Dropdown(props: DropdownProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [focusIndex, setFocusIndex] = useState(-1);
   const [resolvedSide, setResolvedSide] = useState<AnchorSide>("bottom");
+  const [isPositioned, setIsPositioned] = useState(false);
 
   const isAnchorMode = "anchorRef" in props && props.anchorRef != null;
   const anchorRef = isAnchorMode ? (props as AnchorPositioning).anchorRef : null;
@@ -477,18 +478,19 @@ export function Dropdown(props: DropdownProps) {
     menu.style.left = `${Math.round(x)}px`;
     menu.style.top = `${Math.round(y)}px`;
     setResolvedSide(finalSide);
+    setIsPositioned(true);
   }, [anchorRef, anchorSide, anchorAlign, point]);
 
   useLayoutEffect(() => {
     if (!isOpen) return;
-    const frame = requestAnimationFrame(positionMenu);
-    return () => cancelAnimationFrame(frame);
+    positionMenu();
   }, [isOpen, positionMenu, searchQuery]);
 
   useEffect(() => {
     if (isOpen) return;
     lockedWidthRef.current = null;
     lastMenuSizeRef.current = null;
+    setIsPositioned(false);
     if (menuRef.current && style?.width == null) {
       menuRef.current.style.width = "";
     }
@@ -615,19 +617,17 @@ export function Dropdown(props: DropdownProps) {
   const transformOrigin =
     originMap[`${resolvedSide}-${anchorAlign}`] ?? (point ? "top left" : "top left");
 
-  const yDir = resolvedSide === "top" ? 4 : -4;
-
   return (
     <MenuPopover
       isOpen={isOpen}
       menuRef={menuRef}
       portalContainer={portalContainer}
       className={className}
-      style={{ transformOrigin, ...style }}
-      initial={{ opacity: 0, scale: 0.95, y: yDir }}
+      style={{ transformOrigin, visibility: isPositioned ? "visible" : "hidden", ...style }}
+      initial={{ opacity: 1, scale: 1, y: 0 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95, y: yDir }}
-      transition={{ duration: 0.12, ease: "easeOut" }}
+      exit={{ opacity: 1, scale: 1, y: 0 }}
+      transition={{ duration: 0 }}
     >
       <div role="menu" className={menuClassName} onKeyDown={handleKeyDown}>
         {searchable && (

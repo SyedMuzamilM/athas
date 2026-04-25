@@ -67,6 +67,7 @@ export const defaultSettings: Settings = {
   aiCompletion: true,
   aiAutocompleteModelId: DEFAULT_AI_AUTOCOMPLETE_MODEL_ID,
   aiDefaultSessionMode: "",
+  aiSkills: [],
   ollamaBaseUrl: "http://localhost:11434",
   // Layout
   sidebarWidth: 220,
@@ -145,6 +146,7 @@ export function getDefaultSettingsSnapshot(): Settings {
     sidebarActivityItemsOrder: [...defaultSettings.sidebarActivityItemsOrder],
     footerLeadingItemsOrder: [...defaultSettings.footerLeadingItemsOrder],
     footerTrailingItemsOrder: [...defaultSettings.footerTrailingItemsOrder],
+    aiSkills: defaultSettings.aiSkills.map((skill) => ({ ...skill })),
     uiFontSize: normalizeUiFontSize(defaultSettings.uiFontSize),
   };
 }

@@ -1,12 +1,20 @@
-import { Microphone as Mic, ProhibitInset as Slash, X } from "@phosphor-icons/react";
+import {
+  BookOpen,
+  CircleNotch,
+  Command as CommandIcon,
+  Microphone as Mic,
+  PaperPlaneTilt,
+  Stop,
+  X,
+} from "@phosphor-icons/react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { shouldIgnoreFile } from "@/features/quick-open/utils/file-filtering";
 import { getPrimarySessionConfigOption } from "@/features/ai/lib/session-config-option-classifier";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { InlineDropdownPosition } from "@/features/ai/store/types";
+import type { AIChatSkill } from "@/features/ai/types/skills";
 import type { SlashCommand } from "@/features/ai/types/acp";
 import type { AIChatInputBarProps } from "@/features/ai/types/ai-chat";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { toast } from "@/ui/toast";
@@ -17,6 +25,11 @@ import { SlashCommandDropdown } from "../mentions/slash-command-dropdown";
 import { AcpConfigSelector } from "../selectors/acp-config-selector";
 import { ModeSelector } from "../selectors/mode-selector";
 import { ContextSelector } from "../selectors/context-selector";
+import { SkillsCommand } from "../skills/skills-command";
+import {
+  chatComposerControlClassName,
+  chatComposerIconButtonClassName,
+} from "./chat-composer-control-styles";
 
 const AIChatInputBar = memo(function AIChatInputBar({
   buffers,
@@ -39,9 +52,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const [activeInlineControl, setActiveInlineControl] = useState<
     "model" | "mode" | "commands" | null
   >(null);
-
-  // Get state from stores with optimized selectors
-  const { fontSize, fontFamily } = useEditorSettingsStore();
+  const [isSkillsOpen, setIsSkillsOpen] = useState(false);
+  const slashCommandRangeRef = useRef({ startIndex: 0, endIndex: 0 });
 
   // Get state from store - DO NOT subscribe to 'input' to avoid re-renders on every keystroke
   const isTyping = useAIChatStore((state) => state.isTyping);
@@ -54,6 +66,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const mentionState = useAIChatStore((state) => state.mentionState);
   const getCurrentAgentId = useAIChatStore((state) => state.getCurrentAgentId);
   const sessionConfigOptions = useAIChatStore((state) => state.sessionConfigOptions);
+  const sessionModeState = useAIChatStore((state) => state.sessionModeState);
+  const acpStatus = useAIChatStore((state) => state.acpStatus);
 
   // Check if current agent is "custom" (only show model selector for custom agent)
   const currentAgentId = getCurrentAgentId();
@@ -66,6 +80,12 @@ const AIChatInputBar = memo(function AIChatInputBar({
     () => (isCustomAgent ? null : getPrimarySessionConfigOption(sessionConfigOptions, "model")),
     [isCustomAgent, sessionConfigOptions],
   );
+  const hasAcpModeOptions = !isCustomAgent && sessionModeState.availableModes.length > 0;
+  const hasAcpModelOptions = Boolean(acpModelOption);
+  const isAcpMetadataLoading =
+    !isCustomAgent &&
+    isTyping &&
+    (!acpStatus?.initialized || (!hasAcpModeOptions && !hasAcpModelOptions));
 
   // Memoize action selectors
   const setInput = useAIChatStore((state) => state.setInput);
@@ -166,47 +186,97 @@ const AIChatInputBar = memo(function AIChatInputBar({
     return text;
   }, []);
 
-  const getMentionDropdownPosition = useCallback(() => {
+  const getTextBeforeCaret = useCallback(() => {
+    if (!inputRef.current) return getPlainTextFromDiv();
+
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return getPlainTextFromDiv();
+
+    const range = selection.getRangeAt(0);
+    if (!inputRef.current.contains(range.startContainer)) return getPlainTextFromDiv();
+
+    const preCaretRange = range.cloneRange();
+    preCaretRange.selectNodeContents(inputRef.current);
+    preCaretRange.setEnd(range.startContainer, range.startOffset);
+    return preCaretRange.toString();
+  }, [getPlainTextFromDiv]);
+
+  const getCaretDropdownPosition = useCallback(() => {
     if (!inputRef.current) {
       return { top: 0, bottom: 0, left: 0, width: 0 };
     }
 
     const inputRect = inputRef.current.getBoundingClientRect();
-    const horizontalInset = 8;
-
-    const position: InlineDropdownPosition = {
+    const fallbackPosition: InlineDropdownPosition = {
       top: inputRect.top,
       bottom: inputRect.bottom,
-      left: inputRect.left + horizontalInset,
-      width: Math.max(inputRect.width - horizontalInset * 2, 220),
+      left: inputRect.left + 12,
+      width: 320,
+    };
+
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
+      return fallbackPosition;
+    }
+
+    const range = selection.getRangeAt(0).cloneRange();
+    if (!inputRef.current.contains(range.startContainer)) {
+      return fallbackPosition;
+    }
+
+    range.collapse(true);
+    let rect = range.getClientRects()[0] ?? range.getBoundingClientRect();
+
+    if ((rect.width === 0 && rect.height === 0) || !Number.isFinite(rect.left)) {
+      const marker = document.createElement("span");
+      marker.textContent = "\u200B";
+      range.insertNode(marker);
+      rect = marker.getBoundingClientRect();
+      const parent = marker.parentNode;
+      const nextSibling = marker.nextSibling;
+      marker.remove();
+      if (parent) {
+        const restoreRange = document.createRange();
+        if (nextSibling) {
+          restoreRange.setStartBefore(nextSibling);
+        } else {
+          restoreRange.selectNodeContents(parent);
+          restoreRange.collapse(false);
+        }
+        restoreRange.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(restoreRange);
+      }
+    }
+
+    if (!Number.isFinite(rect.left) || rect.height === 0) {
+      return fallbackPosition;
+    }
+
+    const horizontalPadding = 12;
+    const left = Math.min(
+      Math.max(rect.left, inputRect.left + horizontalPadding),
+      inputRect.right - horizontalPadding,
+    );
+
+    const position: InlineDropdownPosition = {
+      top: rect.top,
+      bottom: rect.bottom,
+      left,
+      width: 320,
     };
 
     return position;
   }, []);
+
+  const getMentionDropdownPosition = getCaretDropdownPosition;
+  const getSlashDropdownPosition = getCaretDropdownPosition;
 
   // Function to recalculate mention dropdown position
   const recalculateMentionPosition = useCallback(() => {
     if (!mentionState.active) return;
     updatePosition(getMentionDropdownPosition());
   }, [mentionState.active, updatePosition, getMentionDropdownPosition]);
-
-  const getSlashDropdownPosition = useCallback(() => {
-    if (!inputRef.current) {
-      return { top: 0, bottom: 0, left: 0, width: 0 };
-    }
-
-    const inputRect = inputRef.current.getBoundingClientRect();
-    const horizontalInset = 8;
-
-    const position: InlineDropdownPosition = {
-      top: inputRect.top,
-      bottom: inputRect.bottom,
-      left: inputRect.left + horizontalInset,
-      width: Math.max(inputRect.width - horizontalInset * 2, 220),
-    };
-
-    return position;
-  }, []);
 
   const mentionableFiles = useMemo(
     () => allProjectFiles.filter((file) => !file.isDir && !shouldIgnoreFile(file.path)),
@@ -409,33 +479,31 @@ const AIChatInputBar = memo(function AIChatInputBar({
   };
 
   // Debounced mention detection - increased delay for better performance
-  const debouncedMentionDetection = useCallback(
-    (plainText: string) => {
-      if (performanceTimer.current) {
-        clearTimeout(performanceTimer.current);
-      }
+  const debouncedMentionDetection = useCallback(() => {
+    if (performanceTimer.current) {
+      clearTimeout(performanceTimer.current);
+    }
 
-      performanceTimer.current = window.setTimeout(() => {
-        if (!inputRef.current) return;
+    performanceTimer.current = window.setTimeout(() => {
+      if (!inputRef.current) return;
 
-        const lastAtIndex = plainText.lastIndexOf("@");
+      const textBeforeCaret = getTextBeforeCaret();
+      const lastAtIndex = textBeforeCaret.lastIndexOf("@");
 
-        if (lastAtIndex !== -1) {
-          const afterAt = plainText.slice(lastAtIndex + 1);
-          // Check if there's no space between @ and end, and it's not part of a mention badge
-          if (!afterAt.includes(" ") && !afterAt.includes("]") && afterAt.length < 50) {
-            const position = getMentionDropdownPosition();
-            showMention(position, afterAt, lastAtIndex);
-          } else {
-            hideMention();
-          }
+      if (lastAtIndex !== -1) {
+        const afterAt = textBeforeCaret.slice(lastAtIndex + 1);
+        // Check if there's no space between @ and end, and it's not part of a mention badge
+        if (!afterAt.includes(" ") && !afterAt.includes("]") && afterAt.length < 50) {
+          const position = getMentionDropdownPosition();
+          showMention(position, afterAt, lastAtIndex);
         } else {
           hideMention();
         }
-      }, 150); // Increased to 150ms for better performance
-    },
-    [showMention, hideMention, getMentionDropdownPosition],
-  );
+      } else {
+        hideMention();
+      }
+    }, 150); // Increased to 150ms for better performance
+  }, [showMention, hideMention, getMentionDropdownPosition, getTextBeforeCaret]);
 
   // Optimized input change handler - no throttle for immediate response
   const handleInputChange = useCallback(() => {
@@ -453,23 +521,20 @@ const AIChatInputBar = memo(function AIChatInputBar({
       // Update local state for button enabled/disabled
       setHasInputText(plainTextFromDiv.trim().length > 0);
 
-      // Detect slash commands at start of input (robust against leading whitespace/newlines)
-      const normalizedInput = plainTextFromDiv.trimStart();
-      if (normalizedInput.startsWith("/")) {
-        const slashToken = normalizedInput.slice(1);
-        const hasWhitespaceAfterSlash = /\s/.test(slashToken);
-        const search = hasWhitespaceAfterSlash ? slashToken.split(/\s+/)[0] : slashToken;
-
-        if (!hasWhitespaceAfterSlash && search.length < 50) {
-          setActiveInlineControl("commands");
-          if (isContextDropdownOpen) {
-            setIsContextDropdownOpen(false);
-          }
-          showSlashCommands(getSlashDropdownPosition(), search);
-        } else {
-          setActiveInlineControl(null);
-          hideSlashCommands();
+      const textBeforeCaret = getTextBeforeCaret();
+      const slashMatch = textBeforeCaret.match(/(?:^|\s)\/([^\s/]*)$/);
+      if (slashMatch && slashMatch[1].length < 50) {
+        const search = slashMatch[1];
+        const startIndex = textBeforeCaret.length - search.length - 1;
+        slashCommandRangeRef.current = {
+          startIndex,
+          endIndex: textBeforeCaret.length,
+        };
+        setActiveInlineControl("commands");
+        if (isContextDropdownOpen) {
+          setIsContextDropdownOpen(false);
         }
+        showSlashCommands(getSlashDropdownPosition(), search);
       } else if (slashCommandState.active) {
         setActiveInlineControl(null);
         hideSlashCommands();
@@ -477,7 +542,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
       // Only do mention detection if text contains @ and is reasonably short
       if (plainTextFromDiv.includes("@") && plainTextFromDiv.length < 500) {
-        debouncedMentionDetection(plainTextFromDiv);
+        debouncedMentionDetection();
       } else if (mentionState.active) {
         hideMention();
       }
@@ -485,6 +550,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
   }, [
     setInput,
     getPlainTextFromDiv,
+    getTextBeforeCaret,
     debouncedMentionDetection,
     hideMention,
     mentionState.active,
@@ -530,6 +596,42 @@ const AIChatInputBar = memo(function AIChatInputBar({
       selection?.removeAllRanges();
       selection?.addRange(range);
       handleInputChange();
+    },
+    [getPlainTextFromDiv, handleInputChange],
+  );
+
+  const insertSkillAtCursor = useCallback(
+    (skill: AIChatSkill) => {
+      if (!inputRef.current || !skill.content.trim()) return;
+
+      const selection = window.getSelection();
+      const range = document.createRange();
+      const currentText = getPlainTextFromDiv();
+      const prefix = currentText.trim().length > 0 && !/\s$/.test(currentText) ? "\n\n" : "";
+      const textNode = document.createTextNode(`${prefix}${skill.content.trim()} `);
+
+      inputRef.current.focus();
+
+      const selectionInsideInput =
+        !!selection && selection.rangeCount > 0 && inputRef.current.contains(selection.anchorNode);
+
+      if (selectionInsideInput && selection) {
+        const selectedRange = selection.getRangeAt(0);
+        selectedRange.deleteContents();
+        selectedRange.insertNode(textNode);
+        range.setStartAfter(textNode);
+      } else {
+        range.selectNodeContents(inputRef.current);
+        range.collapse(false);
+        range.insertNode(textNode);
+        range.setStartAfter(textNode);
+      }
+
+      range.collapse(true);
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      handleInputChange();
+      setHasInputText(true);
     },
     [getPlainTextFromDiv, handleInputChange],
   );
@@ -636,9 +738,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
         const mentionSpan = document.createElement("span");
         mentionSpan.setAttribute("data-mention", "true");
         mentionSpan.className =
-          "inline-flex items-center gap-1 rounded border border-blue-500/30 bg-blue-500/10 px-1.5 py-0.5 text-blue-400 select-none";
-        mentionSpan.style.fontFamily = `${fontFamily}, "Fira Code", "Cascadia Code", "JetBrains Mono", Consolas, "Courier New", monospace`;
-        mentionSpan.style.fontSize = `${Math.max(fontSize - 4, 10)}px`; // Smaller than input text
+          "ui-font inline-flex items-center gap-1 rounded border border-accent/30 bg-accent/10 px-1.5 py-0.5 text-[11px] text-accent select-none";
         mentionSpan.textContent = file.name;
         inputRef.current.appendChild(mentionSpan);
 
@@ -675,14 +775,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
         isUpdatingContentRef.current = false;
       }, 0);
     },
-    [
-      mentionState.startIndex,
-      mentionState.search.length,
-      setInput,
-      hideMention,
-      fontFamily,
-      fontSize,
-    ],
+    [mentionState.startIndex, mentionState.search.length, setInput, hideMention],
   );
 
   // Handle slash command selection
@@ -692,8 +785,12 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
       isUpdatingContentRef.current = true;
 
-      // Replace the current input with the slash command
-      const newInput = `/${command.name} `;
+      const currentInput = getPlainTextFromDiv();
+      const { startIndex, endIndex } = slashCommandRangeRef.current;
+      const beforeCommand = currentInput.slice(0, startIndex);
+      const afterCommand = currentInput.slice(endIndex);
+      const trailingSpace = afterCommand.startsWith(" ") ? "" : " ";
+      const newInput = `${beforeCommand}/${command.name}${trailingSpace}${afterCommand}`;
       setInput(newInput);
       hideSlashCommands();
 
@@ -717,7 +814,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
         isUpdatingContentRef.current = false;
       }, 0);
     },
-    [setInput, hideSlashCommands],
+    [getPlainTextFromDiv, setInput, hideSlashCommands],
   );
 
   const handleSendMessage = async () => {
@@ -855,74 +952,72 @@ const AIChatInputBar = memo(function AIChatInputBar({
     >
       <div
         className={cn(
-          "overflow-hidden bg-secondary-bg/42 transition-[border-radius,background-color]",
-          hasAttachedComposerDropdown ? "rounded-t-xl rounded-b-2xl" : "rounded-lg",
+          "overflow-hidden border border-border/70 bg-[color-mix(in_srgb,var(--color-secondary-bg)_82%,var(--color-border)_18%)] p-1 transition-[border-radius,background-color,border-color]",
+          hasAttachedComposerDropdown ? "rounded-t-xl rounded-b-2xl" : "rounded-2xl",
         )}
       >
-        {pastedImages.length > 0 && (
-          <div className="flex flex-wrap gap-2 px-2 pt-2">
-            {pastedImages.map((image) => (
-              <div
-                key={image.id}
-                className="group relative overflow-hidden rounded border border-border bg-secondary-bg"
-              >
-                <img
-                  src={image.dataUrl}
-                  alt={image.name}
-                  className="h-16 w-auto max-w-[120px] object-cover"
-                />
-                <Button
-                  onClick={() => removePastedImage(image.id)}
-                  variant="ghost"
-                  size="icon-xs"
-                  className="absolute top-0.5 right-0.5 rounded-full bg-black/60 text-white opacity-0 hover:bg-black/80 group-hover:opacity-100"
-                  aria-label="Remove image"
+        <div className="overflow-hidden rounded-xl border border-border/60 bg-[color-mix(in_srgb,var(--color-primary-bg)_96%,var(--color-secondary-bg)_4%)]">
+          {pastedImages.length > 0 && (
+            <div className="flex flex-wrap gap-2 px-3 pt-3">
+              {pastedImages.map((image) => (
+                <div
+                  key={image.id}
+                  className="group relative overflow-hidden rounded border border-border bg-secondary-bg"
                 >
-                  <X />
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div
-          ref={inputRef}
-          contentEditable={isInputEnabled}
-          onInput={handleInputChange}
-          onKeyDown={handleKeyDown}
-          onPaste={handlePaste}
-          data-placeholder={
-            isInputEnabled
-              ? hasSlashCommands
-                ? "Message... (@ files, / commands)"
-                : "Message... (@ to mention files)"
-              : "Configure API key to enable AI chat..."
-          }
-          className={cn(
-            "max-h-[140px] min-h-[64px] w-full resize-none overflow-x-hidden overflow-y-auto bg-transparent",
-            "ui-font px-2 py-1.5 text-inherit text-text placeholder:text-text-lighter",
-            "focus:outline-none",
-            hasAttachedComposerDropdown && "border-none",
-            !isInputEnabled ? "cursor-not-allowed opacity-50" : "cursor-text",
-            "empty:before:pointer-events-none empty:before:text-text-lighter empty:before:content-[attr(data-placeholder)]",
+                  <img
+                    src={image.dataUrl}
+                    alt={image.name}
+                    className="h-16 w-auto max-w-[120px] object-cover"
+                  />
+                  <Button
+                    onClick={() => removePastedImage(image.id)}
+                    variant="ghost"
+                    size="icon-xs"
+                    className="absolute top-0.5 right-0.5 rounded-full bg-black/60 text-white opacity-0 hover:bg-black/80 group-hover:opacity-100"
+                    aria-label="Remove image"
+                  >
+                    <X />
+                  </Button>
+                </div>
+              ))}
+            </div>
           )}
-          style={
-            {
-              fontFamily: `${fontFamily}, "Fira Code", "Cascadia Code", "JetBrains Mono", Consolas, "Courier New", monospace`,
-              fontSize: `${Math.max(fontSize - 2, 11)}px`,
-              lineHeight: "1.4",
-              wordWrap: "break-word",
-              overflowWrap: "break-word",
-            } as React.CSSProperties
-          }
-          role="textbox"
-          aria-multiline="true"
-          aria-label="Message input"
-          tabIndex={isInputEnabled ? 0 : -1}
-        />
 
-        <div className="flex items-center justify-between px-2 py-1">
-          <div className="flex min-w-0 flex-1 items-center gap-1.5">
+          <div
+            ref={inputRef}
+            contentEditable={isInputEnabled}
+            onInput={handleInputChange}
+            onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
+            data-placeholder={
+              isInputEnabled
+                ? hasSlashCommands
+                  ? "Ask anything... (@ files, / commands)"
+                  : "Ask anything... (@ to mention files)"
+                : "Configure API key to enable AI chat..."
+            }
+            className={cn(
+              "max-h-[140px] min-h-[64px] w-full resize-none overflow-x-hidden overflow-y-auto bg-transparent",
+              "ui-font ui-text-sm px-3 pt-3 pb-2 text-text placeholder:text-text-lighter",
+              "whitespace-pre-wrap focus:outline-none",
+              hasAttachedComposerDropdown && "border-none",
+              !isInputEnabled ? "cursor-not-allowed opacity-50" : "cursor-text",
+              "empty:before:pointer-events-none empty:before:text-text-lighter empty:before:content-[attr(data-placeholder)]",
+            )}
+            style={
+              {
+                lineHeight: "1.4",
+                wordWrap: "break-word",
+                overflowWrap: "break-word",
+              } as React.CSSProperties
+            }
+            role="textbox"
+            aria-multiline="true"
+            aria-label="Message input"
+            tabIndex={isInputEnabled ? 0 : -1}
+          />
+
+          <div className="flex items-end gap-2 px-2 pb-2 pt-1">
             <div ref={contextDropdownRef} className="min-w-0 flex-1">
               <ContextSelector
                 buffers={buffers}
@@ -937,6 +1032,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
                   }
                   setIsContextDropdownOpen(!isContextDropdownOpen);
                 }}
+                selectedItemsClassName="max-h-14 pr-1"
               />
             </div>
 
@@ -944,29 +1040,93 @@ const AIChatInputBar = memo(function AIChatInputBar({
               <Badge
                 shape="pill"
                 size="sm"
-                className="gap-1 border border-blue-500/30 bg-blue-500/10 px-2.5 text-blue-400"
+                className="shrink-0 gap-1 border border-accent/30 bg-accent/10 px-2.5 text-accent"
               >
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500" />
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
                 <span>{queueCount}</span>
               </Badge>
             )}
 
-            {isListening && (
-              <Badge
-                shape="pill"
-                size="sm"
-                className="gap-1 border border-blue-500/30 bg-blue-500/10 px-2.5 text-blue-400"
+            <div className="flex shrink-0 items-center gap-1">
+              <Button
+                type="button"
+                disabled={!isInputEnabled || !isSpeechRecognitionSupported}
+                onClick={toggleVoiceInput}
+                variant="ghost"
+                size="icon-xs"
+                className={cn(
+                  chatComposerIconButtonClassName(),
+                  isListening && "bg-accent/10 text-accent hover:bg-accent/14 hover:text-accent",
+                )}
+                tooltip={
+                  isMacDevSpeechRecognitionBlocked
+                    ? "Voice input is disabled in macOS dev mode"
+                    : !isSpeechRecognitionSupported
+                      ? "Voice input is not supported"
+                      : isListening
+                        ? interimTranscript || "Stop voice input"
+                        : "Start voice input"
+                }
+                aria-label={isListening ? "Stop voice input" : "Start voice input"}
+                aria-pressed={isListening}
               >
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-400" />
-                <span className="max-w-[120px] truncate">
-                  {interimTranscript ? interimTranscript : "Listening..."}
-                </span>
-              </Badge>
-            )}
-          </div>
+                <Mic size={12} className={cn(isListening && "animate-pulse")} />
+              </Button>
 
-          <div className="flex shrink-0 items-center gap-1">
-            {acpModelOption && (
+              <Button
+                type="button"
+                disabled={isSendDisabled}
+                onClick={isStreaming ? onStopStreaming : handleSendMessage}
+                variant="ghost"
+                size="icon-xs"
+                className={cn(
+                  chatComposerIconButtonClassName(),
+                  isSendDisabled
+                    ? "cursor-not-allowed text-text-lighter opacity-50"
+                    : (hasInputText || hasImages) && isInputEnabled
+                      ? "text-accent hover:bg-accent/8 hover:text-accent/80"
+                      : "text-text-lighter hover:text-text",
+                )}
+                tooltip={
+                  isStreaming ? "Stop generation" : queueCount > 0 ? "Add to queue" : "Send message"
+                }
+                shortcut={isStreaming ? "escape" : "enter"}
+                aria-label={isStreaming ? "Stop generation" : "Send message"}
+              >
+                {isStreaming ? <Stop /> : <PaperPlaneTilt />}
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-2 px-1 pt-1.5">
+          <div className="flex min-w-0 items-center gap-1">
+            {isAcpMetadataLoading && (
+              <>
+                <Button
+                  type="button"
+                  disabled
+                  variant="ghost"
+                  size="xs"
+                  className={chatComposerControlClassName("w-fit")}
+                >
+                  <CircleNotch className="animate-spin" />
+                  <span>Model</span>
+                </Button>
+                <Button
+                  type="button"
+                  disabled
+                  variant="ghost"
+                  size="xs"
+                  className={chatComposerControlClassName("w-fit")}
+                >
+                  <CircleNotch className="animate-spin" />
+                  <span>Mode</span>
+                </Button>
+              </>
+            )}
+
+            {!isAcpMetadataLoading && acpModelOption && (
               <AcpConfigSelector
                 option={acpModelOption}
                 onChange={(value) => void changeSessionConfigOption(acpModelOption.id, value)}
@@ -979,22 +1139,26 @@ const AIChatInputBar = memo(function AIChatInputBar({
                   }
                   setActiveInlineControl((current) => (current === "model" ? null : current));
                 }}
-                className="w-fit max-w-[180px]"
+                className="max-w-[180px]"
                 menuClassName="w-[min(280px,calc(100vw-16px))]"
               />
             )}
 
-            <ModeSelector
-              open={activeInlineControl === "mode"}
-              onOpenChange={(open) => {
-                if (open) {
-                  closeInlineMenus();
-                  setActiveInlineControl("mode");
-                  return;
-                }
-                setActiveInlineControl((current) => (current === "mode" ? null : current));
-              }}
-            />
+            {!isAcpMetadataLoading && (
+              <ModeSelector
+                open={activeInlineControl === "mode"}
+                onOpenChange={(open) => {
+                  if (open) {
+                    closeInlineMenus();
+                    setActiveInlineControl("mode");
+                    return;
+                  }
+                  setActiveInlineControl((current) => (current === "mode" ? null : current));
+                }}
+                className="max-w-[120px]"
+                iconOnly
+              />
+            )}
 
             {hasSlashCommands && (
               <Button
@@ -1010,72 +1174,46 @@ const AIChatInputBar = memo(function AIChatInputBar({
                     setInput("/");
                     setHasInputText(true);
                     inputRef.current.focus();
+                    const selection = window.getSelection();
+                    if (selection) {
+                      const range = document.createRange();
+                      range.selectNodeContents(inputRef.current);
+                      range.collapse(false);
+                      selection.removeAllRanges();
+                      selection.addRange(range);
+                    }
+                    slashCommandRangeRef.current = { startIndex: 0, endIndex: 1 };
                     setActiveInlineControl("commands");
                     showSlashCommands(getSlashDropdownPosition(), "");
                   }
                 }}
                 variant="ghost"
-                size="xs"
-                className={cn(
-                  "w-fit rounded-md px-1.5 text-text-lighter hover:bg-hover hover:text-text",
-                  slashCommandState.active && "bg-hover text-text",
-                )}
+                size="icon-xs"
+                active={slashCommandState.active}
+                className={chatComposerIconButtonClassName()}
                 tooltip="Show slash commands"
                 aria-label="Show slash commands"
               >
-                <Slash size={12} />
+                <CommandIcon size={12} />
               </Button>
             )}
-
-            <Button
-              type="button"
-              disabled={!isInputEnabled || !isSpeechRecognitionSupported}
-              onClick={toggleVoiceInput}
-              variant="ghost"
-              size="xs"
-              className={cn(
-                "w-fit rounded-md px-1.5 text-text-lighter hover:bg-hover hover:text-text",
-                isListening &&
-                  "bg-blue-500/10 text-blue-400 hover:bg-blue-500/14 hover:text-blue-300",
-              )}
-              tooltip={
-                isMacDevSpeechRecognitionBlocked
-                  ? "Voice input is disabled in macOS dev mode"
-                  : !isSpeechRecognitionSupported
-                    ? "Voice input is not supported"
-                    : isListening
-                      ? "Stop voice input"
-                      : "Start voice input"
-              }
-              aria-label={isListening ? "Stop voice input" : "Start voice input"}
-              aria-pressed={isListening}
-            >
-              <Mic size={12} className={cn(isListening && "animate-pulse")} />
-            </Button>
-
-            <Button
-              type="button"
-              disabled={isSendDisabled}
-              onClick={isStreaming ? onStopStreaming : handleSendMessage}
-              variant="ghost"
-              size="xs"
-              className={cn(
-                "ui-font rounded-md px-1.5 hover:bg-hover",
-                isSendDisabled
-                  ? "cursor-not-allowed text-text-lighter opacity-50"
-                  : (hasInputText || hasImages) && isInputEnabled
-                    ? "text-accent hover:bg-accent/8 hover:text-accent/80"
-                    : "text-text-lighter hover:text-text",
-              )}
-              tooltip={
-                isStreaming ? "Stop generation" : queueCount > 0 ? "Add to queue" : "Send message"
-              }
-              shortcut={isStreaming ? "escape" : "enter"}
-              aria-label={isStreaming ? "Stop generation" : "Send message"}
-            >
-              {isStreaming ? "Stop" : "Send"}
-            </Button>
           </div>
+
+          <Button
+            type="button"
+            onClick={() => {
+              closeInlineMenus();
+              setIsSkillsOpen(true);
+            }}
+            variant="ghost"
+            size="xs"
+            className={chatComposerControlClassName("w-fit px-2")}
+            tooltip="Skills"
+            aria-label="Skills"
+          >
+            <BookOpen />
+            <span>Skills</span>
+          </Button>
         </div>
       </div>
 
@@ -1084,6 +1222,12 @@ const AIChatInputBar = memo(function AIChatInputBar({
       )}
 
       {slashCommandState.active && <SlashCommandDropdown onSelect={handleSlashCommandSelect} />}
+
+      <SkillsCommand
+        isOpen={isSkillsOpen}
+        onClose={() => setIsSkillsOpen(false)}
+        onSelectSkill={insertSkillAtCursor}
+      />
     </div>
   );
 });
