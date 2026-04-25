@@ -1,5 +1,4 @@
 import { motion } from "framer-motion";
-import { Command } from "@phosphor-icons/react";
 import React, { useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useAIChatStore } from "@/features/ai/store/store";
@@ -7,6 +6,10 @@ import type { SlashCommand } from "@/features/ai/types/acp";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { dropdownItemClassName } from "@/ui/dropdown";
 import { cn } from "@/utils/cn";
+import {
+  chatComposerDropdownClassName,
+  chatComposerDropdownItemClassName,
+} from "../input/chat-composer-control-styles";
 
 interface SlashCommandDropdownProps {
   onSelect: (command: SlashCommand) => void;
@@ -97,11 +100,12 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
   return createPortal(
     <motion.div
       ref={dropdownRef}
-      initial={{ opacity: 0, scale: 0.95, y: -4 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95, y: -4 }}
-      transition={{ duration: 0.15, ease: "easeOut" }}
-      className="scrollbar-hidden fixed select-none overflow-y-auto rounded-t-2xl rounded-b-xl border border-border/70 bg-primary-bg/98 p-1.5 shadow-[0_14px_32px_-26px_rgba(0,0,0,0.5)] backdrop-blur-sm"
+      initial={false}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0 }}
+      className={chatComposerDropdownClassName(
+        "scrollbar-hidden fixed select-none overflow-y-auto p-1.5",
+      )}
       style={{
         zIndex: 10040,
         maxHeight: `${EDITOR_CONSTANTS.BREADCRUMB_DROPDOWN_MAX_HEIGHT}px`,
@@ -122,15 +126,13 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
               onClick={() => onSelect(command)}
               className={cn(
                 dropdownItemClassName(),
-                "w-full items-start rounded-xl px-2.5 py-2 text-left",
-                "focus:outline-none focus:ring-1 focus:ring-border-strong/35",
+                chatComposerDropdownItemClassName("w-full items-start py-2"),
                 index === selectedIndex ? "bg-selected text-text" : "text-text hover:bg-hover",
               )}
               role="option"
               aria-selected={index === selectedIndex}
               tabIndex={index === selectedIndex ? 0 : -1}
             >
-              <Command size={12} className="mt-0.5 shrink-0 text-text-lighter" />
               <div className="min-w-0 flex-1">
                 <div className="truncate font-medium text-[11px] text-text">/{command.name}</div>
                 <div className="truncate pt-0.5 text-[10px] text-text-lighter">

@@ -1,4 +1,9 @@
-import type { SessionConfigOption, SessionMode, SlashCommand } from "@/features/ai/types/acp";
+import type {
+  AcpAgentStatus,
+  SessionConfigOption,
+  SessionMode,
+  SlashCommand,
+} from "@/features/ai/types/acp";
 import type { AgentType, Chat, Message } from "@/features/ai/types/ai-chat";
 import type { FileEntry } from "@/features/file-system/types/app";
 import type { ProviderModel } from "@/features/ai/services/providers/ai-provider-interface";
@@ -91,6 +96,7 @@ export interface AIChatState {
   availableSlashCommands: SlashCommand[];
 
   // Session mode state
+  acpStatus: AcpAgentStatus | null;
   sessionModeState: {
     currentModeId: string | null;
     availableModes: SessionMode[];
@@ -185,6 +191,7 @@ export interface AIChatActions {
   // Session mode actions
   setSessionModeState: (currentModeId: string | null, availableModes: SessionMode[]) => void;
   setCurrentModeId: (modeId: string) => void;
+  setAcpStatus: (status: AcpAgentStatus | null) => void;
   changeSessionMode: (modeId: string) => Promise<void>;
   setSessionConfigOptions: (options: SessionConfigOption[]) => void;
   changeSessionConfigOption: (configId: string, value: string) => Promise<void>;

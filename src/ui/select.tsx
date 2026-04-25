@@ -13,6 +13,7 @@ import { buttonVariants } from "@/ui/button";
 import { controlFieldIconSizes } from "@/ui/control-field";
 import { Dropdown } from "@/ui/dropdown";
 import Input from "@/ui/input";
+import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 
 export interface SelectOption {
@@ -27,6 +28,7 @@ export interface SelectProps {
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
+  triggerClassName?: string;
   menuClassName?: string;
   disabled?: boolean;
   size?: "xs" | "sm" | "md";
@@ -37,6 +39,9 @@ export interface SelectProps {
   leftIcon?: ReactNode | ComponentType<{ size?: number; className?: string }>;
   id?: string;
   title?: string;
+  hideChevron?: boolean;
+  iconOnly?: boolean;
+  tooltip?: string;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   "aria-label"?: AriaAttributes["aria-label"];
@@ -96,10 +101,10 @@ function renderTriggerIcon(icon: SelectProps["leftIcon"], size: "xs" | "sm" | "m
     (typeof icon === "object" && icon !== null && "render" in icon)
   ) {
     const Icon = icon as ComponentType<{ size?: number; className?: string }>;
-    return <Icon size={size === "md" ? 14 : 12} className="shrink-0 text-text-lighter" />;
+    return <Icon size={size === "md" ? 14 : 12} className="shrink-0 text-current" />;
   }
 
-  return <span className="shrink-0 text-text-lighter">{icon}</span>;
+  return <span className="shrink-0 text-current">{icon}</span>;
 }
 
 function SelectSearchField({
@@ -215,6 +220,7 @@ export default function Select({
   onChange,
   placeholder = "Select...",
   className = "",
+  triggerClassName = "",
   menuClassName = "",
   disabled = false,
   size = "sm",
@@ -225,6 +231,9 @@ export default function Select({
   leftIcon,
   id,
   title,
+  hideChevron = false,
+  iconOnly = false,
+  tooltip,
   open: openProp,
   onOpenChange,
   "aria-label": ariaLabel,
@@ -268,8 +277,9 @@ export default function Select({
   );
   const resolvedTriggerClassName = cn(
     buttonVariants({ variant, size }),
-    selectTriggerVariants({ size, withIcon: Boolean(triggerIcon) }),
-    "justify-between text-left",
+    !iconOnly && selectTriggerVariants({ size, withIcon: Boolean(triggerIcon) }),
+    !iconOnly && "justify-between text-left",
+    triggerClassName,
   );
 
   useEffect(() => {
@@ -297,11 +307,12 @@ export default function Select({
       : undefined;
 
   if (searchable && searchableTrigger === "input") {
-    return (
+    const selectNode = (
       <div className={cn("min-w-0 w-36", className)}>
         <Input
           ref={searchInputRef}
           data-setting-primary-control="true"
+          data-state={open ? "open" : "closed"}
           data-prevent-dialog-escape={open ? "true" : undefined}
           role="combobox"
           aria-expanded={open}
@@ -382,7 +393,7 @@ export default function Select({
           size={size}
           variant={variant === "secondary" || variant === "outline" ? "default" : variant}
           containerClassName="min-w-0 w-full"
-          className="min-w-0 font-normal text-text"
+          className={cn("min-w-0 font-normal text-text", triggerClassName)}
           placeholder={open ? "Search..." : selectedOption?.label || placeholder}
           aria-label={ariaLabel ?? placeholder}
         />
@@ -430,13 +441,22 @@ export default function Select({
         </Dropdown>
       </div>
     );
+
+    return tooltip ? (
+      <Tooltip content={tooltip} triggerClassName="min-w-0">
+        {selectNode}
+      </Tooltip>
+    ) : (
+      selectNode
+    );
   }
 
-  return (
-    <div className={cn("min-w-0 w-36", className)}>
+  const selectNode = (
+    <div className={cn(iconOnly ? "w-fit" : "min-w-0 w-36", className)}>
       <button
         ref={triggerRef}
         data-setting-primary-control="true"
+        data-state={open ? "open" : "closed"}
         data-prevent-dialog-escape={open ? "true" : undefined}
         role="combobox"
         id={id}
@@ -490,16 +510,27 @@ export default function Select({
           }
         }}
       >
-        <span className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
-          {triggerIcon}
-          {selectedOption?.icon && (
-            <span className="size-3 shrink-0 text-text-lighter">{selectedOption.icon}</span>
-          )}
-          <span className="block min-w-0 flex-1 truncate text-left">
-            {selectedOption?.label || value || placeholder}
+        {iconOnly ? (
+          <>
+            {triggerIcon ?? selectedOption?.icon ?? null}
+            <span data-select-label="true" className="sr-only">
+              {selectedOption?.label || value || placeholder}
+            </span>
+          </>
+        ) : (
+          <span className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+            {triggerIcon}
+            {selectedOption?.icon && (
+              <span className="size-3 shrink-0 text-text-lighter">{selectedOption.icon}</span>
+            )}
+            <span data-select-label="true" className="block min-w-0 flex-1 truncate text-left">
+              {selectedOption?.label || value || placeholder}
+            </span>
           </span>
-        </span>
-        <ChevronDown size={iconSizes[size]} className="shrink-0 text-text-lighter" />
+        )}
+        {!hideChevron && (
+          <ChevronDown size={iconSizes[size]} className="shrink-0 text-text-lighter" />
+        )}
       </button>
 
       <Dropdown
@@ -596,5 +627,13 @@ export default function Select({
         </div>
       </Dropdown>
     </div>
+  );
+
+  return tooltip ? (
+    <Tooltip content={tooltip} triggerClassName="min-w-0">
+      {selectNode}
+    </Tooltip>
+  ) : (
+    selectNode
   );
 }

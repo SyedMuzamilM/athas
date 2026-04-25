@@ -59,6 +59,43 @@ function normalizeEditorLineHeight(value: number): number {
   const snapped = Math.round(value * 10) / 10;
   return Math.min(EDITOR_LINE_HEIGHT_MAX, Math.max(EDITOR_LINE_HEIGHT_MIN, snapped));
 }
+const MAX_SYNCED_AI_SKILLS = 200;
+
+function normalizeAISkills(skills: Settings["aiSkills"]): Settings["aiSkills"] {
+  if (!Array.isArray(skills)) {
+    return [];
+  }
+
+  const seenIds = new Set<string>();
+
+  return skills
+    .filter((skill): skill is Settings["aiSkills"][number] => {
+      if (!skill || typeof skill !== "object") return false;
+      if (typeof skill.id !== "string" || skill.id.trim().length === 0) return false;
+      if (typeof skill.title !== "string" || skill.title.trim().length === 0) return false;
+      if (typeof skill.content !== "string") return false;
+      if (typeof skill.createdAt !== "string" || Number.isNaN(Date.parse(skill.createdAt))) {
+        return false;
+      }
+      if (typeof skill.updatedAt !== "string" || Number.isNaN(Date.parse(skill.updatedAt))) {
+        return false;
+      }
+      return true;
+    })
+    .filter((skill) => {
+      if (seenIds.has(skill.id)) return false;
+      seenIds.add(skill.id);
+      return true;
+    })
+    .slice(0, MAX_SYNCED_AI_SKILLS)
+    .map((skill) => ({
+      id: skill.id.trim(),
+      title: skill.title.trim().slice(0, 120),
+      content: skill.content.slice(0, 100_000),
+      createdAt: skill.createdAt,
+      updatedAt: skill.updatedAt,
+    }));
+}
 
 function normalizeAISettings(settings: Settings): Settings {
   const normalizedSettings = { ...settings };
@@ -93,6 +130,7 @@ function normalizeAISettings(settings: Settings): Settings {
     AI_AUTOCOMPLETE_MODEL_MIGRATIONS[normalizedSettings.aiAutocompleteModelId] ||
     normalizedSettings.aiAutocompleteModelId ||
     DEFAULT_AI_AUTOCOMPLETE_MODEL_ID;
+  normalizedSettings.aiSkills = normalizeAISkills(normalizedSettings.aiSkills);
 
   return normalizedSettings;
 }
@@ -194,6 +232,10 @@ export function normalizeSettingValue<K extends keyof Settings>(
 
   if (key === "keybindingPreset" && !isKeybindingPreset(value as string)) {
     return "none" as Settings[K];
+  }
+
+  if (key === "aiSkills") {
+    return normalizeAISkills(value as Settings["aiSkills"]) as Settings[K];
   }
 
   return value;

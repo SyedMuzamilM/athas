@@ -116,6 +116,7 @@ const AIChat = memo(function AIChat({
             break;
           }
           case "status_changed":
+            store.setAcpStatus(payload.status);
             if (!payload.status.running) {
               store.setAvailableSlashCommands([]);
               store.setSessionModeState(null, []);
@@ -687,6 +688,7 @@ details: ${errorDetails || mainError}
               break;
             }
             case "status_changed":
+              useAIChatStore.getState().setAcpStatus(event.status);
               break; // internal state sync
             case "error":
               appendAcpEvent({

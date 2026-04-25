@@ -114,6 +114,8 @@ export class AcpStreamHandler {
           throw new Error(`${this.agentId} failed to start`);
         }
 
+        useAIChatStore.getState().setAcpStatus(startStatus);
+
         if (startStatus.sessionId) {
           if (targetChat) {
             useAIChatStore.getState().setChatAcpSessionId(targetChat.id, startStatus.sessionId);
@@ -287,6 +289,7 @@ export class AcpStreamHandler {
 
   private handleStatusChanged(event: Extract<AcpEvent, { type: "status_changed" }>): void {
     console.log("Agent status changed:", event.status);
+    useAIChatStore.getState().setAcpStatus(event.status);
 
     if (event.status.running && event.status.sessionId) {
       const targetChat = this.getTargetChat();

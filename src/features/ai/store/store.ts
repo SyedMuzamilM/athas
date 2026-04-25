@@ -4,6 +4,7 @@ import { persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import type { AgentType, Chat } from "@/features/ai/types/ai-chat";
 import { canUseProviderWithoutApiKey } from "@/features/ai/lib/provider-access";
+import { fuzzyScore } from "@/features/global-search/utils/fuzzy-search";
 import {
   getProviderApiToken,
   removeProviderApiToken,
@@ -72,6 +73,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           currentModeId: null,
           availableModes: [],
         },
+        acpStatus: null,
         sessionConfigOptions: [],
 
         // Agent selection actions
@@ -652,31 +654,31 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
 
         getFilteredFiles: (allFiles) => {
           const { search } = get().mentionState;
-          const query = search.toLowerCase();
+          const query = search.trim();
 
-          if (!query) return allFiles.filter((file: FileEntry) => !file.isDir).slice(0, 5);
+          if (!query) {
+            return allFiles
+              .filter((file: FileEntry) => !file.isDir)
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .slice(0, 20);
+          }
 
           const scored = allFiles
             .filter((file: FileEntry) => !file.isDir)
             .map((file: FileEntry) => {
-              const name = file.name.toLowerCase();
-              const path = file.path.toLowerCase();
-
-              // Score based on match quality
-              let score = 0;
-              if (name === query) score = 100;
-              else if (name.startsWith(query)) score = 80;
-              else if (name.includes(query)) score = 60;
-              else if (path.includes(query)) score = 40;
-              else return null;
+              const score = Math.max(fuzzyScore(file.name, query), fuzzyScore(file.path, query));
+              if (score <= 0) return null;
 
               return { file, score };
             })
             .filter(Boolean) as { file: FileEntry; score: number }[];
 
           return scored
-            .sort((a, b) => b.score - a.score)
-            .slice(0, 5)
+            .sort((a, b) => {
+              if (b.score !== a.score) return b.score - a.score;
+              return a.file.name.localeCompare(b.file.name);
+            })
+            .slice(0, 20)
             .map(({ file }) => file);
         },
 
@@ -751,6 +753,11 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
         },
 
         // Session mode actions
+        setAcpStatus: (status) =>
+          set((state) => {
+            state.acpStatus = status;
+          }),
+
         setSessionModeState: (currentModeId, availableModes) =>
           set((state) => {
             state.sessionModeState = {
@@ -964,6 +971,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
                 currentModeId: null,
                 availableModes: [],
               };
+              draft.acpStatus = null;
             }
           }),
       },
