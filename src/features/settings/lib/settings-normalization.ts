@@ -6,6 +6,11 @@ import {
   DEFAULT_AI_PROVIDER_ID,
 } from "@/features/settings/config/default-settings";
 import {
+  DEFAULT_MONO_FONT_FAMILY,
+  DEFAULT_UI_FONT_FAMILY,
+} from "@/features/settings/config/typography-defaults";
+import { normalizeConfiguredFontFamily } from "@/features/settings/lib/font-family-resolution";
+import {
   FOOTER_LEADING_ITEM_IDS,
   FOOTER_TRAILING_ITEM_IDS,
   HEADER_TRAILING_ITEM_IDS,
@@ -40,6 +45,9 @@ const AI_MODEL_MIGRATIONS: Record<string, Record<string, string>> = {
 const AI_AUTOCOMPLETE_MODEL_MIGRATIONS: Record<string, string> = {
   "google/gemini-2.5-flash-lite": "google/gemini-3-flash-preview",
 };
+
+const LEGACY_TERMINAL_LINE_HEIGHT_DEFAULT = 1.2;
+const TERMINAL_LINE_HEIGHT_DEFAULT = 1;
 
 function normalizeAISettings(settings: Settings): Settings {
   const normalizedSettings = { ...settings };
@@ -91,6 +99,22 @@ export function normalizeSettings(settings: Settings): Settings {
   }
 
   normalizedSettings.uiFontSize = normalizeUiFontSize(normalizedSettings.uiFontSize);
+  normalizedSettings.fontFamily = normalizeConfiguredFontFamily(
+    normalizedSettings.fontFamily,
+    DEFAULT_MONO_FONT_FAMILY,
+  );
+  normalizedSettings.terminalFontFamily = normalizeConfiguredFontFamily(
+    normalizedSettings.terminalFontFamily,
+    DEFAULT_MONO_FONT_FAMILY,
+  );
+  normalizedSettings.uiFontFamily = normalizeConfiguredFontFamily(
+    normalizedSettings.uiFontFamily,
+    DEFAULT_UI_FONT_FAMILY,
+  );
+  if (normalizedSettings.terminalLineHeight === LEGACY_TERMINAL_LINE_HEIGHT_DEFAULT) {
+    normalizedSettings.terminalLineHeight = TERMINAL_LINE_HEIGHT_DEFAULT;
+  }
+
   if (!isKeybindingPreset(normalizedSettings.keybindingPreset)) {
     normalizedSettings.keybindingPreset = "none";
   }
@@ -128,6 +152,22 @@ export function normalizeSettingValue<K extends keyof Settings>(
 ): Settings[K] {
   if (key === "uiFontSize") {
     return normalizeUiFontSize(value as number) as Settings[K];
+  }
+
+  if (key === "fontFamily") {
+    return normalizeConfiguredFontFamily(value as string, DEFAULT_MONO_FONT_FAMILY) as Settings[K];
+  }
+
+  if (key === "terminalFontFamily") {
+    return normalizeConfiguredFontFamily(value as string, DEFAULT_MONO_FONT_FAMILY) as Settings[K];
+  }
+
+  if (key === "uiFontFamily") {
+    return normalizeConfiguredFontFamily(value as string, DEFAULT_UI_FONT_FAMILY) as Settings[K];
+  }
+
+  if (key === "terminalLineHeight" && value === LEGACY_TERMINAL_LINE_HEIGHT_DEFAULT) {
+    return TERMINAL_LINE_HEIGHT_DEFAULT as Settings[K];
   }
 
   if (key === "iconTheme" && (value === "colorful-material" || value === "seti")) {

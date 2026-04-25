@@ -18,9 +18,10 @@ import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-s
 import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { Button } from "@/ui/button";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
+import { TabsList } from "@/ui/tabs";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
-import { IS_LINUX, IS_MAC } from "@/utils/platform";
+import { IS_MAC, IS_WINDOWS } from "@/utils/platform";
 import { AccountMenu } from "./account-menu";
 import { NotificationsMenu } from "./notifications-menu";
 import ProjectTabs from "./project-tabs";
@@ -40,6 +41,10 @@ type HeaderItem<T extends string> = {
 };
 
 const CHROME_ICON_CLASS_NAME = "size-4";
+const TITLE_BAR_CONTROL_GROUP_CLASS_NAME =
+  "pointer-events-auto border-transparent bg-transparent p-0";
+const TITLE_BAR_ICON_BUTTON_CLASS_NAME =
+  "h-6 w-7 rounded-md border-0 bg-transparent text-text-lighter hover:bg-hover/60 hover:text-text focus-visible:rounded-md";
 
 function orderHeaderItems<T extends string>(items: Array<HeaderItem<T>>, orderedIds: T[]) {
   const itemMap = new Map(items.map((item) => [item.id, item]));
@@ -63,8 +68,6 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     setIsSidebarVisible,
     setIsProjectPickerVisible,
   } = useUIState();
-  const buffers = useBufferStore.use.buffers();
-  const activeBufferId = useBufferStore.use.activeBufferId();
   const openGlobalSearchBuffer = useBufferStore.use.actions().openGlobalSearchBuffer;
 
   const [menuBarActiveMenu, setMenuBarActiveMenu] = useState<string | null>(null);
@@ -74,13 +77,11 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
   const titleBarContextMenu = useContextMenu();
 
   const isMacOS = IS_MAC;
-  const isLinux = IS_LINUX;
+  const isWindows = IS_WINDOWS;
+  const showCustomWindowControls = !isMacOS;
+  const shouldUseNativeMenuBar = !isWindows && settings.nativeMenuBar;
   const titleBarProjectMode = settings.titleBarProjectMode;
   const showTopSidebarTabs = settings.sidebarTabsPosition === "top";
-  const isGlobalSearchActive = buffers.some(
-    (buffer) => buffer.id === activeBufferId && buffer.type === "globalSearch",
-  );
-
   useEffect(() => {
     const initWindow = async () => {
       const window = getCurrentWindow();
@@ -242,20 +243,26 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     document.body,
   );
 
-  const menuItem = !settings.nativeMenuBar ? (
+  const menuItem = !shouldUseNativeMenuBar ? (
     settings.compactMenuBar ? (
       <div className="relative">
         <Tooltip content="Menu" side="bottom">
-          <Button
-            onClick={() => {
-              setMenuBarActiveMenu("File");
-            }}
-            variant="secondary"
-            size="icon-md"
-            className="pointer-events-auto"
-          >
-            <List className={CHROME_ICON_CLASS_NAME} weight="duotone" />
-          </Button>
+          <TabsList variant="segmented" className={TITLE_BAR_CONTROL_GROUP_CLASS_NAME}>
+            <Button
+              onClick={() => {
+                setMenuBarActiveMenu("File");
+              }}
+              variant="ghost"
+              size="icon-sm"
+              className={cn(
+                TITLE_BAR_ICON_BUTTON_CLASS_NAME,
+                menuBarActiveMenu && "bg-hover/70 text-text",
+              )}
+              aria-label="Menu"
+            >
+              <List className={CHROME_ICON_CLASS_NAME} weight="duotone" />
+            </Button>
+          </TabsList>
         </Tooltip>
         <CustomMenuBar
           activeMenu={menuBarActiveMenu}
@@ -273,12 +280,12 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     {
       id: "notifications",
       label: "Notifications",
-      content: <NotificationsMenu iconSize={16} />,
+      content: <NotificationsMenu />,
     },
     {
       id: "account",
       label: "Account",
-      content: <AccountMenu iconSize={16} className={!isMacOS ? "mr-1" : undefined} />,
+      content: <AccountMenu className={!isMacOS ? "mr-1" : undefined} />,
     },
   ];
 
@@ -292,8 +299,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
       >
         <div className="flex-1" />
 
-        {/* Window controls - only show on Linux */}
-        {isLinux && (
+        {showCustomWindowControls && (
           <div className="flex items-center">
             <Tooltip content="Minimize" side="bottom">
               <Button
@@ -342,7 +348,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         data-tauri-drag-region
         onContextMenu={handleTitleBarContextMenu}
         className={cn(
-          "relative z-50 flex h-8 select-none items-center justify-between bg-secondary-bg pr-3",
+          "relative z-50 flex h-8 select-none items-center justify-between bg-secondary-bg pr-2",
           isFullscreen ? "pl-2" : "pl-[94px]",
         )}
       >
@@ -356,7 +362,6 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
               isGitHubPRsViewActive={isGitHubPRsViewActive}
               coreFeatures={settings.coreFeatures}
               onViewChange={handleSidebarViewChange}
-              isSearchActive={isGlobalSearchActive}
               onSearchClick={() => openGlobalSearchBuffer()}
               compact
             />
@@ -378,7 +383,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         </div>
 
         {/* Account menu */}
-        <div className="mr-1 flex h-8 items-center">
+        <div className="flex h-8 items-center">
           <div className="flex items-center gap-1">
             {orderHeaderItems(headerTrailingItems, settings.headerTrailingItemsOrder).map(
               (item) => (
@@ -400,7 +405,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
       className="relative z-50 flex h-8 select-none items-center justify-between bg-secondary-bg px-2"
     >
       {/* Left side */}
-      <div data-tauri-drag-region className="flex flex-1 items-center px-1">
+      <div data-tauri-drag-region className="flex flex-1 items-center">
         <div className="pointer-events-auto">
           <div className="flex items-center gap-2">
             {menuItem}
@@ -411,7 +416,6 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
                 isGitHubPRsViewActive={isGitHubPRsViewActive}
                 coreFeatures={settings.coreFeatures}
                 onViewChange={handleSidebarViewChange}
-                isSearchActive={isGlobalSearchActive}
                 onSearchClick={() => openGlobalSearchBuffer()}
                 compact
               />
@@ -442,8 +446,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
           ))}
         </div>
 
-        {/* Window controls - only show on Linux */}
-        {isLinux && (
+        {showCustomWindowControls && (
           <div className="flex items-center gap-0.5">
             <Tooltip content="Minimize" side="bottom">
               <Button

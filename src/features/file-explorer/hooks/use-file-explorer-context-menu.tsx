@@ -22,6 +22,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileClipboardStore } from "@/features/file-explorer/stores/file-explorer-clipboard-store";
 import type { ContextMenuState } from "@/features/file-system/types/app";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
+import { getBaseName, getDirName, getRelativePath } from "@/utils/path-helpers";
 
 interface UseFileExplorerContextMenuOptions {
   rootFolderPath?: string;
@@ -115,7 +116,7 @@ export function useFileExplorerContextMenu({
           label: "Open in Terminal",
           icon: <Terminal />,
           onClick: () => {
-            const folderName = contextMenu.path.split("/").pop() || "terminal";
+            const folderName = getBaseName(contextMenu.path, "terminal");
             const { openTerminalBuffer } = useBufferStore.getState().actions;
             openTerminalBuffer({
               name: folderName,
@@ -175,13 +176,13 @@ export function useFileExplorerContextMenu({
             try {
               const stats = await fetch(`file://${contextMenu.path}`, { method: "HEAD" });
               const size = stats.headers.get("content-length") || "Unknown";
-              const fileName = contextMenu.path.split("/").pop() || "";
+              const fileName = getBaseName(contextMenu.path, "");
               const extension = fileName.includes(".") ? fileName.split(".").pop() : "No extension";
               alert(
                 `File: ${fileName}\nPath: ${contextMenu.path}\nSize: ${size} bytes\nType: ${extension}`,
               );
             } catch {
-              const fileName = contextMenu.path.split("/").pop() || "";
+              const fileName = getBaseName(contextMenu.path, "");
               alert(`File: ${fileName}\nPath: ${contextMenu.path}`);
             }
           },
@@ -207,10 +208,7 @@ export function useFileExplorerContextMenu({
         icon: <FileText />,
         onClick: async () => {
           try {
-            let relativePath = contextMenu.path;
-            if (rootFolderPath && contextMenu.path.startsWith(rootFolderPath)) {
-              relativePath = contextMenu.path.substring(rootFolderPath.length + 1);
-            }
+            const relativePath = getRelativePath(contextMenu.path, rootFolderPath);
             await navigator.clipboard.writeText(relativePath);
           } catch {}
         },
@@ -259,7 +257,7 @@ export function useFileExplorerContextMenu({
           if (onRevealInFinder) onRevealInFinder(contextMenu.path);
           else if (window.electron) window.electron.shell.showItemInFolder(contextMenu.path);
           else {
-            const parentDir = contextMenu.path.substring(0, contextMenu.path.lastIndexOf("/"));
+            const parentDir = getDirName(contextMenu.path);
             window.open(`file://${parentDir}`, "_blank");
           }
         },

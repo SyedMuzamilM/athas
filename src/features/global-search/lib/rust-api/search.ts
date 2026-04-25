@@ -1,10 +1,18 @@
 import { invoke } from "@tauri-apps/api/core";
 
+export interface SearchMatchRange {
+  start: number;
+  end: number;
+}
+
 export interface SearchMatch {
   line_number: number;
   line_content: string;
   column_start: number;
   column_end: number;
+  match_ranges?: SearchMatchRange[];
+  context_before?: string[];
+  context_after?: string[];
 }
 
 export interface FileSearchResult {
@@ -20,6 +28,7 @@ export interface SearchFilesRequest {
   whole_word?: boolean;
   use_regex?: boolean;
   max_results?: number;
+  context_lines?: number;
 }
 
 export async function searchFilesContent(request: SearchFilesRequest): Promise<FileSearchResult[]> {

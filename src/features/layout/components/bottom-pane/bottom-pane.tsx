@@ -15,17 +15,10 @@ import { cn } from "@/utils/cn";
 import { IS_MAC } from "@/utils/platform";
 import { useProjectStore } from "@/features/window/stores/project-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
-import DiagnosticsPane from "../../../diagnostics/components/diagnostics-pane";
-import type { Diagnostic } from "../../../diagnostics/types/diagnostics";
 import ReferencesPane from "../../../references/components/references-pane";
 import { BottomBufferPane } from "./bottom-buffer-pane";
 
-interface BottomPaneProps {
-  diagnostics: Diagnostic[];
-  onDiagnosticClick?: (diagnostic: Diagnostic) => void;
-}
-
-const BottomPane = ({ diagnostics, onDiagnosticClick }: BottomPaneProps) => {
+const BottomPane = () => {
   const { isBottomPaneVisible, bottomPaneActiveTab } = useUIState();
   const { rootFolderPath } = useProjectStore();
   const { settings } = useSettingsStore();
@@ -46,6 +39,12 @@ const BottomPane = ({ diagnostics, onDiagnosticClick }: BottomPaneProps) => {
     window.addEventListener("athas-internal-tab-drag-hover", syncHover);
     return () => window.removeEventListener("athas-internal-tab-drag-hover", syncHover);
   }, []);
+
+  useEffect(() => {
+    if (isBottomPaneVisible && bottomPaneActiveTab === "diagnostics") {
+      useUIState.getState().setIsBottomPaneVisible(false);
+    }
+  }, [bottomPaneActiveTab, isBottomPaneVisible]);
 
   // Resize logic
   const handleMouseDown = useCallback(
@@ -194,21 +193,6 @@ const BottomPane = ({ diagnostics, onDiagnosticClick }: BottomPaneProps) => {
             isFullScreen={isFullScreen}
           />
         )}
-
-        {/* Diagnostics Pane */}
-        {bottomPaneActiveTab === "diagnostics" && settings.coreFeatures.diagnostics ? (
-          <div className="h-full">
-            <DiagnosticsPane
-              diagnostics={diagnostics}
-              isVisible={true}
-              onClose={() => {}}
-              onDiagnosticClick={onDiagnosticClick}
-              isEmbedded={true}
-              onFullScreen={() => setIsFullScreen(!isFullScreen)}
-              isFullScreen={isFullScreen}
-            />
-          </div>
-        ) : null}
 
         {/* References Pane */}
         {bottomPaneActiveTab === "references" && (

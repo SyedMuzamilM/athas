@@ -820,6 +820,22 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
 
   // Advanced Settings
   {
+    id: "advanced-export-settings",
+    tab: "advanced",
+    section: "Data",
+    label: "Export Settings",
+    description: "Save all app settings to a JSON file",
+    keywords: ["export", "settings", "backup", "json", "sync"],
+  },
+  {
+    id: "advanced-import-settings",
+    tab: "advanced",
+    section: "Data",
+    label: "Import Settings",
+    description: "Restore app settings from a JSON file",
+    keywords: ["import", "settings", "restore", "backup", "json"],
+  },
+  {
     id: "advanced-reset-settings",
     tab: "advanced",
     section: "Data",

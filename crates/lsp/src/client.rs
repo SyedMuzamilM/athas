@@ -1,5 +1,5 @@
 use anyhow::{Context, Result, bail};
-use athas_runtime::NodeRuntime;
+use athas_runtime::{NodeRuntime, process::configure_background_command};
 use crossbeam_channel::{Sender, bounded};
 use lsp_types::*;
 use serde_json::{Value, json};
@@ -81,7 +81,8 @@ impl LspClient {
          (server_path, args)
       };
 
-      let mut child = Command::new(&command_path)
+      let mut command = Command::new(&command_path);
+      let mut child = configure_background_command(&mut command)
          .args(&final_args)
          .stdin(Stdio::piped())
          .stdout(Stdio::piped())

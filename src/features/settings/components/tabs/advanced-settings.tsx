@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
+import { save } from "@tauri-apps/plugin-dialog";
+import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { TypedConfirmAction } from "@/features/settings/components/typed-confirm-action";
+import { createSettingsExportPayload } from "@/features/settings/lib/settings-import-export";
 import { useSettingsStore } from "@/features/settings/store";
 import {
   clearTelemetryLogEntries,
@@ -33,8 +36,88 @@ export const AdvancedSettings = () => {
     showToast({ message: "Telemetry log cleared", type: "success" });
   };
 
+  const handleExportSettings = async () => {
+    try {
+      const targetPath = await save({
+        defaultPath: "athas-settings.json",
+        filters: [
+          { name: "JSON", extensions: ["json"] },
+          { name: "All Files", extensions: ["*"] },
+        ],
+      });
+
+      if (!targetPath) {
+        return;
+      }
+
+      const payload = createSettingsExportPayload(useSettingsStore.getState().settings);
+      await writeTextFile(targetPath, JSON.stringify(payload, null, 2));
+      showToast({ message: "Settings exported", type: "success" });
+    } catch (error) {
+      console.error("Failed to export settings:", error);
+      const message =
+        error instanceof Error
+          ? error.message
+          : typeof error === "string"
+            ? error
+            : JSON.stringify(error);
+
+      showToast({
+        message: `Failed to export settings: ${message}`,
+        type: "error",
+      });
+    }
+  };
+
+  const handleImportSettings = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "application/json";
+    input.onchange = async (event: Event) => {
+      const file = (event.target as HTMLInputElement).files?.[0];
+
+      if (!file) {
+        return;
+      }
+
+      try {
+        const text = await file.text();
+        const imported = useSettingsStore.getState().updateSettingsFromJSON(text);
+
+        if (!imported) {
+          showToast({ message: "Invalid settings file format", type: "error" });
+          return;
+        }
+
+        showToast({ message: "Settings imported", type: "success" });
+      } catch (error) {
+        console.error("Failed to import settings:", error);
+        showToast({ message: `Failed to import settings: ${error}`, type: "error" });
+      }
+    };
+    input.click();
+  };
+
   return (
     <div className="space-y-4">
+      <Section title="Data">
+        <SettingRow label="Export Settings" description="Save all app settings to a JSON file.">
+          <Button variant="default" size="xs" onClick={() => void handleExportSettings()}>
+            Export
+          </Button>
+        </SettingRow>
+        <SettingRow
+          label="Import Settings"
+          description="Restore app settings from an Athas settings JSON file."
+        >
+          <Button variant="default" size="xs" onClick={handleImportSettings}>
+            Import
+          </Button>
+        </SettingRow>
+        <SettingRow label="Reset Settings" description="Reset all settings to their default values">
+          <TypedConfirmAction actionLabel="Reset" onConfirm={handleResetSettings} />
+        </SettingRow>
+      </Section>
       <Section title="Telemetry">
         <SettingRow
           label="Anonymous Usage Telemetry"
@@ -100,9 +183,6 @@ export const AdvancedSettings = () => {
             )}
           </div>
         )}
-        <SettingRow label="Reset Settings" description="Reset all settings to their default values">
-          <TypedConfirmAction actionLabel="Reset" onConfirm={handleResetSettings} />
-        </SettingRow>
       </Section>
     </div>
   );

@@ -7,6 +7,7 @@ import { Button } from "@/ui/button";
 import Command, { CommandHeader, CommandInput, CommandList } from "@/ui/command";
 import { SEARCH_TOGGLE_ICONS } from "@/ui/search";
 import { cn } from "@/utils/cn";
+import { getBaseName, getRelativePath } from "@/utils/path-helpers";
 import { PREVIEW_DEBOUNCE_DELAY } from "../constants/limits";
 import { useContentSearch } from "../hooks/use-content-search";
 import { useKeyboardNavigation } from "../hooks/use-keyboard-navigation";
@@ -32,6 +33,10 @@ const ContentGlobalSearch = () => {
     rootFolderPath,
     searchOptions,
     setSearchOption,
+    includeQuery,
+    setIncludeQuery,
+    excludeQuery,
+    setExcludeQuery,
   } = useContentSearch(isVisible);
 
   const debouncedSetPreview = useDebouncedCallback(
@@ -65,9 +70,7 @@ const ContentGlobalSearch = () => {
     }> = [];
 
     for (const result of results) {
-      const displayPath = rootFolderPath
-        ? result.file_path.replace(rootFolderPath, "").replace(/^\//, "")
-        : result.file_path;
+      const displayPath = getRelativePath(result.file_path, rootFolderPath);
 
       for (const match of result.matches) {
         matches.push({
@@ -89,7 +92,7 @@ const ContentGlobalSearch = () => {
   const navigationItems = useMemo(() => {
     return flattenedMatches.map((item) => ({
       path: `${item.filePath}:${item.match.line_number}`,
-      name: item.filePath.split("/").pop() || "",
+      name: getBaseName(item.filePath, ""),
       isDir: false,
     }));
   }, [flattenedMatches]);
@@ -231,6 +234,20 @@ const ContentGlobalSearch = () => {
                   {option.icon}
                 </Button>
               ))}
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <CommandInput
+                value={includeQuery}
+                onChange={setIncludeQuery}
+                placeholder="Files to include"
+                className="ui-font h-7 rounded-md border border-border/70 bg-primary-bg/65 px-2"
+              />
+              <CommandInput
+                value={excludeQuery}
+                onChange={setExcludeQuery}
+                placeholder="Files to exclude"
+                className="ui-font h-7 rounded-md border border-border/70 bg-primary-bg/65 px-2"
+              />
             </div>
           </div>
         </CommandHeader>

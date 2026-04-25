@@ -31,7 +31,8 @@ export type PaneContentType =
   | "htmlPreview"
   | "csvPreview"
   | "externalEditor"
-  | "globalSearch";
+  | "globalSearch"
+  | "diagnostics";
 
 // ── Base fields shared by every content type ────────────────────────
 
@@ -156,6 +157,10 @@ export interface GlobalSearchContent extends PaneContentBase {
   type: "globalSearch";
 }
 
+export interface DiagnosticsContent extends PaneContentBase {
+  type: "diagnostics";
+}
+
 // ── Discriminated union ─────────────────────────────────────────────
 
 export type PaneContent =
@@ -176,7 +181,8 @@ export type PaneContent =
   | HtmlPreviewContent
   | CsvPreviewContent
   | ExternalEditorContent
-  | GlobalSearchContent;
+  | GlobalSearchContent
+  | DiagnosticsContent;
 
 // ── Type guards ─────────────────────────────────────────────────────
 
@@ -241,6 +247,7 @@ const VIRTUAL_TYPES: ReadonlySet<PaneContentType> = new Set([
   "githubIssue",
   "githubAction",
   "globalSearch",
+  "diagnostics",
 ]);
 
 export function isVirtualContent(c: PaneContent): boolean {
@@ -369,4 +376,7 @@ export type OpenContentSpec =
     }
   | {
       type: "globalSearch";
+    }
+  | {
+      type: "diagnostics";
     };

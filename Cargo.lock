@@ -691,10 +691,11 @@ dependencies = [
 name = "athas-github"
 version = "0.1.0"
 dependencies = [
+ "git2",
  "log",
+ "reqwest",
  "serde",
  "serde_json",
- "tauri",
 ]
 
 [[package]]
@@ -709,6 +710,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tauri",
+ "tempfile",
  "tokio",
  "which",
 ]

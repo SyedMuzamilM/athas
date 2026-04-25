@@ -47,6 +47,11 @@ interface CodeEditorProps {
   scrollable?: boolean;
   backgroundLayer?: ReactNode;
   onReadonlySurfaceClick?: (position: { line: number; column: number }) => void;
+  highlightMatches?: Array<{ start: number; end: number }>;
+  currentHighlightIndex?: number;
+  lineNumberStart?: number;
+  lineNumberMap?: Array<number | null>;
+  onContentChange?: (content: string) => void;
 }
 
 export interface CodeEditorRef {
@@ -73,6 +78,11 @@ const CodeEditor = ({
   scrollable = true,
   backgroundLayer,
   onReadonlySurfaceClick,
+  highlightMatches,
+  currentHighlightIndex,
+  lineNumberStart,
+  lineNumberMap,
+  onContentChange,
 }: CodeEditorProps) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -106,7 +116,9 @@ const CodeEditor = ({
   // Extract values from active buffer or use defaults
   const value = activeBuffer && hasTextContent(activeBuffer) ? activeBuffer.content : "";
   const filePath = activeBuffer?.path || "";
-  const onChange = activeBuffer ? handleContentChange : () => {};
+  const onChange = activeBuffer
+    ? (onContentChange ?? (isActiveSurface ? handleContentChange : () => {}))
+    : () => {};
   const isPreviewBuffer = activeBuffer?.isPreview ?? false;
   const enableInteractiveServices = isActiveSurface && !isPreviewBuffer && !readOnly;
 
@@ -503,6 +515,11 @@ const CodeEditor = ({
                 scrollable={scrollable}
                 backgroundLayer={backgroundLayer}
                 onReadonlySurfaceClick={onReadonlySurfaceClick}
+                highlightMatches={highlightMatches}
+                currentHighlightIndex={currentHighlightIndex}
+                lineNumberStart={lineNumberStart}
+                lineNumberMap={lineNumberMap}
+                onContentChange={onContentChange}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
                 onMouseEnter={

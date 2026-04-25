@@ -1,5 +1,5 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { IS_LINUX } from "@/utils/platform";
+import { IS_LINUX, IS_WINDOWS } from "@/utils/platform";
 
 type ResizeDirection =
   | "East"
@@ -75,10 +75,9 @@ const handleResizeStart = async (direction: ResizeDirection) => {
 };
 
 export const WindowResizeBorder = () => {
-  const isLinux = IS_LINUX;
+  const needsCustomResizeBorder = IS_LINUX || IS_WINDOWS;
 
-  // Only render on Linux where decorations are disabled
-  if (!isLinux) {
+  if (!needsCustomResizeBorder) {
     return null;
   }
 

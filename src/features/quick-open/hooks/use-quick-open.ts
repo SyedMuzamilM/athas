@@ -5,6 +5,7 @@ import { useRecentFilesStore } from "@/features/file-system/controllers/recent-f
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useCenterCursor } from "@/features/editor/hooks/use-center-cursor";
+import { getBaseName } from "@/utils/path-helpers";
 import { SEARCH_DEBOUNCE_DELAY } from "../constants/limits";
 import { useFffSearch } from "./use-fff-search";
 import { useFileLoader } from "./use-file-loader";
@@ -77,7 +78,7 @@ export const useQuickOpen = () => {
 
   const handleItemSelect = useCallback(
     (path: string) => {
-      const fileName = path.split("/").pop() || path;
+      const fileName = getBaseName(path, path);
       addOrUpdateRecentFile(path, fileName);
       handleFileSelect(path, false);
       onClose();

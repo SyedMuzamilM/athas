@@ -24,8 +24,6 @@ export const MainSidebar = memo(() => {
     setIsSidebarVisible,
   } = useUIState();
   const extensionViews = useExtensionViews();
-  const buffers = useBufferStore.use.buffers();
-  const activeBufferId = useBufferStore.use.activeBufferId();
   const openGlobalSearchBuffer = useBufferStore.use.actions().openGlobalSearchBuffer;
 
   // file system store
@@ -55,10 +53,6 @@ export const MainSidebar = memo(() => {
   const isFilesViewActive =
     !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "files";
   const showLeftSidebarTabs = settings.sidebarTabsPosition === "left";
-  const isGlobalSearchActive = buffers.some(
-    (buffer) => buffer.id === activeBufferId && buffer.type === "globalSearch",
-  );
-
   const handleSidebarViewChange = (view: typeof activeSidebarView) => {
     const { nextIsSidebarVisible, nextView } = resolveSidebarPaneClick(
       {
@@ -83,7 +77,6 @@ export const MainSidebar = memo(() => {
             isGitHubPRsViewActive={isGitHubPRsViewActive}
             coreFeatures={settings.coreFeatures}
             onViewChange={handleSidebarViewChange}
-            isSearchActive={isGlobalSearchActive}
             onSearchClick={() => openGlobalSearchBuffer()}
             orientation="vertical"
           />

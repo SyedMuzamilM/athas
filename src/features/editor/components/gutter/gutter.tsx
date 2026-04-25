@@ -28,6 +28,8 @@ interface GutterProps {
   wordWrap?: boolean;
   lines?: string[];
   contentWidth?: number;
+  lineNumberStart?: number;
+  lineNumberMap?: Array<number | null>;
 }
 
 const BUFFER_LINES = 20;
@@ -48,6 +50,8 @@ function GutterComponent({
   wordWrap = false,
   lines,
   contentWidth,
+  lineNumberStart = 1,
+  lineNumberMap,
 }: GutterProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -62,7 +66,17 @@ function GutterComponent({
   const containerHeightRef = useRef(0);
   const viewportRangeRef = useRef(viewportRange);
 
-  const totalWidth = calculateTotalGutterWidth(totalLines);
+  const mappedLargestLine = lineNumberMap?.reduce<number>(
+    (largest, lineNumber) =>
+      typeof lineNumber === "number" ? Math.max(largest, lineNumber) : largest,
+    0,
+  );
+  const largestDisplayedLine = Math.max(
+    totalLines,
+    mappedLargestLine ?? 0,
+    lineNumberStart + totalLines - 1,
+  );
+  const totalWidth = calculateTotalGutterWidth(largestDisplayedLine);
   const totalContentHeight = totalLines * lineHeight + GUTTER_PADDING * 2;
   const isDiffAccordionBuffer = filePath?.startsWith("diff-editor://") ?? false;
 
@@ -248,6 +262,8 @@ function GutterComponent({
             onLineClick={onLineClick}
             foldMapping={foldMapping}
             filePath={filePath}
+            lineNumberStart={lineNumberStart}
+            lineNumberMap={lineNumberMap}
           />
         ) : (
           <>
@@ -291,6 +307,8 @@ function GutterComponent({
               startLine={computedViewport.startLine}
               endLine={computedViewport.endLine}
               hiddenLines={accordionLineSet}
+              lineNumberStart={lineNumberStart}
+              lineNumberMap={lineNumberMap}
             />
           </>
         )}
@@ -312,6 +330,8 @@ export const Gutter = memo(GutterComponent, (prev, next) => {
     prev.foldMapping === next.foldMapping &&
     prev.wordWrap === next.wordWrap &&
     prev.lines === next.lines &&
-    prev.contentWidth === next.contentWidth
+    prev.contentWidth === next.contentWidth &&
+    prev.lineNumberStart === next.lineNumberStart &&
+    prev.lineNumberMap === next.lineNumberMap
   );
 });

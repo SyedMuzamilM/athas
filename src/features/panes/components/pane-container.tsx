@@ -52,6 +52,9 @@ const DiffViewer = lazy(() => import("@/features/git/components/diff/git-diff-vi
 const GlobalSearchBuffer = lazy(
   () => import("@/features/global-search/components/global-search-buffer"),
 );
+const DiagnosticsBuffer = lazy(
+  () => import("@/features/diagnostics/components/diagnostics-buffer"),
+);
 const PRViewer = lazy(() => import("@/features/github/components/pr-viewer"));
 const GitHubIssueViewer = lazy(() => import("@/features/github/components/github-issue-viewer"));
 const GitHubActionViewer = lazy(() => import("@/features/github/components/github-action-viewer"));
@@ -841,6 +844,9 @@ export function PaneContainer({ pane }: PaneContainerProps) {
 
         case "globalSearch":
           return <GlobalSearchBuffer />;
+
+        case "diagnostics":
+          return <DiagnosticsBuffer />;
 
         case "image":
           return <ImageViewer filePath={buffer.path} fileName={buffer.name} bufferId={buffer.id} />;

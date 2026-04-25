@@ -32,12 +32,6 @@ body {
   }
 }
 
-svg.lucide {
-  width: var(--app-ui-font-size);
-  height: var(--app-ui-font-size);
-  flex-shrink: 0;
-}
-
 input,
 textarea,
 select,

@@ -14,10 +14,12 @@ import { Tab, TabsList } from "@/ui/tabs";
 import Tooltip from "@/ui/tooltip";
 import { useAIChatStore } from "@/features/ai/store/store";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics-store";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
 import { getGitStatus } from "@/features/git/api/git-status-api";
 import GitBranchManager from "@/features/git/components/git-branch-manager";
 import { useGitStore } from "@/features/git/stores/git-store";
+import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
 import { useUpdater } from "@/features/settings/hooks/use-updater";
 import { useSettingsStore } from "@/features/settings/store";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
@@ -55,8 +57,13 @@ type FooterItem<T extends string> = {
   content: ReactNode;
 };
 
-const FOOTER_ICON_BUTTON_CLASS_NAME = "min-w-7 px-0 [&_svg]:size-4";
-const FOOTER_PILL_BUTTON_CLASS_NAME = "px-2.5 [&_svg]:size-4";
+const FOOTER_ICON_TAB_CLASS_NAME = "min-w-7 px-0 [&_svg]:size-4";
+const FOOTER_PILL_TAB_CLASS_NAME = "px-2.5 [&_svg]:size-4";
+const FOOTER_COUNT_PILL_CLASS_NAME =
+  "flex h-3 min-w-3 items-center justify-center rounded-full px-0.5 text-[8px] leading-3";
+const FOOTER_CONTROL_GROUP_CLASS_NAME = "pointer-events-auto border-transparent bg-transparent p-0";
+const FOOTER_CONTROL_CLASS_NAME =
+  "rounded-md border-0 bg-transparent hover:bg-hover/60 data-[active=true]:bg-hover/70";
 
 function orderFooterItems<T extends string>(items: Array<FooterItem<T>>, orderedIds: T[]) {
   const itemMap = new Map(items.map((item) => [item.id, item]));
@@ -130,7 +137,7 @@ function FooterTabControl({
   const shortcut = useCommandShortcut(commandId);
 
   return (
-    <TabsList variant="segmented">
+    <TabsList variant="segmented" className={FOOTER_CONTROL_GROUP_CLASS_NAME}>
       <Tooltip content={tooltip} shortcut={shortcut} side="top">
         <Tab
           role="button"
@@ -139,7 +146,7 @@ function FooterTabControl({
           isActive={active}
           size="xs"
           variant="segmented"
-          className={className}
+          className={cn(FOOTER_CONTROL_CLASS_NAME, className)}
           onClick={onClick}
           onKeyDown={(event) => {
             if (event.key === "Enter" || event.key === " ") {
@@ -263,10 +270,10 @@ const AiUsageStatusIndicator = () => {
         variant="secondary"
         size="xs"
         className={cn(
-          "rounded-md bg-primary-bg/40 px-2 text-text-lighter",
+          "rounded-md border-transparent bg-transparent px-2 text-text-lighter hover:bg-hover/60",
           "ui-font ui-text-sm gap-1 font-medium",
           modeToneClass,
-          isOpen && "border-border/60 bg-hover/80",
+          isOpen && "bg-hover/70",
         )}
         style={{ minHeight: 0, minWidth: 0 }}
         tooltip={`${planLabel} • ${modeLabel}`}
@@ -379,13 +386,20 @@ const Footer = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const settings = useSettingsStore((state) => state.settings);
   const uiState = useUIState();
+  const activeBufferId = useBufferStore.use.activeBufferId();
+  const buffers = useBufferStore.use.buffers();
+  const openDiagnosticsBuffer = useBufferStore.use.actions().openDiagnosticsBuffer;
   const bottomRoot = usePaneStore.use.bottomRoot();
   const bottomPaneBufferCount = getAllPaneGroups(bottomRoot).reduce(
     (total, pane) => total + pane.bufferIds.length,
     0,
   );
   const { rootFolderPath } = useFileSystemStore();
+  const activeRepoPath = useRepositoryStore.use.activeRepoPath();
+  const gitStatus = useGitStore((state) => state.gitStatus);
   const workspaceGitStatus = useGitStore((state) => state.workspaceGitStatus);
+  const currentRepoPath = useGitStore((state) => state.currentRepoPath);
+  const currentWorkspaceRepoPath = useGitStore((state) => state.currentWorkspaceRepoPath);
   const { actions } = useGitStore();
   const { available, downloading, installing, updateInfo, downloadAndInstall } = useUpdater(false);
 
@@ -395,23 +409,34 @@ const Footer = () => {
     (total, diagnostics) => total + diagnostics.length,
     0,
   );
+  const isDiagnosticsBufferActive = buffers.some(
+    (buffer) => buffer.id === activeBufferId && buffer.type === "diagnostics",
+  );
+  const footerRepoPath = activeRepoPath ?? currentWorkspaceRepoPath ?? rootFolderPath;
+  const footerGitStatus =
+    activeRepoPath && currentRepoPath === activeRepoPath && gitStatus
+      ? gitStatus
+      : workspaceGitStatus;
+  const footerBranch = footerGitStatus?.branch;
 
   const footerLeadingItemsSource: Array<FooterItem<FooterLeadingItemId> | null> = [
-    rootFolderPath && workspaceGitStatus?.branch
+    footerRepoPath && footerBranch
       ? {
           id: "branch",
           label: "Git branch",
           content: (
             <GitBranchManager
-              currentBranch={workspaceGitStatus.branch}
-              repoPath={rootFolderPath}
+              currentBranch={footerBranch}
+              repoPath={footerRepoPath}
               paletteTarget
               placement="up"
               onBranchChange={async () => {
-                const status = await getGitStatus(rootFolderPath);
-                actions.setWorkspaceGitStatus(status, rootFolderPath);
+                const status = await getGitStatus(footerRepoPath);
+                actions.setWorkspaceGitStatus(status, footerRepoPath);
+                if (currentRepoPath === footerRepoPath) {
+                  actions.setGitStatus(status);
+                }
               }}
-              compact={true}
             />
           ),
         }
@@ -424,7 +449,7 @@ const Footer = () => {
             <FooterTabControl
               tooltip="Toggle Terminal"
               active={uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "terminal"}
-              className={FOOTER_ICON_BUTTON_CLASS_NAME}
+              className={FOOTER_ICON_TAB_CLASS_NAME}
               commandId="workbench.toggleTerminal"
               onClick={() => {
                 uiState.setBottomPaneActiveTab("terminal");
@@ -452,7 +477,7 @@ const Footer = () => {
             <FooterTabControl
               tooltip="Toggle Bottom Tabs"
               active={uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "buffers"}
-              className={FOOTER_ICON_BUTTON_CLASS_NAME}
+              className={FOOTER_ICON_TAB_CLASS_NAME}
               onClick={() => {
                 uiState.setBottomPaneActiveTab("buffers");
                 const showingBuffers =
@@ -474,26 +499,21 @@ const Footer = () => {
               tooltip={
                 diagnosticsCount > 0
                   ? `${diagnosticsCount} diagnostic${diagnosticsCount === 1 ? "" : "s"}`
-                  : "Toggle Diagnostics Panel"
+                  : "Open Diagnostics"
               }
-              active={uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "diagnostics"}
+              active={isDiagnosticsBufferActive}
               className={cn(
-                FOOTER_PILL_BUTTON_CLASS_NAME,
-                !(uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "diagnostics") &&
-                  diagnosticsCount > 0 &&
-                  "text-warning",
+                FOOTER_PILL_TAB_CLASS_NAME,
+                !isDiagnosticsBufferActive && diagnosticsCount > 0 && "text-warning",
               )}
               commandId="workbench.toggleDiagnostics"
-              onClick={() => {
-                uiState.setBottomPaneActiveTab("diagnostics");
-                const showingDiagnostics =
-                  !uiState.isBottomPaneVisible || uiState.bottomPaneActiveTab !== "diagnostics";
-                uiState.setIsBottomPaneVisible(showingDiagnostics);
-              }}
+              onClick={() => openDiagnosticsBuffer()}
             >
               <WarningCircle weight="duotone" />
               {diagnosticsCount > 0 && (
-                <span className="ui-text-sm ml-0.5">{diagnosticsCount}</span>
+                <span className="ui-font ui-text-sm font-medium tabular-nums text-current">
+                  {diagnosticsCount}
+                </span>
               )}
             </FooterTabControl>
           ),
@@ -506,11 +526,13 @@ const Footer = () => {
           content: (
             <FooterTabControl
               tooltip={`${extensionUpdatesCount} extension update${extensionUpdatesCount === 1 ? "" : "s"} available`}
-              className={cn(FOOTER_PILL_BUTTON_CLASS_NAME, "text-blue-400 hover:text-blue-300")}
+              className={cn(FOOTER_PILL_TAB_CLASS_NAME, "text-blue-400 hover:text-blue-300")}
               onClick={() => uiState.openSettingsDialog("extensions")}
             >
               <PuzzlePiece weight="duotone" />
-              <span className="ui-text-sm ml-0.5">{extensionUpdatesCount}</span>
+              <span className={cn(FOOTER_COUNT_PILL_CLASS_NAME, "bg-blue-400 text-primary-bg")}>
+                {extensionUpdatesCount > 9 ? "9+" : extensionUpdatesCount}
+              </span>
             </FooterTabControl>
           ),
         }
@@ -529,7 +551,7 @@ const Footer = () => {
                     : `Update available: ${updateInfo?.version}`
               }
               className={cn(
-                FOOTER_ICON_BUTTON_CLASS_NAME,
+                FOOTER_ICON_TAB_CLASS_NAME,
                 downloading || installing
                   ? "cursor-not-allowed opacity-60"
                   : "text-blue-400 hover:text-blue-300",
@@ -568,7 +590,7 @@ const Footer = () => {
         <FooterTabControl
           tooltip="Toggle AI Chat"
           active={settings.isAIChatVisible}
-          className={FOOTER_ICON_BUTTON_CLASS_NAME}
+          className={FOOTER_ICON_TAB_CLASS_NAME}
           commandId="workbench.toggleAIChat"
           onClick={() => {
             useSettingsStore.getState().toggleAIChatVisible();

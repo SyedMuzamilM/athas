@@ -1,7 +1,7 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { cva } from "class-variance-authority";
 import { motion } from "framer-motion";
-import { type IconProps as LucideProps, X } from "@phosphor-icons/react";
+import { type IconProps as PhosphorIconProps, X } from "@phosphor-icons/react";
 import { type ReactNode } from "react";
 import { resolveEscapeGuard } from "@/utils/keyboard/escape-guard";
 import { cn } from "@/utils/cn";
@@ -11,7 +11,7 @@ interface DialogProps {
   onClose: () => void;
   title: ReactNode;
   icon?: React.ForwardRefExoticComponent<
-    Omit<LucideProps, "ref"> & React.RefAttributes<SVGSVGElement>
+    Omit<PhosphorIconProps, "ref"> & React.RefAttributes<SVGSVGElement>
   >;
   headerActions?: ReactNode;
   footer?: ReactNode;

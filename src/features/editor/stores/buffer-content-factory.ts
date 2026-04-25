@@ -191,5 +191,13 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         name: "Search",
         isPreview: false,
       };
+    case "diagnostics":
+      return {
+        ...base,
+        type: "diagnostics",
+        path: "diagnostics://problems",
+        name: "Diagnostics",
+        isPreview: false,
+      };
   }
 };

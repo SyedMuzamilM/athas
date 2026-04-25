@@ -3,6 +3,7 @@ import {
   DEFAULT_MONO_FONT_FAMILY,
   DEFAULT_UI_FONT_FAMILY,
 } from "@/features/settings/config/typography-defaults";
+import { normalizeConfiguredFontFamily } from "./font-family-resolution";
 import { getUiFontScale, normalizeUiFontSize, UI_FONT_SIZE_DEFAULT } from "./ui-font-size";
 
 export const APPEARANCE_BOOTSTRAP_CACHE_KEY = "athas.bootstrap.appearance.v1";
@@ -242,11 +243,11 @@ function parseBootstrapCache(raw: unknown): AppearanceBootstrapCache | null {
 
   const editorFontFamily =
     typeof record.editorFontFamily === "string"
-      ? record.editorFontFamily
+      ? normalizeConfiguredFontFamily(record.editorFontFamily, DEFAULT_MONO_FONT_FAMILY)
       : DEFAULT_APPEARANCE_BOOTSTRAP_CACHE.editorFontFamily;
   const uiFontFamily =
     typeof record.uiFontFamily === "string"
-      ? record.uiFontFamily
+      ? normalizeConfiguredFontFamily(record.uiFontFamily, DEFAULT_UI_FONT_FAMILY)
       : DEFAULT_APPEARANCE_BOOTSTRAP_CACHE.uiFontFamily;
   const uiFontSize = normalizeUiFontSize(record.uiFontSize);
 
@@ -339,8 +340,14 @@ export function cacheFontsForBootstrap(
   const existing = readAppearanceBootstrapCache() || DEFAULT_APPEARANCE_BOOTSTRAP_CACHE;
   const next: AppearanceBootstrapCache = {
     ...existing,
-    editorFontFamily: editorFontFamily || existing.editorFontFamily,
-    uiFontFamily: uiFontFamily || existing.uiFontFamily,
+    editorFontFamily: normalizeConfiguredFontFamily(
+      editorFontFamily || existing.editorFontFamily,
+      DEFAULT_MONO_FONT_FAMILY,
+    ),
+    uiFontFamily: normalizeConfiguredFontFamily(
+      uiFontFamily || existing.uiFontFamily,
+      DEFAULT_UI_FONT_FAMILY,
+    ),
     uiFontSize: uiFontSize === undefined ? existing.uiFontSize : normalizeUiFontSize(uiFontSize),
   };
   writeAppearanceBootstrapCache(next);

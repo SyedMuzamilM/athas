@@ -24,6 +24,11 @@ import {
 import { useKeymapStore } from "@/features/keymaps/stores/store";
 import type { Keybinding } from "@/features/keymaps/types";
 import { getEffectiveKeybindingForCommand } from "@/features/keymaps/utils/effective-keymaps";
+import {
+  createKeybindingsExportPayload,
+  getExportableUserKeybindings,
+  parseKeybindingsImportJson,
+} from "@/features/keymaps/utils/keybinding-import-export";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { useToast } from "@/features/layout/contexts/toast-context";
@@ -128,7 +133,7 @@ export const KeyboardSettings = () => {
   };
 
   const handleExport = async () => {
-    const userBindings = userKeybindings.filter((kb) => kb.source === "user");
+    const userBindings = getExportableUserKeybindings(useKeymapStore.getState().keybindings);
 
     try {
       const targetPath = await save({
@@ -143,7 +148,12 @@ export const KeyboardSettings = () => {
         return;
       }
 
-      await writeTextFile(targetPath, JSON.stringify(userBindings, null, 2));
+      const payload = createKeybindingsExportPayload({
+        keybindingPreset: settings.keybindingPreset,
+        keybindings: userBindings,
+      });
+
+      await writeTextFile(targetPath, JSON.stringify(payload, null, 2));
       showToast({ message: "Keybindings exported", type: "success" });
     } catch (error) {
       console.error("Failed to export keybindings:", error);
@@ -171,19 +181,28 @@ export const KeyboardSettings = () => {
 
       try {
         const text = await file.text();
-        const imported = JSON.parse(text) as Keybinding[];
+        const imported = parseKeybindingsImportJson(text);
 
-        if (!Array.isArray(imported)) {
+        if (!imported) {
           showToast({ message: "Invalid keybindings file format", type: "error" });
           return;
         }
 
+        if (imported.keybindingPreset) {
+          await updateSetting("keybindingPreset", imported.keybindingPreset);
+        }
+
         const { addKeybinding } = useKeymapStore.getState().actions;
-        for (const binding of imported) {
+        for (const binding of imported.keybindings) {
           addKeybinding(binding);
         }
 
-        showToast({ message: `Imported ${imported.length} keybindings`, type: "success" });
+        showToast({
+          message: `Imported ${imported.keybindings.length} keybindings${
+            imported.keybindingPreset ? " and preset" : ""
+          }`,
+          type: "success",
+        });
       } catch (error) {
         showToast({ message: `Failed to import keybindings: ${error}`, type: "error" });
       }

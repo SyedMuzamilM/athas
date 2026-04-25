@@ -386,7 +386,7 @@ foreach ($arg in $args) {{
 #[cfg(target_os = "macos")]
 fn macos_app_name(app: &AppHandle) -> &'static str {
    match app_identifier_suffix(app) {
-      Some("alpha") => "Athas Alpha",
+      Some("alpha") => "Athas Preview",
       Some("dev") => "Athas Dev",
       _ => "Athas",
    }

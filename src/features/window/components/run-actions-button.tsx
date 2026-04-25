@@ -10,6 +10,12 @@ import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
 import Input from "@/ui/input";
 import { TabsList } from "@/ui/tabs";
 import Tooltip from "@/ui/tooltip";
+import { cn } from "@/utils/cn";
+
+const TITLE_BAR_CONTROL_GROUP_CLASS_NAME =
+  "pointer-events-auto border-transparent bg-transparent p-0";
+const TITLE_BAR_BUTTON_CLASS_NAME =
+  "h-6 rounded-md border-0 bg-transparent text-text-lighter hover:bg-hover/60 hover:text-text focus-visible:rounded-md data-[active=true]:bg-hover/70";
 
 type ActionDraft = {
   id?: string;
@@ -115,7 +121,11 @@ export default function RunActionsButton() {
   return (
     <>
       <div ref={triggerRef} className="pointer-events-auto">
-        <TabsList variant="segmented" data-active={isMenuOpen}>
+        <TabsList
+          variant="segmented"
+          data-active={isMenuOpen}
+          className={TITLE_BAR_CONTROL_GROUP_CLASS_NAME}
+        >
           <Tooltip
             content={primaryAction ? `Run ${primaryAction.name}` : "Add run action"}
             side="bottom"
@@ -125,7 +135,7 @@ export default function RunActionsButton() {
               onClick={handlePrimaryRun}
               variant="ghost"
               size="sm"
-              className="h-full min-w-9 rounded-none border-0 px-2 text-text-lighter hover:bg-hover/60 hover:text-text focus-visible:rounded-none"
+              className={cn(TITLE_BAR_BUTTON_CLASS_NAME, "min-w-9 px-2")}
               aria-label={primaryAction ? `Run ${primaryAction.name}` : "Add run action"}
             >
               <Play className="size-4 translate-x-[0.5px]" weight="duotone" />
@@ -138,7 +148,8 @@ export default function RunActionsButton() {
               onClick={() => setIsMenuOpen((open) => !open)}
               variant="ghost"
               size="icon-sm"
-              className="h-full w-7 rounded-none border-0 text-text-lighter hover:bg-hover/60 hover:text-text focus-visible:rounded-none"
+              active={isMenuOpen}
+              className={cn(TITLE_BAR_BUTTON_CLASS_NAME, "w-7 px-0")}
               aria-expanded={isMenuOpen}
               aria-haspopup="menu"
               aria-label="Open run actions"

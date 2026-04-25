@@ -33,7 +33,7 @@ function App() {
 
   return (
     <TooltipProvider>
-      {/* Linux window resize handles (must be outside zoom container) */}
+      {/* Borderless desktop window resize handles (must be outside zoom container) */}
       <WindowResizeBorder />
 
       <div className="h-dvh w-dvw overflow-hidden">

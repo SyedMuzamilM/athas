@@ -1,4 +1,5 @@
 const QUERY_FOLDER_BY_LANGUAGE: Record<string, string> = {
+  angular: "html",
   javascript: "tsx",
   javascriptreact: "tsx",
   typescript: "tsx",
