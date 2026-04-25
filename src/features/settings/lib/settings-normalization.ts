@@ -48,6 +48,17 @@ const AI_AUTOCOMPLETE_MODEL_MIGRATIONS: Record<string, string> = {
 
 const LEGACY_TERMINAL_LINE_HEIGHT_DEFAULT = 1.2;
 const TERMINAL_LINE_HEIGHT_DEFAULT = 1;
+const EDITOR_LINE_HEIGHT_MIN = 1;
+const EDITOR_LINE_HEIGHT_MAX = 2;
+
+function normalizeEditorLineHeight(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 1.4;
+  }
+
+  const snapped = Math.round(value * 10) / 10;
+  return Math.min(EDITOR_LINE_HEIGHT_MAX, Math.max(EDITOR_LINE_HEIGHT_MIN, snapped));
+}
 
 function normalizeAISettings(settings: Settings): Settings {
   const normalizedSettings = { ...settings };
@@ -114,6 +125,9 @@ export function normalizeSettings(settings: Settings): Settings {
   if (normalizedSettings.terminalLineHeight === LEGACY_TERMINAL_LINE_HEIGHT_DEFAULT) {
     normalizedSettings.terminalLineHeight = TERMINAL_LINE_HEIGHT_DEFAULT;
   }
+  normalizedSettings.editorLineHeight = normalizeEditorLineHeight(
+    normalizedSettings.editorLineHeight,
+  );
 
   if (!isKeybindingPreset(normalizedSettings.keybindingPreset)) {
     normalizedSettings.keybindingPreset = "none";
@@ -168,6 +182,10 @@ export function normalizeSettingValue<K extends keyof Settings>(
 
   if (key === "terminalLineHeight" && value === LEGACY_TERMINAL_LINE_HEIGHT_DEFAULT) {
     return TERMINAL_LINE_HEIGHT_DEFAULT as Settings[K];
+  }
+
+  if (key === "editorLineHeight") {
+    return normalizeEditorLineHeight(value as number) as Settings[K];
   }
 
   if (key === "iconTheme" && (value === "colorful-material" || value === "seti")) {

@@ -25,6 +25,7 @@ export const defaultSettings: Settings = {
   // Editor
   fontFamily: DEFAULT_MONO_FONT_FAMILY,
   fontSize: DEFAULT_CODE_FONT_SIZE,
+  editorLineHeight: 1.4,
   tabSize: 2,
   wordWrap: false,
   lineNumbers: true,

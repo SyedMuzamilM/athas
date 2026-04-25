@@ -112,6 +112,7 @@ const CodeEditor = ({
 
   // Apply zoom to font size for position calculations (must match editor.tsx)
   const zoomedFontSize = settings.fontSize * zoomLevel;
+  const zoomedLineHeight = calculateLineHeight(zoomedFontSize, settings.editorLineHeight);
 
   // Extract values from active buffer or use defaults
   const value = activeBuffer && hasTextContent(activeBuffer) ? activeBuffer.content : "";
@@ -194,7 +195,6 @@ const CodeEditor = ({
     value,
     cursorPosition,
     editorRef,
-    fontSize: zoomedFontSize,
   });
 
   // Rename symbol support
@@ -279,8 +279,8 @@ const CodeEditor = ({
       const currentContent = textarea.value;
       if (!currentContent) return false;
 
-      const { fontSize } = useEditorSettingsStore.getState();
-      const lineHeight = Math.ceil(fontSize * 1.4); // Must match calculateLineHeight()
+      const { fontSize, lineHeight: editorLineHeight } = useEditorSettingsStore.getState();
+      const lineHeight = calculateLineHeight(fontSize, editorLineHeight);
       const lines = currentContent.split("\n");
 
       // Convert to 0-indexed line number and clamp to valid range
@@ -407,7 +407,7 @@ const CodeEditor = ({
           }
 
           // Calculate scroll position to center the match in viewport
-          const lineHeight = calculateLineHeight(zoomedFontSize);
+          const lineHeight = calculateLineHeight(zoomedFontSize, settings.editorLineHeight);
           const targetScrollTop = line * lineHeight;
           const viewportHeight = textarea.clientHeight;
           const centeredScrollTop = Math.max(0, targetScrollTop - viewportHeight / 2 + lineHeight);
@@ -462,6 +462,7 @@ const CodeEditor = ({
               ref={codeLensRef}
               lenses={codeLenses}
               fontSize={zoomedFontSize}
+              lineHeight={zoomedLineHeight}
               scrollTop={editorRef.current?.querySelector("textarea")?.scrollTop ?? 0}
               viewportHeight={editorRef.current?.clientHeight ?? 600}
             />
@@ -473,6 +474,7 @@ const CodeEditor = ({
               ref={inlayHintsRef}
               hints={inlayHints}
               fontSize={zoomedFontSize}
+              lineHeight={zoomedLineHeight}
               charWidth={zoomedFontSize * 0.6}
               scrollTop={editorRef.current?.querySelector("textarea")?.scrollTop ?? 0}
               viewportHeight={editorRef.current?.clientHeight ?? 600}
@@ -490,6 +492,7 @@ const CodeEditor = ({
               line={rename.renameState.line}
               column={rename.renameState.column}
               fontSize={zoomedFontSize}
+              lineHeight={zoomedLineHeight}
               charWidth={zoomedFontSize * 0.6}
               inputRef={rename.inputRef}
               onSubmit={(newName) => void rename.executeRename(newName)}

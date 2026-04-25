@@ -61,6 +61,7 @@ import { GitBlameLayer } from "./layers/git-blame-layer";
 import { HighlightLayer } from "./layers/highlight-layer";
 import { InputLayer } from "./layers/input-layer";
 import { MultiCursorLayer } from "./layers/multi-cursor-layer";
+import { PrimaryCursorLayer } from "./layers/primary-cursor-layer";
 import { SearchHighlightLayer } from "./layers/search-highlight-layer";
 import { SelectionLayer } from "./layers/selection-layer";
 import { VimCursorLayer } from "./layers/vim-cursor-layer";
@@ -144,6 +145,7 @@ export function Editor({
   const onChange = useEditorStateStore.use.onChange();
 
   const baseFontSize = useEditorSettingsStore.use.fontSize();
+  const lineHeightMultiplier = useEditorSettingsStore.use.lineHeight();
   const fontFamily = useEditorSettingsStore.use.fontFamily();
   const zoomLevel = useZoomStore.use.editorZoomLevel();
   const vimModeEnabled = useSettingsStore((state) => state.settings.vimMode);
@@ -231,7 +233,7 @@ export function Editor({
 
     const previous = previousFoldViewportRef.current;
     if (previous && previous.signature !== collapsedSignature) {
-      const currentLineHeight = calculateLineHeight(fontSize);
+      const currentLineHeight = calculateLineHeight(fontSize, lineHeightMultiplier);
       const previousTopVirtualLine = Math.max(
         0,
         Math.floor(textarea.scrollTop / currentLineHeight),
@@ -249,7 +251,7 @@ export function Editor({
       signature: collapsedSignature,
       mapping: foldTransform.mapping,
     };
-  }, [collapsedSignature, foldTransform.mapping, fontSize]);
+  }, [collapsedSignature, foldTransform.mapping, fontSize, lineHeightMultiplier]);
 
   // Track content area width for word wrap gutter measurement
   useEffect(() => {
@@ -289,7 +291,10 @@ export function Editor({
   const lines = foldTransform.hasActiveFolds ? foldTransform.virtualLines : actualLines;
   const displayContent = foldTransform.hasActiveFolds ? foldTransform.virtualContent : content;
 
-  const lineHeight = useMemo(() => calculateLineHeight(fontSize), [fontSize]);
+  const lineHeight = useMemo(
+    () => calculateLineHeight(fontSize, lineHeightMultiplier),
+    [fontSize, lineHeightMultiplier],
+  );
   const shouldVirtualizeRendering =
     lines.length >= EDITOR_CONSTANTS.RENDER_VIRTUALIZATION_THRESHOLD;
   const useIncrementalTokenization = hasSyntaxHighlighting && shouldVirtualizeRendering;
@@ -1058,9 +1063,23 @@ export function Editor({
           wordWrap={wordWrap}
           readOnly={readOnly}
           scrollable={scrollable}
+          customCaret={useGlobalEditorState && !wordWrap && !readOnly}
           bufferId={bufferId || undefined}
           showText={!hasSyntaxHighlighting}
         />
+        {useGlobalEditorState && !wordWrap && !readOnly && (
+          <PrimaryCursorLayer
+            cursorPosition={cursorPosition}
+            visualLine={visualCursorLine}
+            fontSize={fontSize}
+            fontFamily={fontFamily}
+            lineHeight={lineHeight}
+            tabSize={tabSize}
+            content={displayContent}
+            textareaRef={inputRef}
+            hidden={vimModeEnabled && (vimMode === "normal" || vimMode === "visual")}
+          />
+        )}
         {useGlobalEditorState && (
           <SelectionLayer
             ref={selectionLayerRef}

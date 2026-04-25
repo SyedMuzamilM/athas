@@ -101,8 +101,8 @@ const ensureCursorVisible = (position: Position) => {
   const viewport = document.querySelector(".editor-viewport") as HTMLDivElement | null;
   if (!viewport) return;
 
-  const fontSize = useEditorSettingsStore.getState().fontSize;
-  const lineHeight = getLineHeight(fontSize);
+  const { fontSize, lineHeight: editorLineHeight } = useEditorSettingsStore.getState();
+  const lineHeight = getLineHeight(fontSize, editorLineHeight);
   const targetTop = position.line * lineHeight;
   const targetBottom = targetTop + lineHeight;
   const currentScrollTop = viewport.scrollTop;

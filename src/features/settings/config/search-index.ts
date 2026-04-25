@@ -78,6 +78,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["font", "size", "editor", "typography"],
   },
   {
+    id: "editor-line-height",
+    tab: "editor",
+    section: "Typography",
+    label: "Line Height",
+    description: "Editor line height multiplier",
+    keywords: ["line", "height", "spacing", "editor", "typography"],
+  },
+  {
     id: "editor-tab-size",
     tab: "editor",
     section: "Typography",

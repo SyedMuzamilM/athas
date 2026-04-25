@@ -1,4 +1,3 @@
-import { EDITOR_CONSTANTS } from "../config/constants";
 import { useBufferStore } from "../stores/buffer-store";
 import { useEditorDecorationsStore } from "../stores/decorations-store";
 import { useHistoryStore } from "../stores/history-store";
@@ -14,6 +13,7 @@ import type {
   EditorSettings,
   EventHandler,
 } from "./types";
+import { calculateLineHeight } from "../utils/lines";
 
 class EditorAPIImpl implements EditorAPI {
   private eventHandlers: Map<EditorEvent, Set<EventHandler<EditorEvent>>> = new Map();
@@ -138,8 +138,8 @@ class EditorAPIImpl implements EditorAPI {
 
     // Direct viewport scrolling for immediate response
     if (this.viewportRef) {
-      const fontSize = this.getSettings().fontSize;
-      const lineHeight = Math.ceil(EDITOR_CONSTANTS.LINE_HEIGHT_MULTIPLIER * fontSize);
+      const { fontSize, lineHeight: editorLineHeight } = this.getSettings();
+      const lineHeight = calculateLineHeight(fontSize, editorLineHeight);
       const targetLineTop = position.line * lineHeight;
       const targetLineBottom = targetLineTop + lineHeight;
       const currentScrollTop = this.viewportRef.scrollTop;
@@ -527,9 +527,11 @@ class EditorAPIImpl implements EditorAPI {
 
   // Settings
   getSettings(): EditorSettings {
-    const { fontSize, tabSize, lineNumbers, wordWrap } = useEditorSettingsStore.getState();
+    const { fontSize, lineHeight, tabSize, lineNumbers, wordWrap } =
+      useEditorSettingsStore.getState();
     return {
       fontSize,
+      lineHeight,
       tabSize,
       lineNumbers,
       wordWrap,
@@ -542,6 +544,9 @@ class EditorAPIImpl implements EditorAPI {
 
     if (settings.fontSize !== undefined) {
       store.actions.setFontSize(settings.fontSize);
+    }
+    if (settings.lineHeight !== undefined) {
+      store.actions.setLineHeight(settings.lineHeight);
     }
     if (settings.tabSize !== undefined) {
       store.actions.setTabSize(settings.tabSize);

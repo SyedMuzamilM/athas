@@ -20,6 +20,7 @@ type SyncableSettingsKey =
   | "quickOpenPreview"
   | "fontFamily"
   | "fontSize"
+  | "editorLineHeight"
   | "tabSize"
   | "wordWrap"
   | "lineNumbers"
@@ -100,6 +101,7 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "quickOpenPreview",
   "fontFamily",
   "fontSize",
+  "editorLineHeight",
   "tabSize",
   "wordWrap",
   "lineNumbers",

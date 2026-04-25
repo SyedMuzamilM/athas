@@ -16,6 +16,7 @@ export interface Settings {
   // Editor
   fontFamily: string;
   fontSize: number;
+  editorLineHeight: number;
   tabSize: number;
   wordWrap: boolean;
   lineNumbers: boolean;

@@ -28,7 +28,6 @@ interface UseLspIntegrationOptions {
   value: string;
   cursorPosition: Position;
   editorRef: RefObject<HTMLDivElement | null> | RefObject<HTMLTextAreaElement>;
-  fontSize: number;
 }
 
 /**
@@ -49,7 +48,6 @@ export const useLspIntegration = ({
   value,
   cursorPosition,
   editorRef,
-  fontSize,
 }: UseLspIntegrationOptions) => {
   // Get LSP client instance (singleton)
   const lspClient = useMemo(() => LspClient.getInstance(), []);
@@ -68,7 +66,7 @@ export const useLspIntegration = ({
   const snippetCompletion = useSnippetCompletion(filePath);
 
   // Get layout dimensions for hover position calculations
-  const { charWidth } = useEditorLayout();
+  const { charWidth, lineHeight } = useEditorLayout();
 
   // Use constant debounce for predictable completion behavior
   const completionTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
@@ -104,7 +102,7 @@ export const useLspIntegration = ({
     getHover: lspClient.getHover.bind(lspClient),
     isLanguageSupported: (fp) => isFileSupported(fp),
     filePath: filePath || "",
-    fontSize,
+    lineHeight,
     charWidth,
   });
 
@@ -113,7 +111,7 @@ export const useLspIntegration = ({
     getDefinition: lspClient.getDefinition.bind(lspClient),
     isLanguageSupported: (fp) => isFileSupported(fp),
     filePath: filePath || "",
-    fontSize,
+    lineHeight,
     charWidth,
   });
 
@@ -121,7 +119,7 @@ export const useLspIntegration = ({
   const definitionLinkHandlers = useDefinitionLink({
     filePath: filePath || "",
     content: value,
-    fontSize,
+    lineHeight,
     charWidth,
     isLanguageSupported: isLspSupported,
     getDefinition: lspClient.getDefinition.bind(lspClient),

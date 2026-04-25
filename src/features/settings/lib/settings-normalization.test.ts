@@ -37,4 +37,10 @@ describe("settings normalization", () => {
     expect(normalized.terminalLineHeight).toBe(1);
     expect(normalizeSettingValue("terminalLineHeight", 1.2)).toBe(1);
   });
+
+  it("clamps editor line height to the supported range", () => {
+    expect(normalizeSettingValue("editorLineHeight", 0.6)).toBe(1);
+    expect(normalizeSettingValue("editorLineHeight", 2.6)).toBe(2);
+    expect(normalizeSettingValue("editorLineHeight", 1.34)).toBe(1.3);
+  });
 });

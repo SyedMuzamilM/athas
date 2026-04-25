@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useEditorLayout } from "@/features/editor/hooks/use-layout";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useEditorUIStore } from "@/features/editor/stores/ui-store";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
@@ -27,7 +26,7 @@ const TRIGGER_CHARS = ["(", ","];
 
 export const SignatureHelpTooltip = () => {
   const [signatureHelp, setSignatureHelp] = useState<SignatureHelpResult | null>(null);
-  const { charWidth } = useEditorLayout();
+  const { charWidth, lineHeight } = useEditorLayout();
   const cursorPosition = useEditorStateStore.use.cursorPosition();
   const filePath = useEditorStateStore.use.filePath();
   const lastInputTimestamp = useEditorUIStore.use.lastInputTimestamp();
@@ -108,9 +107,6 @@ export const SignatureHelpTooltip = () => {
   }, [cursorPosition.offset, signatureHelp, fetchSignatureHelp]);
 
   const position = useMemo(() => {
-    const fontSize = useEditorSettingsStore.getState().fontSize;
-    const lineHeight = Math.ceil((fontSize || 14) * EDITOR_CONSTANTS.LINE_HEIGHT_MULTIPLIER);
-
     return {
       top:
         EDITOR_CONSTANTS.EDITOR_PADDING_TOP +
@@ -122,7 +118,7 @@ export const SignatureHelpTooltip = () => {
         cursorPosition.column * charWidth -
         scrollOffsetRef.current.left,
     };
-  }, [cursorPosition.line, cursorPosition.column, charWidth]);
+  }, [cursorPosition.line, cursorPosition.column, charWidth, lineHeight]);
 
   if (!signatureHelp || signatureHelp.signatures.length === 0) return null;
 
