@@ -21,6 +21,11 @@ import { useToastStore, type NotificationEntry } from "@/ui/toast";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 
+const TITLE_BAR_CONTROL_GROUP_CLASS_NAME =
+  "pointer-events-auto border-transparent bg-transparent p-0";
+const TITLE_BAR_ICON_BUTTON_CLASS_NAME =
+  "h-6 rounded-md border-0 bg-transparent text-text-lighter hover:bg-hover/60 hover:text-text focus-visible:rounded-md data-[active=true]:bg-hover/70";
+
 interface NotificationsMenuProps {
   className?: string;
 }
@@ -186,15 +191,16 @@ export const NotificationsMenu = ({ className }: NotificationsMenuProps) => {
   return (
     <>
       <Tooltip content="Notifications" side="bottom">
-        <TabsList variant="segmented" className={cn("pointer-events-auto", className)}>
+        <TabsList variant="segmented" className={cn(TITLE_BAR_CONTROL_GROUP_CLASS_NAME, className)}>
           <Button
             ref={buttonRef}
             onClick={() => setIsOpen((open) => !open)}
             type="button"
             variant="ghost"
             size="sm"
+            active={isOpen}
             className={cn(
-              "h-full rounded-none border-0 text-text-lighter hover:bg-hover/60 hover:text-text focus-visible:rounded-none",
+              TITLE_BAR_ICON_BUTTON_CLASS_NAME,
               unreadCount > 0 ? "min-w-10 gap-1 px-1.5" : "w-7 px-0",
             )}
             aria-expanded={isOpen}

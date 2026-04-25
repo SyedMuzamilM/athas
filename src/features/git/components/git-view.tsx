@@ -747,7 +747,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
               currentBranch={gitStatus.branch}
               repoPath={activeRepoPath}
               onBranchChange={refreshAfterAction}
-              compact
             />
             {(gitStatus.ahead > 0 || gitStatus.behind > 0) && (
               <span className="ui-text-sm shrink-0 text-text-lighter">

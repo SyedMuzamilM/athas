@@ -13,8 +13,8 @@
   "rtl": false,
   "aliases": {
     "components": "@/components",
-    "utils": "@/lib/utils",
-    "ui": "@/components/ui",
+    "utils": "@/utils/cn",
+    "ui": "@/ui",
     "lib": "@/lib",
     "hooks": "@/hooks"
   },

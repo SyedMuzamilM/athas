@@ -18,6 +18,11 @@ import Tooltip from "@/ui/tooltip";
 import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
 import { cn } from "@/utils/cn";
 
+const TITLE_BAR_CONTROL_GROUP_CLASS_NAME =
+  "pointer-events-auto border-transparent bg-transparent p-0";
+const TITLE_BAR_ICON_BUTTON_CLASS_NAME =
+  "h-6 w-7 rounded-md border-0 bg-transparent text-text-lighter hover:bg-hover/60 hover:text-text focus-visible:rounded-md data-[active=true]:bg-hover/70";
+
 interface AccountMenuProps {
   className?: string;
 }
@@ -169,14 +174,15 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
   return (
     <>
       <Tooltip content={tooltipLabel} side="bottom">
-        <TabsList variant="segmented" className={cn("pointer-events-auto", className)}>
+        <TabsList variant="segmented" className={cn(TITLE_BAR_CONTROL_GROUP_CLASS_NAME, className)}>
           <Button
             ref={buttonRef}
             onClick={() => setIsOpen((open) => !open)}
             type="button"
             variant="ghost"
             size="icon-sm"
-            className="h-full w-7 rounded-none border-0 text-text-lighter hover:bg-hover/60 hover:text-text focus-visible:rounded-none"
+            active={isOpen}
+            className={TITLE_BAR_ICON_BUTTON_CLASS_NAME}
             aria-expanded={isOpen}
             aria-haspopup="menu"
             aria-label="Account"

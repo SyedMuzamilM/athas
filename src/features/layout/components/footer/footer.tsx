@@ -61,6 +61,9 @@ const FOOTER_ICON_TAB_CLASS_NAME = "min-w-7 px-0 [&_svg]:size-4";
 const FOOTER_PILL_TAB_CLASS_NAME = "px-2.5 [&_svg]:size-4";
 const FOOTER_COUNT_PILL_CLASS_NAME =
   "flex h-3 min-w-3 items-center justify-center rounded-full px-0.5 text-[8px] leading-3";
+const FOOTER_CONTROL_GROUP_CLASS_NAME = "pointer-events-auto border-transparent bg-transparent p-0";
+const FOOTER_CONTROL_CLASS_NAME =
+  "rounded-md border-0 bg-transparent hover:bg-hover/60 data-[active=true]:bg-hover/70";
 
 function orderFooterItems<T extends string>(items: Array<FooterItem<T>>, orderedIds: T[]) {
   const itemMap = new Map(items.map((item) => [item.id, item]));
@@ -134,7 +137,7 @@ function FooterTabControl({
   const shortcut = useCommandShortcut(commandId);
 
   return (
-    <TabsList variant="segmented" className="pointer-events-auto">
+    <TabsList variant="segmented" className={FOOTER_CONTROL_GROUP_CLASS_NAME}>
       <Tooltip content={tooltip} shortcut={shortcut} side="top">
         <Tab
           role="button"
@@ -143,7 +146,7 @@ function FooterTabControl({
           isActive={active}
           size="xs"
           variant="segmented"
-          className={className}
+          className={cn(FOOTER_CONTROL_CLASS_NAME, className)}
           onClick={onClick}
           onKeyDown={(event) => {
             if (event.key === "Enter" || event.key === " ") {
@@ -267,10 +270,10 @@ const AiUsageStatusIndicator = () => {
         variant="secondary"
         size="xs"
         className={cn(
-          "rounded-md bg-primary-bg/40 px-2 text-text-lighter",
+          "rounded-md border-transparent bg-transparent px-2 text-text-lighter hover:bg-hover/60",
           "ui-font ui-text-sm gap-1 font-medium",
           modeToneClass,
-          isOpen && "border-border/60 bg-hover/80",
+          isOpen && "bg-hover/70",
         )}
         style={{ minHeight: 0, minWidth: 0 }}
         tooltip={`${planLabel} • ${modeLabel}`}
@@ -434,7 +437,6 @@ const Footer = () => {
                   actions.setGitStatus(status);
                 }
               }}
-              compact={true}
             />
           ),
         }
