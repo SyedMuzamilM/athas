@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { Pulse as Activity, WarningCircle as AlertCircle } from "@phosphor-icons/react";
 import { GitHubAuthStatusMessage } from "./github-auth-status";
+import { GitHubSidebarState } from "./github-sidebar-state";
 import {
   memo,
   startTransition,
@@ -176,19 +177,17 @@ const GitHubActionsView = memo(({ refreshNonce = 0 }: GitHubActionsViewProps) =>
   }
 
   return (
-    <div className="min-h-0 flex-1 overflow-hidden">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <GitHubSidebarLoadingBar isVisible={isLoading} className="mx-2 mb-1 mt-1" />
       <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
         {error ? (
-          <div className="flex items-center gap-2 px-2 py-3 text-error">
-            <AlertCircle className="size-4" />
-            <p className="ui-text-sm">{error}</p>
-          </div>
+          <GitHubSidebarState
+            icon={<AlertCircle className="size-4" />}
+            title={error}
+            tone="error"
+          />
         ) : deferredRuns.length === 0 && !isLoading ? (
-          <div className="flex items-center gap-2 px-2 py-3 text-text-lighter">
-            <Activity className="size-4" />
-            <p className="ui-text-sm">No workflow runs</p>
-          </div>
+          <GitHubSidebarState icon={<Activity className="size-4" />} title="No workflow runs" />
         ) : (
           <div className="space-y-1 overflow-x-hidden">
             {deferredRuns.map((run) => (

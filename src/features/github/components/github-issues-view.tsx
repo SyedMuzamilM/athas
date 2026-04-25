@@ -4,6 +4,7 @@ import {
   ChatCircleText as MessageSquare,
 } from "@phosphor-icons/react";
 import { GitHubAuthStatusMessage } from "./github-auth-status";
+import { GitHubSidebarState } from "./github-sidebar-state";
 import {
   memo,
   startTransition,
@@ -179,19 +180,17 @@ const GitHubIssuesView = memo(({ refreshNonce = 0 }: GitHubIssuesViewProps) => {
   }
 
   return (
-    <div className="min-h-0 flex-1 overflow-hidden">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <GitHubSidebarLoadingBar isVisible={isLoading} className="mx-2 mb-1 mt-1" />
       <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
         {error ? (
-          <div className="flex items-center gap-2 px-2 py-3 text-error">
-            <AlertCircle className="size-4" />
-            <p className="ui-text-sm">{error}</p>
-          </div>
+          <GitHubSidebarState
+            icon={<AlertCircle className="size-4" />}
+            title={error}
+            tone="error"
+          />
         ) : deferredIssues.length === 0 && !isLoading ? (
-          <div className="flex items-center gap-2 px-2 py-3 text-text-lighter">
-            <MessageSquare className="size-4" />
-            <p className="ui-text-sm">No open issues</p>
-          </div>
+          <GitHubSidebarState icon={<MessageSquare className="size-4" />} title="No open issues" />
         ) : (
           <div className="space-y-1 overflow-x-hidden">
             {deferredIssues.map((issue) => (

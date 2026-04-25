@@ -28,6 +28,11 @@ struct RepoSlug {
    name: String,
 }
 
+struct RepoRemote {
+   slug: RepoSlug,
+   remote_name: String,
+}
+
 struct GitHubApi {
    client: Client,
    github_token: Option<String>,
@@ -284,25 +289,73 @@ fn parse_github_error_message(body: &str) -> Option<String> {
 }
 
 fn resolve_repo_slug(repo_path: &str) -> Result<RepoSlug, String> {
+   resolve_repo_remote(repo_path).map(|remote| remote.slug)
+}
+
+fn resolve_repo_remote(repo_path: &str) -> Result<RepoRemote, String> {
    let repository = Repository::discover(repo_path)
       .map_err(|_| "Repository is not a Git repository".to_string())?;
 
-   let remote_urls = repository
+   let remote_names = repository
       .remotes()
       .map_err(|e| format!("Failed to read repository remotes: {e}"))?
       .iter()
       .flatten()
-      .filter_map(|remote_name| repository.find_remote(remote_name).ok())
-      .filter_map(|remote| remote.url().map(ToOwned::to_owned))
+      .map(ToOwned::to_owned)
       .collect::<Vec<_>>();
 
-   for url in remote_urls {
-      if let Some(slug) = parse_github_remote_url(&url) {
-         return Ok(slug);
+   for remote_name in
+      order_remote_names(remote_names, current_branch_remote(&repository).as_deref())
+   {
+      if let Ok(remote) = repository.find_remote(&remote_name) {
+         if let Some(url) = remote.url() {
+            if let Some(slug) = parse_github_remote_url(url) {
+               return Ok(RepoRemote { slug, remote_name });
+            }
+         }
       }
    }
 
    Err("No github.com remote found for this repository".to_string())
+}
+
+fn current_branch_remote(repository: &Repository) -> Option<String> {
+   let head = repository.head().ok()?;
+   if !head.is_branch() {
+      return None;
+   }
+
+   let branch_name = head.shorthand()?;
+   repository
+      .config()
+      .ok()?
+      .get_string(&format!("branch.{branch_name}.remote"))
+      .ok()
+      .filter(|remote| !remote.trim().is_empty())
+}
+
+fn order_remote_names(remote_names: Vec<String>, upstream_remote: Option<&str>) -> Vec<String> {
+   let mut ordered = Vec::with_capacity(remote_names.len());
+
+   if let Some(upstream_remote) = upstream_remote {
+      if remote_names.iter().any(|name| name == upstream_remote) {
+         ordered.push(upstream_remote.to_string());
+      }
+   }
+
+   if remote_names.iter().any(|name| name == "origin")
+      && !ordered.iter().any(|name| name == "origin")
+   {
+      ordered.push("origin".to_string());
+   }
+
+   for remote_name in remote_names {
+      if !ordered.iter().any(|name| name == &remote_name) {
+         ordered.push(remote_name);
+      }
+   }
+
+   ordered
 }
 
 fn parse_github_remote_url(url: &str) -> Option<RepoSlug> {
@@ -701,7 +754,8 @@ pub fn github_checkout_pr(
    pr_number: i64,
    github_token: Option<String>,
 ) -> Result<(), String> {
-   let slug = resolve_repo_slug(&repo_path_value)?;
+   let resolved_remote = resolve_repo_remote(&repo_path_value)?;
+   let slug = resolved_remote.slug;
    let api = GitHubApi::new(github_token)?;
    let _: RestPullRequest = api.get_json(&repo_path(&slug, &format!("pulls/{pr_number}")))?;
 
@@ -711,7 +765,10 @@ pub fn github_checkout_pr(
    }
 
    let refspec = format!("refs/pull/{pr_number}/head:refs/heads/{branch}");
-   run_git(Path::new(&repo_path_value), &["fetch", "origin", &refspec])?;
+   run_git(
+      Path::new(&repo_path_value),
+      &["fetch", &resolved_remote.remote_name, &refspec],
+   )?;
    run_git(Path::new(&repo_path_value), &["switch", &branch])
 }
 
@@ -877,7 +934,7 @@ pub fn github_get_workflow_run_details(
 
 #[cfg(test)]
 mod api_tests {
-   use super::parse_github_remote_url;
+   use super::{order_remote_names, parse_github_remote_url};
 
    #[test]
    fn parses_https_github_remote() {
@@ -904,5 +961,33 @@ mod api_tests {
    fn rejects_nested_or_invalid_remote_paths() {
       assert!(parse_github_remote_url("https://github.com/athasdev/athas/extra.git").is_none());
       assert!(parse_github_remote_url("https://github.com/athasdev/../athas.git").is_none());
+   }
+
+   #[test]
+   fn orders_upstream_remote_before_origin_and_other_remotes() {
+      let ordered = order_remote_names(
+         vec![
+            "origin".to_string(),
+            "fork".to_string(),
+            "upstream".to_string(),
+         ],
+         Some("upstream"),
+      );
+
+      assert_eq!(ordered, vec!["upstream", "origin", "fork"]);
+   }
+
+   #[test]
+   fn orders_origin_before_other_remotes_without_upstream() {
+      let ordered = order_remote_names(
+         vec![
+            "fork".to_string(),
+            "origin".to_string(),
+            "upstream".to_string(),
+         ],
+         None,
+      );
+
+      assert_eq!(ordered, vec!["origin", "fork", "upstream"]);
    }
 }
