@@ -32,7 +32,7 @@ export const defaultSettings: Settings = {
   // Terminal
   terminalFontFamily: DEFAULT_MONO_FONT_FAMILY,
   terminalFontSize: DEFAULT_TERMINAL_FONT_SIZE,
-  terminalLineHeight: 1.2,
+  terminalLineHeight: 1,
   terminalLetterSpacing: 0,
   terminalScrollback: 10000,
   terminalCursorStyle: "block",

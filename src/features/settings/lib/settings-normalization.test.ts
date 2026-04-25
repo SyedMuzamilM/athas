@@ -27,4 +27,14 @@ describe("settings normalization", () => {
     );
     expect(normalizeSettingValue("uiFontFamily", "Geist Sans")).toBe(DEFAULT_UI_FONT_FAMILY);
   });
+
+  it("migrates the old terminal line-height default to preserve TUI block graphics", () => {
+    const normalized = normalizeSettings({
+      ...getDefaultSettingsSnapshot(),
+      terminalLineHeight: 1.2,
+    });
+
+    expect(normalized.terminalLineHeight).toBe(1);
+    expect(normalizeSettingValue("terminalLineHeight", 1.2)).toBe(1);
+  });
 });

@@ -46,6 +46,9 @@ const AI_AUTOCOMPLETE_MODEL_MIGRATIONS: Record<string, string> = {
   "google/gemini-2.5-flash-lite": "google/gemini-3-flash-preview",
 };
 
+const LEGACY_TERMINAL_LINE_HEIGHT_DEFAULT = 1.2;
+const TERMINAL_LINE_HEIGHT_DEFAULT = 1;
+
 function normalizeAISettings(settings: Settings): Settings {
   const normalizedSettings = { ...settings };
   const provider =
@@ -108,6 +111,9 @@ export function normalizeSettings(settings: Settings): Settings {
     normalizedSettings.uiFontFamily,
     DEFAULT_UI_FONT_FAMILY,
   );
+  if (normalizedSettings.terminalLineHeight === LEGACY_TERMINAL_LINE_HEIGHT_DEFAULT) {
+    normalizedSettings.terminalLineHeight = TERMINAL_LINE_HEIGHT_DEFAULT;
+  }
 
   if (!isKeybindingPreset(normalizedSettings.keybindingPreset)) {
     normalizedSettings.keybindingPreset = "none";
@@ -158,6 +164,10 @@ export function normalizeSettingValue<K extends keyof Settings>(
 
   if (key === "uiFontFamily") {
     return normalizeConfiguredFontFamily(value as string, DEFAULT_UI_FONT_FAMILY) as Settings[K];
+  }
+
+  if (key === "terminalLineHeight" && value === LEGACY_TERMINAL_LINE_HEIGHT_DEFAULT) {
+    return TERMINAL_LINE_HEIGHT_DEFAULT as Settings[K];
   }
 
   if (key === "iconTheme" && (value === "colorful-material" || value === "seti")) {
