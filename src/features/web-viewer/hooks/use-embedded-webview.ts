@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import { hasOverlayCoveringWebview } from "../utils/web-viewer-overlay";
 
@@ -251,6 +252,14 @@ export function useEmbeddedWebview({
     if (!webviewLabel) return;
     void syncWebviewVisibility(webviewLabel);
   }, [syncWebviewVisibility, webviewLabel]);
+
+  useEffect(() => {
+    if (isActive) return;
+
+    void getCurrentWebview()
+      .setFocus()
+      .catch((error) => console.error("Failed to restore app webview focus:", error));
+  }, [isActive]);
 
   // Hide webview when modals, context menus, or overlays appear
   useEffect(() => {
