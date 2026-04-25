@@ -11,14 +11,12 @@ import {
   applySettingsSideEffects,
 } from "@/features/settings/lib/settings-effects";
 import { initializeSettingsState } from "@/features/settings/lib/settings-bootstrap";
-import {
-  normalizeSettingValue,
-  normalizeSettings,
-} from "@/features/settings/lib/settings-normalization";
+import { normalizeSettingValue } from "@/features/settings/lib/settings-normalization";
 import {
   debouncedSaveSettingsToStore,
   saveSettingsToStore,
 } from "@/features/settings/lib/settings-persistence";
+import { parseSettingsImportJson } from "@/features/settings/lib/settings-import-export";
 import { settingsSearchIndex } from "./config/search-index";
 import type { SearchResult, SearchState } from "./types/search";
 import type { Settings } from "./types/settings";
@@ -57,11 +55,11 @@ export const useSettingsStore = create(
       (set, get) => ({
         updateSettingsFromJSON: (jsonString: string): boolean => {
           try {
-            const parsedSettings = JSON.parse(jsonString);
-            const validatedSettings = normalizeSettings({
-              ...getDefaultSettingsSnapshot(),
-              ...parsedSettings,
-            });
+            const validatedSettings = parseSettingsImportJson(jsonString);
+
+            if (!validatedSettings) {
+              return false;
+            }
 
             set((state) => {
               state.settings = validatedSettings;
