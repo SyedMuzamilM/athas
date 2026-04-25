@@ -8,7 +8,9 @@ import { useEditorSettingsStore } from "@/features/editor/stores/settings-store"
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useEditorViewStore } from "@/features/editor/stores/view-store";
 import { calculateOffsetFromPosition } from "@/features/editor/utils/position";
+import type { Position } from "@/features/editor/types/editor";
 import { useVimStore } from "@/features/vim/stores/vim-store";
+import { createDomEditorFacade } from "../dom-editor-facade";
 import { getAction } from "../actions/action-registry";
 import { createReplaceAction } from "../actions/replace-action";
 import { getOperator } from "../operators/operator-registry";
@@ -148,13 +150,7 @@ export const executeVimCommand = (keys: string[]): boolean => {
 
       // For navigation, just move the cursor to the end of the range
       context.setCursorPosition(range.end);
-
-      // Update textarea cursor
-      const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
-      if (textarea) {
-        textarea.selectionStart = textarea.selectionEnd = range.end.offset;
-        textarea.dispatchEvent(new Event("select"));
-      }
+      context.facade.collapseSelection(range.end.offset);
 
       return true;
     }
@@ -183,21 +179,15 @@ const getEditorContext = (): EditorContext | null => {
   if (!lines || lines.length === 0) return null;
 
   const content = lines.join("\n");
+  const facade = createDomEditorFacade();
 
   const updateContent = (newContent: string) => {
     if (activeBufferId) {
-      bufferState.actions.updateBufferContent(activeBufferId, newContent);
-
-      // Update textarea
-      const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
-      if (textarea) {
-        textarea.value = newContent;
-        textarea.dispatchEvent(new Event("input", { bubbles: true }));
-      }
+      facade.setContent(newContent);
     }
   };
 
-  const setCursorPosition = (position: any) => {
+  const setCursorPosition = (position: Position) => {
     cursorState.actions.setCursorPosition(position);
   };
 
@@ -209,6 +199,7 @@ const getEditorContext = (): EditorContext | null => {
     updateContent,
     setCursorPosition,
     tabSize,
+    facade,
   };
 };
 

@@ -5,6 +5,7 @@ import { useEditorViewStore } from "@/features/editor/stores/view-store";
 import { calculateOffsetFromPosition } from "@/features/editor/utils/position";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { createSelectors } from "@/utils/zustand-selectors";
+import { createDomEditorFacade } from "@/features/vim/core/dom-editor-facade";
 
 interface SearchMatch {
   line: number;
@@ -53,6 +54,8 @@ const useVimSearchStoreBase = create(
           set((state) => {
             state.isSearchMode = false;
             state.searchTerm = "";
+            state.matches = [];
+            state.currentMatchIndex = -1;
           });
         },
 
@@ -147,13 +150,9 @@ const useVimSearchStoreBase = create(
             };
             setCursorPosition(newPosition);
 
-            // Update textarea cursor
-            const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
-            if (textarea) {
-              textarea.selectionStart = match.offset;
-              textarea.selectionEnd = match.offset + match.length;
-              textarea.dispatchEvent(new Event("select"));
-            }
+            // Update textarea selection via facade
+            const facade = createDomEditorFacade();
+            facade.setSelection(match.offset, match.offset + match.length);
           }
         },
 

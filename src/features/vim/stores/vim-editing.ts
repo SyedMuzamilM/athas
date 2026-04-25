@@ -4,6 +4,7 @@ import { useEditorViewStore } from "@/features/editor/stores/view-store";
 import { calculateOffsetFromPosition } from "@/features/editor/utils/position";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useVimStore } from "@/features/vim/stores/vim-store";
+import { createDomEditorFacade } from "@/features/vim/core/dom-editor-facade";
 
 export interface VimEditingCommands {
   deleteLine: () => void;
@@ -25,56 +26,29 @@ export interface VimEditingCommands {
 }
 
 export const createVimEditing = (): VimEditingCommands => {
-  const getCursorPosition = () => useEditorStateStore.getState().cursorPosition;
-  const setCursorPosition = (position: any) =>
-    useEditorStateStore.getState().actions.setCursorPosition(position);
-  const getLines = () => useEditorViewStore.getState().lines;
-  const getContent = () => useEditorViewStore.getState().actions.getContent();
+  const facade = createDomEditorFacade();
+
+  const getCursorPosition = () => facade.getCursorPosition();
+  const setCursorPosition = (position: any) => facade.setCursorPosition(position);
+  const getLines = () => facade.getLines();
+  const getContent = () => facade.getContent();
 
   // Update buffer content
   const updateContent = (newContent: string) => {
-    const { actions, activeBufferId } = useBufferStore.getState();
-    if (activeBufferId) {
-      actions.updateBufferContent(activeBufferId, newContent);
-
-      // Update textarea value directly without triggering input event
-      // Vim mode manages its own history, so we don't want to trigger
-      // the app-store's debounced history tracking
-      const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
-      if (textarea) {
-        textarea.value = newContent;
-        // Don't dispatch input event - vim handles its own history
-      }
-    }
+    facade.setContent(newContent);
   };
 
   // Save state for undo
   const saveUndoState = () => {
-    const { activeBufferId } = useBufferStore.getState();
-    if (!activeBufferId) return;
-
-    const currentContent = getContent();
-    const currentPos = getCursorPosition();
-
-    // Push to centralized history store
-    useHistoryStore.getState().actions.pushHistory(activeBufferId, {
-      content: currentContent,
-      cursorPosition: currentPos,
-      timestamp: Date.now(),
-    });
+    facade.saveUndoState();
   };
 
   // Update textarea cursor position
   const updateTextareaCursor = (newPosition: any, shouldFocus = false) => {
-    const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
-    if (textarea) {
-      // Focus first if requested - setting selection on blurred textarea may not persist
-      if (shouldFocus && document.activeElement !== textarea) {
-        textarea.focus();
-      }
-      textarea.selectionStart = textarea.selectionEnd = newPosition.offset;
-      textarea.dispatchEvent(new Event("select"));
+    if (shouldFocus) {
+      facade.focus();
     }
+    facade.collapseSelection(newPosition.offset);
   };
 
   return {

@@ -37,10 +37,6 @@ interface VimState {
     end: { line: number; column: number } | null;
   };
   visualMode: "char" | "line" | null;
-  register: {
-    text: string;
-    isLineWise: boolean;
-  };
   lastOperation: {
     type: "command" | "action" | null;
     keys: string[];
@@ -66,10 +62,6 @@ const defaultVimState: VimState = {
     end: null,
   },
   visualMode: null,
-  register: {
-    text: "",
-    isLineWise: false,
-  },
   lastOperation: null,
   registers: new Map<string, RegisterEntry>(),
   currentRegister: null,
@@ -176,13 +168,6 @@ const useVimStoreBase = create(
         setLastKey: (key: string | null) => {
           set((state) => {
             state.lastKey = key;
-          });
-        },
-
-        setRegister: (text: string, isLineWise: boolean) => {
-          set((state) => {
-            state.register.text = text;
-            state.register.isLineWise = isLineWise;
           });
         },
 

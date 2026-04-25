@@ -1,8 +1,7 @@
 import { useEffect, useRef } from "react";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useEditorViewStore } from "@/features/editor/stores/view-store";
-import { calculateOffsetFromPosition, getLineHeight } from "@/features/editor/utils/position";
+import { calculateOffsetFromPosition } from "@/features/editor/utils/position";
 import { useSettingsStore } from "@/features/settings/store";
 import {
   executeReplaceCommand,
@@ -10,6 +9,7 @@ import {
 } from "@/features/vim/core/core/command-executor";
 import { getCommandParseStatus, parseVimCommand } from "@/features/vim/core/core/command-parser";
 import { createFindCharMotion } from "@/features/vim/core/motions/character-motions";
+import { createDomEditorFacade } from "@/features/vim/core/dom-editor-facade";
 import { createVimEditing } from "@/features/vim/stores/vim-editing";
 import { useVimSearchStore } from "@/features/vim/stores/vim-search";
 import { useVimStore } from "@/features/vim/stores/vim-store";
@@ -28,13 +28,8 @@ const getDocumentLength = (lines: string[]): number =>
   lines.reduce((sum, line, index) => sum + line.length + (index < lines.length - 1 ? 1 : 0), 0);
 
 const getVisibleLineCount = (): number => {
-  const fontSize = useEditorSettingsStore.getState().fontSize;
-  const lineHeight = getLineHeight(fontSize);
-
-  const viewport = document.querySelector(".editor-viewport") as HTMLElement | null;
-  const viewportHeight = viewport?.clientHeight ?? window.innerHeight;
-
-  return Math.max(1, Math.floor(viewportHeight / lineHeight));
+  const { visibleLines } = createDomEditorFacade().getViewportMetrics();
+  return visibleLines;
 };
 
 const getVisualSelectionOffsets = (
@@ -74,19 +69,12 @@ const getVisualSelectionOffsets = (
   };
 };
 
-const applyTextareaSelection = (
-  textarea: HTMLTextAreaElement,
-  selection: { start: number; end: number },
-) => {
-  textarea.selectionStart = selection.start;
-  textarea.selectionEnd = selection.end;
-  textarea.dispatchEvent(new Event("select"));
+const applyTextareaSelection = (selection: { start: number; end: number }) => {
+  createDomEditorFacade().setSelection(selection.start, selection.end);
 };
 
-const collapseTextareaSelection = (textarea: HTMLTextAreaElement, offset: number) => {
-  textarea.selectionStart = offset;
-  textarea.selectionEnd = offset;
-  textarea.dispatchEvent(new Event("select"));
+const collapseTextareaSelection = (offset: number) => {
+  createDomEditorFacade().collapseSelection(offset);
 };
 
 const getReplacementChar = (event: KeyboardEvent): string | null => {
@@ -143,18 +131,16 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
 
   // Control editor state based on vim mode
   useEffect(() => {
+    const facade = createDomEditorFacade();
+
     if (!vimMode) {
       // When vim mode is off, ensure editor is enabled
       setDisabled(false);
       setCursorVisibility(true);
 
-      const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement | null;
-      if (textarea) {
-        textarea.readOnly = false;
-        textarea.removeAttribute("data-vim-mode");
-        textarea.removeAttribute("readonly");
-        textarea.style.caretColor = "";
-      }
+      facade.setReadOnly(false);
+      facade.setDataVimMode(null);
+      facade.setCaretColor("");
 
       document.body.classList.remove(
         "vim-mode-normal",
@@ -177,58 +163,52 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
     setCursorVisibility(shouldShowCursor);
 
     // Update textarea data attributes for CSS styling
-    const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
-    if (textarea) {
-      const vimModeAttr = isCommandMode ? "command" : mode;
-      textarea.setAttribute("data-vim-mode", vimModeAttr);
-      textarea.readOnly = shouldReadOnly;
-      if (!shouldReadOnly) {
-        textarea.removeAttribute("readonly");
+    const vimModeAttr = isCommandMode ? "command" : mode;
+    facade.setDataVimMode(vimModeAttr);
+    facade.setReadOnly(shouldReadOnly);
+
+    // Add body class for global vim mode styling
+    document.body.classList.remove(
+      "vim-mode-normal",
+      "vim-mode-insert",
+      "vim-mode-visual",
+      "vim-mode-command",
+    );
+    document.body.classList.add(`vim-mode-${vimModeAttr}`);
+
+    if (mode === "insert") {
+      // Only set cursor position if textarea doesn't have focus
+      // If it has focus, a vim command (like I, A, o, O) already positioned it
+      if (!facade.isFocused()) {
+        facade.focus();
+        const cursor = useEditorStateStore.getState().cursorPosition;
+        facade.collapseSelection(cursor.offset);
       }
-
-      // Add body class for global vim mode styling
-      document.body.classList.remove(
-        "vim-mode-normal",
-        "vim-mode-insert",
-        "vim-mode-visual",
-        "vim-mode-command",
+      facade.setCaretColor("");
+    } else if (mode === "visual") {
+      if (!facade.isFocused()) {
+        facade.focus();
+      }
+      const lines = useEditorViewStore.getState().lines;
+      const selectionOffsets = getVisualSelectionOffsets(
+        visualSelection.start,
+        visualSelection.end,
+        lines,
+        activeVisualMode,
       );
-      document.body.classList.add(`vim-mode-${vimModeAttr}`);
-
-      if (mode === "insert") {
-        // Only set cursor position if textarea doesn't have focus
-        // If it has focus, a vim command (like I, A, o, O) already positioned it
-        if (document.activeElement !== textarea) {
-          textarea.focus();
-          const cursor = useEditorStateStore.getState().cursorPosition;
-          textarea.selectionStart = textarea.selectionEnd = cursor.offset;
-        }
-        textarea.style.caretColor = "";
-      } else if (mode === "visual") {
-        if (document.activeElement !== textarea) {
-          textarea.focus();
-        }
-        const lines = useEditorViewStore.getState().lines;
-        const selectionOffsets = getVisualSelectionOffsets(
-          visualSelection.start,
-          visualSelection.end,
-          lines,
-          activeVisualMode,
-        );
-        if (selectionOffsets) {
-          applyTextareaSelection(textarea, selectionOffsets);
-        } else {
-          const cursor = useEditorStateStore.getState().cursorPosition;
-          collapseTextareaSelection(textarea, cursor.offset);
-        }
-        textarea.style.caretColor = "transparent";
+      if (selectionOffsets) {
+        applyTextareaSelection(selectionOffsets);
       } else {
         const cursor = useEditorStateStore.getState().cursorPosition;
-        collapseTextareaSelection(textarea, cursor.offset);
-        textarea.style.caretColor = "transparent";
-        if (document.activeElement === textarea) {
-          textarea.blur();
-        }
+        collapseTextareaSelection(cursor.offset);
+      }
+      facade.setCaretColor("transparent");
+    } else {
+      const cursor = useEditorStateStore.getState().cursorPosition;
+      collapseTextareaSelection(cursor.offset);
+      facade.setCaretColor("transparent");
+      if (facade.isFocused()) {
+        facade.blur();
       }
     }
   }, [
@@ -247,6 +227,7 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
 
     // Create vim navigation and editing commands
     const vimEdit = createVimEditing();
+    const facade = createDomEditorFacade();
 
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
@@ -441,11 +422,7 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
             offset: newOffset,
           });
 
-          const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
-          if (textarea) {
-            textarea.selectionStart = textarea.selectionEnd = newOffset;
-            textarea.dispatchEvent(new Event("select"));
-          }
+          facade.collapseSelection(newOffset);
         }
 
         clearLastKey();
@@ -489,11 +466,7 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
             offset: newOffset,
           });
 
-          const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
-          if (textarea) {
-            textarea.selectionStart = textarea.selectionEnd = newOffset;
-            textarea.dispatchEvent(new Event("select"));
-          }
+          facade.collapseSelection(newOffset);
         }
 
         clearLastKey();
@@ -539,11 +512,7 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
 
         if (range.end.line !== curPos.line || range.end.column !== curPos.column) {
           setCursorPosition(range.end);
-          const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
-          if (textarea) {
-            textarea.selectionStart = textarea.selectionEnd = range.end.offset;
-            textarea.dispatchEvent(new Event("select"));
-          }
+          facade.collapseSelection(range.end.offset);
         }
 
         clearKeyBuffer();
@@ -577,10 +546,7 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
           setCursorPosition(newPosition);
 
           // Update textarea cursor
-          const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
-          if (textarea) {
-            textarea.selectionStart = textarea.selectionEnd = newOffset;
-          }
+          facade.collapseSelection(newOffset);
 
           setMode("insert");
           return true;
@@ -616,11 +582,7 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
                 column: targetColumn,
                 offset: newOffset,
               });
-              const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
-              if (textarea) {
-                textarea.selectionStart = textarea.selectionEnd = newOffset;
-                textarea.dispatchEvent(new Event("select"));
-              }
+              facade.collapseSelection(newOffset);
             }
             return true;
           }
@@ -656,18 +618,15 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
           });
 
           // Initialize textarea selection at current position
-          const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
-          if (textarea) {
-            textarea.focus();
-            const selectionOffsets = getVisualSelectionOffsets(
-              { line: currentPos.line, column: currentPos.column },
-              { line: currentPos.line, column: currentPos.column },
-              lines,
-              "char",
-            );
-            if (selectionOffsets) {
-              applyTextareaSelection(textarea, selectionOffsets);
-            }
+          facade.focus();
+          const selectionOffsets = getVisualSelectionOffsets(
+            { line: currentPos.line, column: currentPos.column },
+            { line: currentPos.line, column: currentPos.column },
+            lines,
+            "char",
+          );
+          if (selectionOffsets) {
+            applyTextareaSelection(selectionOffsets);
           }
 
           return true;
@@ -681,18 +640,15 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
           enterVisualMode("line", { line: currentPos.line, column: 0 });
 
           // Initialize textarea selection for the whole line
-          const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
-          if (textarea) {
-            textarea.focus();
-            const selectionOffsets = getVisualSelectionOffsets(
-              { line: currentPos.line, column: 0 },
-              { line: currentPos.line, column: 0 },
-              lines,
-              "line",
-            );
-            if (selectionOffsets) {
-              applyTextareaSelection(textarea, selectionOffsets);
-            }
+          facade.focus();
+          const selectionOffsets = getVisualSelectionOffsets(
+            { line: currentPos.line, column: 0 },
+            { line: currentPos.line, column: 0 },
+            lines,
+            "line",
+          );
+          if (selectionOffsets) {
+            applyTextareaSelection(selectionOffsets);
           }
 
           return true;
@@ -928,11 +884,7 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
             column: targetColumn,
             offset: newOffset,
           });
-          const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
-          if (textarea) {
-            textarea.selectionStart = textarea.selectionEnd = newOffset;
-            textarea.dispatchEvent(new Event("select"));
-          }
+          facade.collapseSelection(newOffset);
         }
         return true;
       }
@@ -1010,10 +962,7 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
           };
           setCursorPosition(newPosition);
 
-          const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
-          if (textarea) {
-            textarea.selectionStart = textarea.selectionEnd = newOffset;
-          }
+          facade.collapseSelection(newOffset);
         }
 
         setMode("normal");
@@ -1074,9 +1023,8 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
               lines,
               currentVisualMode,
             );
-            const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
-            if (textarea && selectionOffsets) {
-              applyTextareaSelection(textarea, selectionOffsets);
+            if (selectionOffsets) {
+              applyTextareaSelection(selectionOffsets);
             }
           }
         }
@@ -1091,13 +1039,8 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
           e.preventDefault();
           e.stopPropagation();
           {
-            const textarea = document.querySelector(
-              ".editor-textarea",
-            ) as HTMLTextAreaElement | null;
             const cursor = useEditorStateStore.getState().cursorPosition;
-            if (textarea) {
-              collapseTextareaSelection(textarea, cursor.offset);
-            }
+            collapseTextareaSelection(cursor.offset);
           }
           setMode("normal");
           return true;
@@ -1110,10 +1053,10 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
         case "y":
         case "c": {
           e.preventDefault();
+          e.preventDefault();
           e.stopPropagation();
           // Handle operators on visual selection
-          const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
-          if (textarea && visualSelection.start && visualSelection.end) {
+          if (visualSelection.start && visualSelection.end) {
             const lines = useEditorViewStore.getState().lines;
             const selectionOffsets = getVisualSelectionOffsets(
               visualSelection.start,
@@ -1177,9 +1120,8 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
             lines,
             currentVisualMode,
           );
-          const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
-          if (textarea && selectionOffsets) {
-            applyTextareaSelection(textarea, selectionOffsets);
+          if (selectionOffsets) {
+            applyTextareaSelection(selectionOffsets);
           }
         }
 
