@@ -1,9 +1,7 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { ClockCounterClockwise, FolderSimpleStar, TreeStructure } from "@phosphor-icons/react";
 import {
-  Check,
   Eye,
-  FolderOpen,
   DotsThree as MoreHorizontal,
   ArrowClockwise as RefreshCw,
 } from "@phosphor-icons/react";
@@ -12,7 +10,6 @@ import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useSettingsStore } from "@/features/settings/store";
 import { Button } from "@/ui/button";
 import { CommandEmpty, CommandItem, CommandList } from "@/ui/command";
-import { Dropdown } from "@/ui/dropdown";
 import { PANE_GROUP_BASE, PaneIconButton, paneHeaderClassName } from "@/ui/pane";
 import {
   EQUAL_WIDTH_SEGMENTED_TAB_ITEM_CLASS_NAME,
@@ -21,7 +18,6 @@ import {
 } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
 import { formatRelativeDate } from "@/utils/date";
-import { getFolderName } from "@/utils/path-helpers";
 import { getBranches } from "../api/git-branches-api";
 import { getGitLog } from "../api/git-commits-api";
 import { getCommitDiff, getFileDiff, getStashDiff } from "../api/git-diff-api";
@@ -39,6 +35,7 @@ import GitBranchManager from "./git-branch-manager";
 import GitCommitHistory from "./git-commit-history";
 import GitCommitPanel from "./git-commit-panel";
 import GitCommandSurface from "./git-command-surface";
+import GitProjectSelector from "./git-project-selector";
 import GitRemoteManager from "./git-remote-manager";
 import GitTagManager from "./git-tag-manager";
 import GitWorktreeManager from "./git-worktree-manager";
@@ -63,19 +60,14 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   const stashes = useGitStore((state) => state.stashes);
   const { setIsLoadingGitData, setIsRefreshing } = actions;
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
-  const workspaceRepoPaths = useRepositoryStore.use.workspaceRepoPaths();
-  const manualRepoPath = useRepositoryStore.use.manualRepoPath();
-  const isDiscoveringRepos = useRepositoryStore.use.isDiscovering();
   const {
     syncWorkspaceRepositories,
     selectRepository,
     setManualRepository,
-    clearManualRepository,
     refreshWorkspaceRepositories,
   } = useRepositoryStore.use.actions();
   const [showGitActionsMenu, setShowGitActionsMenu] = useState(false);
   const [showStashList, setShowStashList] = useState(false);
-  const [isRepoMenuOpen, setIsRepoMenuOpen] = useState(false);
   const [isSelectingRepo, setIsSelectingRepo] = useState(false);
   const [repoSelectionError, setRepoSelectionError] = useState<string | null>(null);
   const [gitActionsMenuAnchor, setGitActionsMenuAnchor] = useState<GitActionsMenuAnchorRect | null>(
@@ -90,7 +82,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   const [fileDiffStats, setFileDiffStats] = useState<Record<string, GitFileDiffStats>>({});
 
   const wasActiveRef = useRef(isActive);
-  const repoTriggerRef = useRef<HTMLButtonElement>(null);
   const [stashSearchQuery, setStashSearchQuery] = useState("");
 
   const visibleGitFiles = useMemo(
@@ -123,7 +114,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       }
 
       setManualRepository(resolvedRepoPath);
-      setIsRepoMenuOpen(false);
     } catch (error) {
       console.error("Failed to select repository:", error);
       const message = "Failed to select repository";
@@ -133,12 +123,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       setIsSelectingRepo(false);
     }
   }, [setManualRepository]);
-
-  const handleUseWorkspaceRoot = useCallback(() => {
-    clearManualRepository();
-    setRepoSelectionError(null);
-    setIsRepoMenuOpen(false);
-  }, [clearManualRepository]);
 
   const loadInitialGitData = useCallback(async () => {
     if (!activeRepoPath) return;
@@ -208,7 +192,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
   useEffect(() => {
     setRepoSelectionError(null);
-    setIsRepoMenuOpen(false);
   }, [repoPath]);
 
   useEffect(() => {
@@ -592,7 +575,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         });
         setShowGitActionsMenu(!showGitActionsMenu);
         setShowStashList(false);
-        setIsRepoMenuOpen(false);
       }}
       tooltip="Git Actions"
     >
@@ -613,31 +595,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       tooltip="Select repository folder"
     >
       {isSelectingRepo ? "Selecting..." : "Browse Repository"}
-    </Button>
-  );
-
-  const renderRepoOption = (
-    path: string,
-    label: string,
-    isActive: boolean,
-    onClick: () => void,
-  ) => (
-    <Button
-      key={path}
-      onClick={onClick}
-      variant="ghost"
-      size="sm"
-      className={cn(
-        "group flex w-full items-start gap-1.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-hover",
-        isActive ? "bg-hover text-text" : "text-text-lighter",
-      )}
-    >
-      <Check
-        className={cn("mt-0.5 shrink-0", isActive ? "text-success opacity-100" : "opacity-0")}
-      />
-      <span className={cn("min-w-0 flex-1 truncate", isActive ? "text-text" : "text-text-lighter")}>
-        {label}
-      </span>
     </Button>
   );
 
@@ -743,6 +700,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       <div className="ui-font ui-text-sm flex h-full select-none flex-col gap-2 p-2">
         <div className={paneHeaderClassName("rounded-lg")}>
           <div className={cn(PANE_GROUP_BASE, "min-w-0 flex-1")}>
+            <GitProjectSelector onRepositoryChange={() => setRepoSelectionError(null)} />
             <GitBranchManager
               currentBranch={gitStatus.branch}
               repoPath={activeRepoPath}
@@ -759,24 +717,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           </div>
 
           <div className="flex shrink-0 items-center gap-1">
-            <PaneIconButton
-              ref={repoTriggerRef}
-              onClick={() => {
-                setIsRepoMenuOpen((value) => {
-                  const nextOpen = !value;
-                  if (nextOpen) {
-                    void refreshWorkspaceRepositories();
-                  }
-                  return nextOpen;
-                });
-                setShowGitActionsMenu(false);
-                setShowStashList(false);
-              }}
-              tooltip={activeRepoPath}
-              aria-label={`Repository: ${getFolderName(activeRepoPath)}`}
-            >
-              <FolderOpen />
-            </PaneIconButton>
             <PaneIconButton
               onClick={handleManualRefresh}
               disabled={isLoadingGitData || isRefreshing}
@@ -868,85 +808,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         </div>
       </div>
 
-      <Dropdown
-        isOpen={isRepoMenuOpen}
-        anchorRef={repoTriggerRef}
-        anchorAlign="end"
-        onClose={() => setIsRepoMenuOpen(false)}
-        className="w-[240px]"
-      >
-        <div className="space-y-1">
-          {workspaceRepoPaths.map((workspaceRepoPath) =>
-            renderRepoOption(
-              workspaceRepoPath,
-              getFolderName(workspaceRepoPath),
-              activeRepoPath === workspaceRepoPath,
-              () => {
-                selectRepository(workspaceRepoPath);
-                setRepoSelectionError(null);
-                setIsRepoMenuOpen(false);
-              },
-            ),
-          )}
-
-          {manualRepoPath &&
-            !workspaceRepoPaths.includes(manualRepoPath) &&
-            renderRepoOption(
-              manualRepoPath,
-              getFolderName(manualRepoPath),
-              activeRepoPath === manualRepoPath,
-              () => {
-                selectRepository(manualRepoPath);
-                setRepoSelectionError(null);
-                setIsRepoMenuOpen(false);
-              },
-            )}
-
-          {repoPath && workspaceRepoPaths.length === 0 && !isDiscoveringRepos && (
-            <div className="ui-text-sm px-2 py-1.5 text-text-lighter">
-              No repositories found in this workspace.
-            </div>
-          )}
-
-          {isDiscoveringRepos && (
-            <div className="ui-text-sm flex items-center gap-1.5 px-2 py-1.5 text-text-lighter">
-              <RefreshCw className="animate-spin" />
-              Detecting workspace repositories...
-            </div>
-          )}
-
-          <div className="mt-1 border-border/60 border-t pt-2">
-            <Button
-              onClick={() => void handleSelectRepository()}
-              disabled={isSelectingRepo}
-              variant="ghost"
-              size="sm"
-              className="ui-text-sm flex w-full items-center gap-2 rounded-lg text-left text-text-lighter disabled:opacity-60"
-            >
-              <FolderOpen />
-              {isSelectingRepo ? "Selecting..." : "Browse Repository..."}
-            </Button>
-
-            {manualRepoPath && (
-              <Button
-                onClick={handleUseWorkspaceRoot}
-                variant="ghost"
-                size="sm"
-                className="ui-text-sm mt-1 w-full rounded-lg px-2 py-1 text-left text-text-lighter hover:text-text"
-              >
-                Use workspace repositories
-              </Button>
-            )}
-
-            {repoSelectionError && (
-              <div className="ui-text-sm mt-1 rounded-lg border border-error/30 bg-error/5 px-2 py-1 text-error/90">
-                {repoSelectionError}
-              </div>
-            )}
-          </div>
-        </div>
-      </Dropdown>
-
       <GitActionsMenu
         isOpen={showGitActionsMenu}
         anchorRect={gitActionsMenuAnchor}
@@ -986,7 +847,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
             filteredStashes.map((stash) => (
               <CommandItem
                 key={stash.index}
-                className="ui-font items-start"
+                className="ui-font h-auto min-h-8 items-start whitespace-normal px-2 py-1.5 leading-normal"
                 onClick={() => {
                   void handleViewStashDiff(stash.index);
                   setShowStashList(false);
@@ -996,10 +857,11 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                 <Eye className="mt-0.5 size-4 shrink-0 text-text-lighter" />
                 <div className="min-w-0 flex-1">
                   <div className="ui-text-sm text-text">{`stash@{${stash.index}}`}</div>
-                  <div className="ui-text-sm mt-0.5 truncate text-text-lighter">
+                  <div className="ui-text-xs mt-0.5 break-words text-text-lighter">
                     {stash.message || "Stashed changes"}
                   </div>
-                  <div className="ui-text-xs mt-1 text-text-lighter/80">
+                  <div className="ui-text-xs mt-1 inline-flex items-center gap-1 text-text-lighter/80">
+                    <ClockCounterClockwise className="size-3.5" />
                     {formatRelativeDate(stash.date)}
                   </div>
                 </div>

@@ -92,17 +92,18 @@ const GitRemoteManager = ({ isOpen, onClose, repoPath, onRefresh }: GitRemoteMan
       placeholder="Search remotes..."
       meta={`${remotes.length} remote${remotes.length === 1 ? "" : "s"}`}
     >
-      <div className="border-border/70 border-b px-3 py-3">
-        <div className="mb-2 flex items-center gap-2 text-text">
+      <div className="border-border/70 border-b px-3 py-2">
+        <div className="mb-1.5 flex items-center gap-2 text-text">
           <Plus className="size-4 text-text-lighter" />
-          <span className="ui-text-sm font-medium">Add Remote</span>
+          <span className="ui-text-sm font-medium">Add remote</span>
         </div>
-        <div className="space-y-2">
+        <div className="grid gap-1.5">
           <Input
             type="text"
             placeholder="Remote name"
             value={newRemoteName}
             onChange={(e) => setNewRemoteName(e.target.value)}
+            size="xs"
             className="w-full"
           />
           <Input
@@ -110,6 +111,7 @@ const GitRemoteManager = ({ isOpen, onClose, repoPath, onRefresh }: GitRemoteMan
             placeholder="Remote URL"
             value={newRemoteUrl}
             onChange={(e) => setNewRemoteUrl(e.target.value)}
+            size="xs"
             className="w-full"
             onKeyDown={(e) => {
               if (e.key === "Enter") {
@@ -121,7 +123,7 @@ const GitRemoteManager = ({ isOpen, onClose, repoPath, onRefresh }: GitRemoteMan
             <Button
               onClick={() => void handleAddRemote()}
               disabled={isLoading || !newRemoteName.trim() || !newRemoteUrl.trim()}
-              size="sm"
+              size="xs"
               variant="secondary"
             >
               {isLoading ? "Adding..." : "Add Remote"}
@@ -142,11 +144,14 @@ const GitRemoteManager = ({ isOpen, onClose, repoPath, onRefresh }: GitRemoteMan
             const isActionLoading = actionLoading.has(remote.name);
 
             return (
-              <CommandItem key={remote.name} className="ui-font items-start">
+              <CommandItem
+                key={remote.name}
+                className="ui-font h-auto min-h-8 items-start whitespace-normal px-2 py-1.5 leading-normal"
+              >
                 <Globe className="mt-0.5 size-4 shrink-0 text-text-lighter" />
                 <div className="min-w-0 flex-1">
-                  <div className="ui-text-sm text-text">{remote.name}</div>
-                  <div className="ui-text-sm mt-0.5 break-all text-text-lighter">{remote.url}</div>
+                  <div className="ui-text-sm break-words text-text">{remote.name}</div>
+                  <div className="ui-text-xs mt-0.5 break-all text-text-lighter">{remote.url}</div>
                 </div>
                 <Button
                   onClick={(event) => {
