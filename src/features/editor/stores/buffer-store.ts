@@ -117,6 +117,7 @@ interface BufferActions {
   }) => string;
   openAgentBuffer: (sessionId?: string) => string;
   openGlobalSearchBuffer: () => string;
+  openDiagnosticsBuffer: () => string;
   closeBuffer: (bufferId: string) => void;
   closeBufferForce: (bufferId: string) => void;
   closeBuffersBatch: (bufferIds: string[], skipSessionSave?: boolean) => void;
@@ -637,8 +638,9 @@ export const useBufferStore = createSelectors(
               return newBuffer.id;
             }
 
-            case "globalSearch": {
-              const existing = buffers.find((b) => b.type === "globalSearch");
+            case "globalSearch":
+            case "diagnostics": {
+              const existing = buffers.find((b) => b.type === spec.type);
               if (existing) {
                 set((state) => {
                   state.activeBufferId = existing.id;
@@ -658,7 +660,9 @@ export const useBufferStore = createSelectors(
                 newBuffers = newBuffers.filter((b) => b.id !== lruBuffer.id);
               }
 
-              const id = generateBufferId("search://global");
+              const path =
+                spec.type === "globalSearch" ? "search://global" : "diagnostics://problems";
+              const id = generateBufferId(path);
               const newBuffer = createPaneContent(id, spec);
 
               set((state) => {
@@ -897,6 +901,10 @@ export const useBufferStore = createSelectors(
 
         openGlobalSearchBuffer: (): string => {
           return get().actions.openContent({ type: "globalSearch" });
+        },
+
+        openDiagnosticsBuffer: (): string => {
+          return get().actions.openContent({ type: "diagnostics" });
         },
 
         closeBuffer: (bufferId: string) => {

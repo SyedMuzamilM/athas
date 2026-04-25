@@ -10,6 +10,7 @@ import {
   PushPin as Pin,
   Sparkle as Sparkles,
   TerminalWindow as Terminal,
+  WarningCircle,
   X,
 } from "@phosphor-icons/react";
 import { memo, useCallback, useEffect, useState } from "react";
@@ -182,6 +183,8 @@ const TabBarItem = memo(function TabBarItem({
             <Activity className="text-text-lighter" />
           ) : buffer.type === "globalSearch" ? (
             <Search className="text-text-lighter" />
+          ) : buffer.type === "diagnostics" ? (
+            <WarningCircle className="text-text-lighter" />
           ) : (
             <FileExplorerIcon
               fileName={getDiffIconName() ?? buffer.name}

@@ -14,6 +14,7 @@ import { Tab, TabsList } from "@/ui/tabs";
 import Tooltip from "@/ui/tooltip";
 import { useAIChatStore } from "@/features/ai/store/store";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics-store";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
 import { getGitStatus } from "@/features/git/api/git-status-api";
 import GitBranchManager from "@/features/git/components/git-branch-manager";
@@ -382,6 +383,9 @@ const Footer = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const settings = useSettingsStore((state) => state.settings);
   const uiState = useUIState();
+  const activeBufferId = useBufferStore.use.activeBufferId();
+  const buffers = useBufferStore.use.buffers();
+  const openDiagnosticsBuffer = useBufferStore.use.actions().openDiagnosticsBuffer;
   const bottomRoot = usePaneStore.use.bottomRoot();
   const bottomPaneBufferCount = getAllPaneGroups(bottomRoot).reduce(
     (total, pane) => total + pane.bufferIds.length,
@@ -401,6 +405,9 @@ const Footer = () => {
   const diagnosticsCount = Array.from(diagnosticsByFile.values()).reduce(
     (total, diagnostics) => total + diagnostics.length,
     0,
+  );
+  const isDiagnosticsBufferActive = buffers.some(
+    (buffer) => buffer.id === activeBufferId && buffer.type === "diagnostics",
   );
   const footerRepoPath = activeRepoPath ?? currentWorkspaceRepoPath ?? rootFolderPath;
   const footerGitStatus =
@@ -490,22 +497,15 @@ const Footer = () => {
               tooltip={
                 diagnosticsCount > 0
                   ? `${diagnosticsCount} diagnostic${diagnosticsCount === 1 ? "" : "s"}`
-                  : "Toggle Diagnostics Panel"
+                  : "Open Diagnostics"
               }
-              active={uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "diagnostics"}
+              active={isDiagnosticsBufferActive}
               className={cn(
                 FOOTER_PILL_TAB_CLASS_NAME,
-                !(uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "diagnostics") &&
-                  diagnosticsCount > 0 &&
-                  "text-warning",
+                !isDiagnosticsBufferActive && diagnosticsCount > 0 && "text-warning",
               )}
               commandId="workbench.toggleDiagnostics"
-              onClick={() => {
-                uiState.setBottomPaneActiveTab("diagnostics");
-                const showingDiagnostics =
-                  !uiState.isBottomPaneVisible || uiState.bottomPaneActiveTab !== "diagnostics";
-                uiState.setIsBottomPaneVisible(showingDiagnostics);
-              }}
+              onClick={() => openDiagnosticsBuffer()}
             >
               <WarningCircle weight="duotone" />
               {diagnosticsCount > 0 && (

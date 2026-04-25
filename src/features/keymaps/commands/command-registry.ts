@@ -334,17 +334,11 @@ const viewCommands: Command[] = [
   },
   {
     id: "workbench.toggleDiagnostics",
-    title: "Toggle Diagnostics",
+    title: "Show Diagnostics",
     category: "View",
     keybinding: "cmd+shift+j",
     execute: () => {
-      const state = useUIState.getState();
-      if (state.isBottomPaneVisible && state.bottomPaneActiveTab === "diagnostics") {
-        state.setIsBottomPaneVisible(false);
-      } else {
-        state.setBottomPaneActiveTab("diagnostics");
-        state.setIsBottomPaneVisible(true);
-      }
+      useBufferStore.getState().actions.openDiagnosticsBuffer();
     },
   },
   {

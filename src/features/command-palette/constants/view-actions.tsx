@@ -12,6 +12,7 @@ import {
   MagnifyingGlassPlus as ZoomIn,
   MagnifyingGlassMinus as ZoomOut,
 } from "@phosphor-icons/react";
+import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useSettingsStore } from "@/features/settings/store";
 import type { BottomPaneTab } from "@/features/window/stores/ui-state/types";
 import { IS_WINDOWS } from "@/utils/platform";
@@ -106,21 +107,13 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
     },
     {
       id: "toggle-diagnostics-panel",
-      label:
-        isBottomPaneVisible && bottomPaneActiveTab === "diagnostics"
-          ? "View: Hide Diagnostics"
-          : "View: Show Diagnostics",
-      description: "Toggle diagnostics panel",
+      label: "View: Show Diagnostics",
+      description: "Open diagnostics",
       icon: <AlertCircle />,
       category: "View",
       commandId: "workbench.toggleDiagnostics",
       action: () => {
-        if (isBottomPaneVisible && bottomPaneActiveTab === "diagnostics") {
-          setIsBottomPaneVisible(false);
-        } else {
-          setBottomPaneActiveTab("diagnostics");
-          setIsBottomPaneVisible(true);
-        }
+        useBufferStore.getState().actions.openDiagnosticsBuffer();
         onClose();
       },
     },
