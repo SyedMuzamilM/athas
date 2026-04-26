@@ -104,8 +104,24 @@ export interface DebugStoppedState {
   description?: string;
 }
 
+export interface DebugWatchExpression {
+  id: string;
+  expression: string;
+  createdAt: number;
+}
+
+export interface DebugWatchResult {
+  expressionId: string;
+  value: string;
+  type?: string;
+  variablesReference: number;
+  error?: string;
+  evaluatedAt: number;
+}
+
 export type DebugRequestContext =
   | { command: "threads" }
   | { command: "stackTrace"; threadId: number }
   | { command: "scopes"; frameId: number }
-  | { command: "variables"; variablesReference: number };
+  | { command: "variables"; variablesReference: number }
+  | { command: "evaluate"; expressionId: string };

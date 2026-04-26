@@ -102,7 +102,19 @@ async function handleDebugResponse(sessionId: string, message: Record<string, un
     store.actions.clearAdapterRequest(requestSeq);
   }
 
-  if (message.success === false) return;
+  if (message.success === false) {
+    if (context?.command === "evaluate") {
+      store.actions.setWatchResult({
+        expressionId: context.expressionId,
+        value: "",
+        variablesReference: 0,
+        error:
+          typeof message.message === "string" ? message.message : "Could not evaluate expression.",
+        evaluatedAt: Date.now(),
+      });
+    }
+    return;
+  }
 
   if (command === "threads") {
     const threads = toThreads(body?.threads);
@@ -137,6 +149,18 @@ async function handleDebugResponse(sessionId: string, message: Record<string, un
 
   if (command === "variables" && context?.command === "variables") {
     store.actions.setVariables(context.variablesReference, toVariables(body?.variables));
+    return;
+  }
+
+  if (command === "evaluate" && context?.command === "evaluate") {
+    store.actions.setWatchResult({
+      expressionId: context.expressionId,
+      value: typeof body?.result === "string" ? body.result : "",
+      type: typeof body?.type === "string" ? body.type : undefined,
+      variablesReference:
+        typeof body?.variablesReference === "number" ? body.variablesReference : 0,
+      evaluatedAt: Date.now(),
+    });
   }
 }
 

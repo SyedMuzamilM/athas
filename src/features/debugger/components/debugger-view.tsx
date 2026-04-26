@@ -30,6 +30,7 @@ import {
   DebugSessionStatusIcon,
   DebugStackFrames,
 } from "./debugger-panels";
+import { DebugWatchPanel } from "./debugger-watch-panel";
 import { DebugVariablesPanel } from "./debugger-variables-panel";
 
 const getActiveDebuggableFile = () => {
@@ -53,6 +54,7 @@ export default function DebuggerView() {
   const cursorPosition = useEditorStateStore.use.cursorPosition();
   const handleFileOpen = useFileSystemStore.use.handleFileOpen?.();
   const breakpoints = useDebuggerStore.use.breakpoints();
+  const watchExpressions = useDebuggerStore.use.watchExpressions();
   const workspaceConfigs = useDebuggerStore.use.workspaceConfigs();
   const userConfigs = useDebuggerStore.use.userConfigs();
   const activeConfigId = useDebuggerStore.use.activeConfigId();
@@ -414,6 +416,15 @@ export default function DebuggerView() {
             frames={stackFrames}
             selectedFrameId={selectedFrameId}
             onSelect={selectStackFrame}
+          />
+        </DebugSection>
+
+        <DebugSection title="Watch" count={watchExpressions.length}>
+          <DebugWatchPanel
+            activeSessionId={activeSession?.id}
+            selectedFrameId={selectedFrameId}
+            isPaused={isPaused}
+            pendingRequests={pendingRequests}
           />
         </DebugSection>
 

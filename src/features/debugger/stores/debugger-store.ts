@@ -13,13 +13,18 @@ import type {
   DebugStoppedState,
   DebugThread,
   DebugVariable,
+  DebugWatchExpression,
+  DebugWatchResult,
 } from "@/features/debugger/types/debugger";
 
 const BREAKPOINTS_STORAGE_KEY = "athas-debugger-breakpoints";
 const USER_CONFIGS_STORAGE_KEY = "athas-debugger-user-configs";
+const WATCH_EXPRESSIONS_STORAGE_KEY = "athas-debugger-watch-expressions";
 
 interface DebuggerState {
   breakpoints: DebugBreakpoint[];
+  watchExpressions: DebugWatchExpression[];
+  watchResults: Record<string, DebugWatchResult>;
   workspaceConfigs: DebugLaunchConfig[];
   userConfigs: DebugLaunchConfig[];
   activeConfigId: string | null;
@@ -42,6 +47,12 @@ interface DebuggerState {
     setBreakpointEnabled: (breakpointId: string, enabled: boolean) => void;
     removeBreakpoint: (breakpointId: string) => void;
     clearBreakpoints: () => void;
+    addWatchExpression: (expression: string) => DebugWatchExpression | null;
+    updateWatchExpression: (expressionId: string, expression: string) => void;
+    removeWatchExpression: (expressionId: string) => void;
+    clearWatchExpressions: () => void;
+    setWatchResult: (result: DebugWatchResult) => void;
+    clearWatchResults: () => void;
     startSession: (session: DebugSession) => void;
     stopSession: () => void;
     setSessionStatus: (status: DebugSession["status"]) => void;
@@ -98,17 +109,47 @@ const loadUserConfigs = (): DebugLaunchConfig[] => {
   }
 };
 
+const loadWatchExpressions = (): DebugWatchExpression[] => {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const raw = window.localStorage.getItem(WATCH_EXPRESSIONS_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed.filter(
+      (item): item is DebugWatchExpression =>
+        item &&
+        typeof item.id === "string" &&
+        typeof item.expression === "string" &&
+        typeof item.createdAt === "number",
+    );
+  } catch {
+    return [];
+  }
+};
+
 const saveBreakpoints = (breakpoints: DebugBreakpoint[]) => {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(BREAKPOINTS_STORAGE_KEY, JSON.stringify(breakpoints));
 };
 
+const saveWatchExpressions = (watchExpressions: DebugWatchExpression[]) => {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(WATCH_EXPRESSIONS_STORAGE_KEY, JSON.stringify(watchExpressions));
+};
+
 const createBreakpointId = (filePath: string, line: number) =>
   `bp_${filePath.replace(/[^a-zA-Z0-9]/g, "_")}_${line}`;
+
+const createWatchExpressionId = () => `watch_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
 export const useDebuggerStore = createSelectors(
   create<DebuggerState>()((set, get) => ({
     breakpoints: loadBreakpoints(),
+    watchExpressions: loadWatchExpressions(),
+    watchResults: {},
     workspaceConfigs: [],
     userConfigs: loadUserConfigs(),
     activeConfigId: null,
@@ -128,6 +169,7 @@ export const useDebuggerStore = createSelectors(
         set({
           breakpoints: loadBreakpoints(),
           userConfigs: loadUserConfigs(),
+          watchExpressions: loadWatchExpressions(),
         });
       },
 
@@ -188,6 +230,73 @@ export const useDebuggerStore = createSelectors(
         set({ breakpoints: [] });
       },
 
+      addWatchExpression: (expression) => {
+        const trimmedExpression = expression.trim();
+        if (!trimmedExpression) return null;
+
+        const watchExpression = {
+          id: createWatchExpressionId(),
+          expression: trimmedExpression,
+          createdAt: Date.now(),
+        };
+
+        set((state) => {
+          const nextWatchExpressions = [...state.watchExpressions, watchExpression];
+          saveWatchExpressions(nextWatchExpressions);
+          return { watchExpressions: nextWatchExpressions };
+        });
+
+        return watchExpression;
+      },
+
+      updateWatchExpression: (expressionId, expression) => {
+        const trimmedExpression = expression.trim();
+        if (!trimmedExpression) return;
+
+        set((state) => {
+          const nextWatchExpressions = state.watchExpressions.map((watchExpression) =>
+            watchExpression.id === expressionId
+              ? { ...watchExpression, expression: trimmedExpression }
+              : watchExpression,
+          );
+          saveWatchExpressions(nextWatchExpressions);
+          return { watchExpressions: nextWatchExpressions };
+        });
+      },
+
+      removeWatchExpression: (expressionId) => {
+        set((state) => {
+          const nextWatchExpressions = state.watchExpressions.filter(
+            (watchExpression) => watchExpression.id !== expressionId,
+          );
+          const nextWatchResults = { ...state.watchResults };
+          delete nextWatchResults[expressionId];
+          saveWatchExpressions(nextWatchExpressions);
+          return {
+            watchExpressions: nextWatchExpressions,
+            watchResults: nextWatchResults,
+          };
+        });
+      },
+
+      clearWatchExpressions: () => {
+        saveWatchExpressions([]);
+        set({ watchExpressions: [], watchResults: {} });
+      },
+
+      setWatchResult: (result) => {
+        set((state) => ({
+          watchResults: {
+            ...state.watchResults,
+            [result.expressionId]: result,
+          },
+        }));
+      },
+
+      clearWatchResults: () => {
+        set({ watchResults: {} });
+      },
+
       startSession: (session) => {
         set({
           activeSession: session,
@@ -196,6 +305,7 @@ export const useDebuggerStore = createSelectors(
           selectedFrameId: null,
           scopes: [],
           variablesByReference: {},
+          watchResults: {},
           stoppedState: null,
           pendingRequests: {},
         });
@@ -235,6 +345,7 @@ export const useDebuggerStore = createSelectors(
               ? { ...state.activeSession, status: "idle" }
               : state.activeSession,
           stoppedState: null,
+          watchResults: {},
         }));
       },
 
