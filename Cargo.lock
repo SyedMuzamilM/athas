@@ -553,6 +553,7 @@ dependencies = [
  "async-trait",
  "athas-ai",
  "athas-database",
+ "athas-debugger",
  "athas-extensions",
  "athas-fff-search",
  "athas-github",
@@ -659,6 +660,19 @@ dependencies = [
  "serde_json",
  "sqlx",
  "tokio",
+]
+
+[[package]]
+name = "athas-debugger"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "athas-runtime",
+ "log",
+ "serde",
+ "serde_json",
+ "tauri",
+ "uuid",
 ]
 
 [[package]]

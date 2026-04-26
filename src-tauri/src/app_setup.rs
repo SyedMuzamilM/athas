@@ -6,6 +6,7 @@ use crate::{
 };
 use athas_ai::AcpAgentBridge;
 use athas_database::ConnectionManager;
+use athas_debugger::DebugManager;
 use athas_lsp::LspManager;
 use athas_project::FileWatcher;
 use log::{debug, info};
@@ -77,6 +78,7 @@ fn register_managed_state(app: &mut tauri::App<Wry>) {
    app.manage(acp_bridge);
 
    app.manage(LspManager::new(app.handle().clone()));
+   app.manage(DebugManager::new(app.handle().clone()));
    app.manage(ThemeCache::new(std::collections::HashMap::new()));
    app.manage(FileClipboard::new(None));
    app.manage(Arc::new(ConnectionManager::new()));

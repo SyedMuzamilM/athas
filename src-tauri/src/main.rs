@@ -281,6 +281,12 @@ fn main() {
          lsp_document_change,
          lsp_document_close,
          lsp_is_language_supported,
+         // Debugger commands
+         debug_start_session,
+         debug_send_request,
+         debug_send_raw_message,
+         debug_stop_session,
+         debug_list_sessions,
          // Extension commands
          download_extension,
          install_extension,
