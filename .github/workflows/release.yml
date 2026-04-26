@@ -24,36 +24,42 @@ jobs:
             target: "aarch64-apple-darwin"
             include_updater_json: true
             timeout_minutes: 60
+            rustflags: ""
           - platform: "macos-latest"
             os: "macos"
             args: "--target x86_64-apple-darwin"
             target: "x86_64-apple-darwin"
             include_updater_json: true
             timeout_minutes: 60
+            rustflags: ""
           - platform: "ubuntu-22.04"
             os: "linux"
             args: "--bundles deb,rpm"
             target: ""
             include_updater_json: false
             timeout_minutes: 60
+            rustflags: ""
           - platform: "ubuntu-22.04-arm"
             os: "linux"
             args: "--bundles deb,rpm"
             target: ""
             include_updater_json: false
             timeout_minutes: 60
+            rustflags: ""
           - platform: "windows-latest"
             os: "windows"
             args: ""
             target: ""
             include_updater_json: true
             timeout_minutes: 90
+            rustflags: "-C link-arg=/NODEFAULTLIB:libvcruntime.lib"
           - platform: "windows-latest"
             os: "windows"
             args: "--target aarch64-pc-windows-msvc"
             target: "aarch64-pc-windows-msvc"
             include_updater_json: true
             timeout_minutes: 90
+            rustflags: ""
 
     runs-on: ${{ matrix.platform }}
     timeout-minutes: ${{ matrix.timeout_minutes }}
@@ -239,10 +245,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          APPLE_ID: ${{ matrix.os == 'macos' && secrets.APPLE_ID || '' }}
-          APPLE_PASSWORD: ${{ matrix.os == 'macos' && secrets.APPLE_PASSWORD || '' }}
-          APPLE_TEAM_ID: ${{ matrix.os == 'macos' && secrets.APPLE_TEAM_ID || '' }}
+          APPLE_ID: ${{ matrix.os == 'macos' && steps.release_meta.outputs.is_prerelease != 'true' && secrets.APPLE_ID || '' }}
+          APPLE_PASSWORD: ${{ matrix.os == 'macos' && steps.release_meta.outputs.is_prerelease != 'true' && secrets.APPLE_PASSWORD || '' }}
+          APPLE_TEAM_ID: ${{ matrix.os == 'macos' && steps.release_meta.outputs.is_prerelease != 'true' && secrets.APPLE_TEAM_ID || '' }}
           NO_STRIP: ${{ matrix.os == 'linux' && 'true' || '' }}
+          RUSTFLAGS: ${{ matrix.rustflags }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: ${{ steps.release_meta.outputs.release_name }}
