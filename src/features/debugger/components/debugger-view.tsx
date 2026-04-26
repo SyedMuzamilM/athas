@@ -9,7 +9,7 @@ import {
   Stack,
   Trash,
 } from "@phosphor-icons/react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
@@ -24,6 +24,7 @@ import {
   sendDebugAdapterRequest,
   startDebugLaunchSession,
   stopDebugAdapterSession,
+  syncDebugBreakpoints,
 } from "../services/debug-adapter-service";
 import { useDebuggerStore } from "../stores/debugger-store";
 import {
@@ -83,6 +84,7 @@ export default function DebuggerView() {
   const [expandedVariableReferences, setExpandedVariableReferences] = useState<Set<number>>(
     () => new Set(),
   );
+  const syncedBreakpointFilesRef = useRef<Set<string>>(new Set());
 
   const activeFile = useMemo(() => getActiveDebuggableFile(), [activeBufferId, buffers]);
   const generatedConfig = useMemo(
@@ -132,6 +134,14 @@ export default function DebuggerView() {
   const canSendAdapterThreadRequest = Boolean(isAdapterSession && activeThreadId);
   const isPaused = activeSession?.status === "paused";
   const canStep = Boolean(canSendAdapterThreadRequest && isPaused);
+  const breakpointSyncSignature = useMemo(
+    () =>
+      breakpoints
+        .map((breakpoint) => `${breakpoint.filePath}:${breakpoint.line}:${breakpoint.enabled}`)
+        .sort()
+        .join("|"),
+    [breakpoints],
+  );
 
   useEffect(() => {
     debuggerActions.hydrate();
@@ -140,6 +150,35 @@ export default function DebuggerView() {
   useEffect(() => {
     setExpandedVariableReferences(new Set());
   }, [activeSession?.id, selectedFrameId]);
+
+  useEffect(() => {
+    if (!activeSession?.id || !isAdapterSession) {
+      syncedBreakpointFilesRef.current = new Set();
+      return;
+    }
+
+    const filePaths = new Set([
+      ...syncedBreakpointFilesRef.current,
+      ...breakpoints.map((breakpoint) => breakpoint.filePath),
+    ]);
+    let isCurrentSync = true;
+
+    syncDebugBreakpoints(activeSession.id, breakpoints, Array.from(filePaths))
+      .then(() => {
+        if (isCurrentSync) {
+          syncedBreakpointFilesRef.current = filePaths;
+        }
+      })
+      .catch((error) => {
+        if (isCurrentSync) {
+          setStartError(error instanceof Error ? error.message : String(error));
+        }
+      });
+
+    return () => {
+      isCurrentSync = false;
+    };
+  }, [activeSession?.id, breakpointSyncSignature, breakpoints, isAdapterSession]);
 
   useEffect(() => {
     if (!rootFolderPath) {

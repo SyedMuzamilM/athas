@@ -91,17 +91,24 @@ export async function startDebugLaunchSession(
   return session;
 }
 
-async function syncDebugBreakpoints(sessionId: string, breakpoints: DebugBreakpoint[]) {
+export async function syncDebugBreakpoints(
+  sessionId: string,
+  breakpoints: DebugBreakpoint[],
+  knownFilePaths: string[] = [],
+) {
   const breakpointsByFile = new Map<string, DebugBreakpoint[]>();
+  const filePaths = new Set(knownFilePaths);
 
   for (const breakpoint of breakpoints) {
+    filePaths.add(breakpoint.filePath);
     if (!breakpoint.enabled) continue;
     const fileBreakpoints = breakpointsByFile.get(breakpoint.filePath) ?? [];
     fileBreakpoints.push(breakpoint);
     breakpointsByFile.set(breakpoint.filePath, fileBreakpoints);
   }
 
-  for (const [filePath, fileBreakpoints] of breakpointsByFile) {
+  for (const filePath of filePaths) {
+    const fileBreakpoints = breakpointsByFile.get(filePath) ?? [];
     await sendDebugAdapterRequest(sessionId, "setBreakpoints", {
       source: { path: filePath },
       breakpoints: fileBreakpoints.map((breakpoint) => ({
