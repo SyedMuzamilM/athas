@@ -6,6 +6,7 @@ import CommandPalette from "@/features/command-palette/components/command-palett
 import IconThemeSelector from "@/features/command-palette/components/icon-theme-selector";
 import ThemeSelector from "@/features/command-palette/components/theme-selector";
 import { ConnectionDialog } from "@/features/database/components/connection/connection-dialog";
+import { initializeDebuggerEventBridge } from "@/features/debugger/services/debug-adapter-events";
 import { ProjectNameMenu } from "@/features/file-system/components/project-name-menu";
 import { getSymlinkInfo } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
@@ -96,6 +97,10 @@ export function MainLayout() {
   const sidebarPosition = settings.sidebarPosition;
   const terminalWidthMode = useTerminalStore((state) => state.widthMode);
   const showInlineAiChat = settings.isAIChatVisible;
+
+  useEffect(() => {
+    void initializeDebuggerEventBridge();
+  }, []);
 
   useEffect(() => {
     if (settings.vimRelativeLineNumbers !== relativeLineNumbers) {

@@ -37,3 +37,33 @@ export interface DebuggableFile {
   name: string;
   language?: string;
 }
+
+export interface DebugAdapterLaunch {
+  command: string;
+  args?: string[];
+  cwd?: string;
+  env?: Record<string, string>;
+}
+
+export interface DebugAdapterSessionInfo {
+  id: string;
+  command: string;
+  args: string[];
+  cwd?: string;
+}
+
+export interface DebugProtocolMessage {
+  sessionId: string;
+  message: unknown;
+}
+
+export interface DebugProcessOutput {
+  sessionId: string;
+  stream: "stdout" | "stderr" | string;
+  data: string;
+}
+
+export interface DebugSessionEnded {
+  sessionId: string;
+  reason: string;
+}

@@ -3,7 +3,10 @@ import { createSelectors } from "@/utils/zustand-selectors";
 import type {
   DebugBreakpoint,
   DebugLaunchConfig,
+  DebugProcessOutput,
+  DebugProtocolMessage,
   DebugSession,
+  DebugSessionEnded,
 } from "@/features/debugger/types/debugger";
 
 const BREAKPOINTS_STORAGE_KEY = "athas-debugger-breakpoints";
@@ -15,6 +18,9 @@ interface DebuggerState {
   userConfigs: DebugLaunchConfig[];
   activeConfigId: string | null;
   activeSession: DebugSession | null;
+  adapterMessages: DebugProtocolMessage[];
+  adapterOutput: DebugProcessOutput[];
+  endedSessions: DebugSessionEnded[];
   actions: {
     hydrate: () => void;
     setWorkspaceConfigs: (configs: DebugLaunchConfig[]) => void;
@@ -25,6 +31,10 @@ interface DebuggerState {
     clearBreakpoints: () => void;
     startSession: (session: DebugSession) => void;
     stopSession: () => void;
+    recordAdapterMessage: (message: DebugProtocolMessage) => void;
+    recordAdapterOutput: (output: DebugProcessOutput) => void;
+    recordSessionEnded: (event: DebugSessionEnded) => void;
+    clearAdapterTranscript: () => void;
     getBreakpointsForFile: (filePath: string) => DebugBreakpoint[];
   };
 }
@@ -81,6 +91,9 @@ export const useDebuggerStore = createSelectors(
     userConfigs: loadUserConfigs(),
     activeConfigId: null,
     activeSession: null,
+    adapterMessages: [],
+    adapterOutput: [],
+    endedSessions: [],
     actions: {
       hydrate: () => {
         set({
@@ -156,6 +169,36 @@ export const useDebuggerStore = createSelectors(
             ? { ...state.activeSession, status: "idle" }
             : state.activeSession,
         }));
+      },
+
+      recordAdapterMessage: (message) => {
+        set((state) => ({
+          adapterMessages: [...state.adapterMessages.slice(-499), message],
+        }));
+      },
+
+      recordAdapterOutput: (output) => {
+        set((state) => ({
+          adapterOutput: [...state.adapterOutput.slice(-499), output],
+        }));
+      },
+
+      recordSessionEnded: (event) => {
+        set((state) => ({
+          endedSessions: [...state.endedSessions.slice(-99), event],
+          activeSession:
+            state.activeSession?.id === event.sessionId
+              ? { ...state.activeSession, status: "idle" }
+              : state.activeSession,
+        }));
+      },
+
+      clearAdapterTranscript: () => {
+        set({
+          adapterMessages: [],
+          adapterOutput: [],
+          endedSessions: [],
+        });
       },
 
       getBreakpointsForFile: (filePath) => {
