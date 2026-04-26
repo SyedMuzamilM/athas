@@ -19,6 +19,10 @@ import Input from "@/ui/input";
 import Select from "@/ui/select";
 import { cn } from "@/utils/cn";
 import { getBaseName, joinPath } from "@/utils/path-helpers";
+import {
+  startDebugLaunchSession,
+  stopDebugAdapterSession,
+} from "../services/debug-adapter-service";
 import { useDebuggerStore } from "../stores/debugger-store";
 import {
   buildDebugCommand,
@@ -66,6 +70,7 @@ export default function DebuggerView() {
   const debuggerActions = useDebuggerStore.use.actions();
   const [customCommand, setCustomCommand] = useState("");
   const [launchLoadError, setLaunchLoadError] = useState<string | null>(null);
+  const [startError, setStartError] = useState<string | null>(null);
 
   const activeFile = useMemo(() => getActiveDebuggableFile(), [activeBufferId, buffers]);
   const generatedConfig = useMemo(
@@ -117,7 +122,26 @@ export default function DebuggerView() {
     void loadLaunchConfig();
   }, [debuggerActions, rootFolderPath]);
 
-  const startDebugging = () => {
+  const startDebugging = async () => {
+    setStartError(null);
+    if (resolvedSelectedConfig.adapterCommand) {
+      try {
+        const adapterSession = await startDebugLaunchSession(resolvedSelectedConfig, breakpoints);
+        debuggerActions.startSession({
+          id: adapterSession.id,
+          name: resolvedSelectedConfig.name,
+          configId: resolvedSelectedConfig.id,
+          command: [adapterSession.command, ...adapterSession.args].join(" "),
+          cwd: adapterSession.cwd,
+          startedAt: Date.now(),
+          status: "running",
+        });
+      } catch (error) {
+        setStartError(error instanceof Error ? error.message : String(error));
+      }
+      return;
+    }
+
     const command = selectedCommand.trim();
     if (!command) return;
 
@@ -144,7 +168,11 @@ export default function DebuggerView() {
   };
 
   const stopDebugging = () => {
-    window.dispatchEvent(new CustomEvent("close-active-terminal"));
+    if (activeSession && resolvedSelectedConfig.adapterCommand) {
+      void stopDebugAdapterSession(activeSession.id).catch(() => {});
+    } else {
+      window.dispatchEvent(new CustomEvent("close-active-terminal"));
+    }
     debuggerActions.stopSession();
   };
 
@@ -243,6 +271,7 @@ export default function DebuggerView() {
         {launchLoadError && workspaceConfigs.length === 0 ? (
           <div className="text-[11px] text-text-lighter">{launchLoadError}</div>
         ) : null}
+        {startError ? <div className="text-[11px] text-error">{startError}</div> : null}
       </div>
 
       {activeSession ? (

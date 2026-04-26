@@ -100,6 +100,10 @@ export function resolveDebugConfigVariables(
     cwd: config.cwd ? resolveValue(config.cwd) : config.cwd,
     command: config.command ? resolveValue(config.command) : config.command,
     args: config.args?.map(resolveValue),
+    adapterCommand: config.adapterCommand
+      ? resolveValue(config.adapterCommand)
+      : config.adapterCommand,
+    adapterArgs: config.adapterArgs?.map(resolveValue),
     env: config.env
       ? Object.fromEntries(
           Object.entries(config.env).map(([key, value]) => [key, resolveValue(value)]),
@@ -132,18 +136,29 @@ export function normalizeLaunchConfigs(raw: unknown): DebugLaunchConfig[] {
       const program = typeof config.program === "string" ? config.program : undefined;
       const cwd = typeof config.cwd === "string" ? config.cwd : undefined;
       const command = typeof config.command === "string" ? config.command : undefined;
+      const adapterCommand =
+        typeof config.adapterCommand === "string" ? config.adapterCommand : undefined;
       const args = Array.isArray(config.args)
         ? config.args.filter((arg): arg is string => typeof arg === "string")
         : undefined;
+      const adapterArgs = Array.isArray(config.adapterArgs)
+        ? config.adapterArgs.filter((arg): arg is string => typeof arg === "string")
+        : undefined;
+      const request = config.request === "attach" ? "attach" : "launch";
+      const type = typeof config.type === "string" ? config.type : undefined;
 
       return {
         id: `workspace-${index}-${name.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase()}`,
         name,
         runtime,
+        type,
+        request,
         program,
         cwd,
         command,
         args,
+        adapterCommand,
+        adapterArgs,
         source: "workspace",
       };
     })

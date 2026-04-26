@@ -33,12 +33,16 @@ describe("debugger command helpers", () => {
           type: "node",
           program: "/repo/server.js",
           args: ["--port", "3000"],
+          adapterCommand: "node",
+          adapterArgs: ["/repo/js-debug/dap.js"],
         },
       ],
     });
 
     expect(configs).toHaveLength(1);
     expect(configs[0]?.runtime).toBe("node");
+    expect(configs[0]?.adapterCommand).toBe("node");
+    expect(configs[0]?.adapterArgs).toEqual(["/repo/js-debug/dap.js"]);
     expect(buildDebugCommand(configs[0]!)).toBe("node --inspect-brk /repo/server.js --port 3000");
   });
 

@@ -14,11 +14,15 @@ export interface DebugLaunchConfig {
   id: string;
   name: string;
   runtime: DebuggerRuntime;
+  type?: string;
+  request?: "launch" | "attach";
   program?: string;
   cwd?: string;
   args?: string[];
   command?: string;
   env?: Record<string, string>;
+  adapterCommand?: string;
+  adapterArgs?: string[];
   source: "generated" | "workspace" | "user";
 }
 

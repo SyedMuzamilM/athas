@@ -3,6 +3,8 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
   DebugAdapterLaunch,
   DebugAdapterSessionInfo,
+  DebugBreakpoint,
+  DebugLaunchConfig,
   DebugProcessOutput,
   DebugProtocolMessage,
   DebugSessionEnded,
@@ -45,6 +47,68 @@ export async function stopDebugAdapterSession(sessionId: string): Promise<void> 
 
 export async function listDebugAdapterSessions(): Promise<DebugAdapterSessionInfo[]> {
   return await invoke<DebugAdapterSessionInfo[]>("debug_list_sessions");
+}
+
+export async function startDebugLaunchSession(
+  config: DebugLaunchConfig,
+  breakpoints: DebugBreakpoint[],
+): Promise<DebugAdapterSessionInfo> {
+  if (!config.adapterCommand) {
+    throw new Error("Debug configuration is missing adapterCommand");
+  }
+
+  const session = await startDebugAdapterSession({
+    command: config.adapterCommand,
+    args: config.adapterArgs ?? [],
+    cwd: config.cwd,
+    env: config.env,
+  });
+
+  await sendDebugAdapterRequest(session.id, "initialize", {
+    adapterID: config.type ?? config.runtime,
+    pathFormat: "path",
+    linesStartAt1: true,
+    columnsStartAt1: true,
+    supportsVariableType: true,
+    supportsVariablePaging: true,
+    supportsRunInTerminalRequest: true,
+  });
+
+  await syncDebugBreakpoints(session.id, breakpoints);
+
+  await sendDebugAdapterRequest(session.id, config.request ?? "launch", {
+    name: config.name,
+    type: config.type ?? config.runtime,
+    request: config.request ?? "launch",
+    program: config.program,
+    cwd: config.cwd,
+    args: config.args ?? [],
+    env: config.env ?? {},
+  });
+
+  await sendDebugAdapterRequest(session.id, "configurationDone");
+
+  return session;
+}
+
+async function syncDebugBreakpoints(sessionId: string, breakpoints: DebugBreakpoint[]) {
+  const breakpointsByFile = new Map<string, DebugBreakpoint[]>();
+
+  for (const breakpoint of breakpoints) {
+    if (!breakpoint.enabled) continue;
+    const fileBreakpoints = breakpointsByFile.get(breakpoint.filePath) ?? [];
+    fileBreakpoints.push(breakpoint);
+    breakpointsByFile.set(breakpoint.filePath, fileBreakpoints);
+  }
+
+  for (const [filePath, fileBreakpoints] of breakpointsByFile) {
+    await sendDebugAdapterRequest(sessionId, "setBreakpoints", {
+      source: { path: filePath },
+      breakpoints: fileBreakpoints.map((breakpoint) => ({
+        line: breakpoint.line + 1,
+      })),
+    });
+  }
 }
 
 export async function subscribeDebuggerEvents(
