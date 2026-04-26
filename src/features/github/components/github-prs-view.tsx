@@ -61,64 +61,52 @@ interface PRListItemProps {
   pr: PullRequest;
   isActive: boolean;
   onSelect: () => void;
-  onPrefetch: () => void;
   onContextMenu: (event: React.MouseEvent, pr: PullRequest) => void;
 }
 
-const PRListItem = memo(
-  ({ pr, isActive, onSelect, onPrefetch, onContextMenu }: PRListItemProps) => {
-    return (
-      <Button
-        onClick={onSelect}
-        onMouseEnter={onPrefetch}
-        onFocus={onPrefetch}
-        onContextMenu={(event) => onContextMenu(event, pr)}
-        variant="ghost"
-        size="sm"
-        className={cn(
-          "h-auto w-full items-start justify-start rounded-xl px-3 py-2.5 text-left hover:bg-hover/70",
-          isActive && "bg-hover/80 text-text",
-        )}
-      >
-        <img
-          src={
-            pr.author.avatarUrl ||
-            `https://github.com/${encodeURIComponent(pr.author.login || "github")}.png?size=40`
-          }
-          alt={pr.author.login}
-          className="size-5 shrink-0 self-start rounded-full bg-secondary-bg"
-          loading="lazy"
-        />
-        <div className="min-w-0 flex-1">
-          <div className="ui-text-sm truncate text-text leading-4">{pr.title}</div>
-          <div className="ui-text-sm mt-1 text-text-lighter">{`#${pr.number} by ${pr.author.login}`}</div>
-          <div className="mt-1">
-            <span className="ui-text-sm inline-flex min-w-0 max-w-full items-center rounded-md bg-secondary-bg/80 px-1.5 py-0.5 editor-font text-text-lighter">
-              <span className="min-w-0 truncate">{pr.baseRef}</span>
-              <span className="shrink-0 px-1">&larr;</span>
-              <span className="min-w-0 truncate">{pr.headRef}</span>
-            </span>
-          </div>
+const PRListItem = memo(({ pr, isActive, onSelect, onContextMenu }: PRListItemProps) => {
+  return (
+    <Button
+      onClick={onSelect}
+      onContextMenu={(event) => onContextMenu(event, pr)}
+      variant="ghost"
+      size="sm"
+      className={cn(
+        "h-auto w-full items-start justify-start rounded-xl px-3 py-2.5 text-left hover:bg-hover/70",
+        isActive && "bg-hover/80 text-text",
+      )}
+    >
+      <img
+        src={
+          pr.author.avatarUrl ||
+          `https://github.com/${encodeURIComponent(pr.author.login || "github")}.png?size=40`
+        }
+        alt={pr.author.login}
+        className="size-5 shrink-0 self-start rounded-full bg-secondary-bg"
+        loading="lazy"
+      />
+      <div className="min-w-0 flex-1">
+        <div className="ui-text-sm truncate text-text leading-4">{pr.title}</div>
+        <div className="ui-text-sm mt-1 text-text-lighter">{`#${pr.number} by ${pr.author.login}`}</div>
+        <div className="mt-1">
+          <span className="ui-text-sm inline-flex min-w-0 max-w-full items-center rounded-md bg-secondary-bg/80 px-1.5 py-0.5 editor-font text-text-lighter">
+            <span className="min-w-0 truncate">{pr.baseRef}</span>
+            <span className="shrink-0 px-1">&larr;</span>
+            <span className="min-w-0 truncate">{pr.headRef}</span>
+          </span>
         </div>
-      </Button>
-    );
-  },
-);
+      </div>
+    </Button>
+  );
+});
 
 PRListItem.displayName = "PRListItem";
 
 const GitHubPRsView = memo(() => {
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
   const { prs, isLoading, error, currentFilter, isAuthenticated } = useGitHubStore();
-  const {
-    fetchPRs,
-    setFilter,
-    checkAuth,
-    setActiveRepoPath,
-    openPRInBrowser,
-    checkoutPR,
-    prefetchPR,
-  } = useGitHubStore().actions;
+  const { fetchPRs, setFilter, checkAuth, setActiveRepoPath, openPRInBrowser, checkoutPR } =
+    useGitHubStore().actions;
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
   const { syncWorkspaceRepositories, setManualRepository } = useRepositoryStore.use.actions();
   const buffers = useBufferStore.use.buffers();
@@ -201,14 +189,6 @@ const GitHubPRsView = memo(() => {
       }
     };
   }, [effectiveRepoPath, fetchPRs, isAuthenticated, isGitHubPRsViewActive, currentFilter]);
-
-  useEffect(() => {
-    if (!effectiveRepoPath || !isGitHubPRsViewActive || activeSection !== "pull-requests") return;
-
-    for (const pr of prs.slice(0, 3)) {
-      void prefetchPR(effectiveRepoPath, pr.number);
-    }
-  }, [activeSection, effectiveRepoPath, isGitHubPRsViewActive, prefetchPR, prs]);
 
   const handleRefresh = useCallback(() => {
     if (effectiveRepoPath) {
@@ -520,10 +500,6 @@ const GitHubPRsView = memo(() => {
                       pr={pr}
                       isActive={activePRNumber === pr.number}
                       onSelect={() => handleSelectPR(pr)}
-                      onPrefetch={() => {
-                        if (!effectiveRepoPath) return;
-                        void prefetchPR(effectiveRepoPath, pr.number);
-                      }}
                       onContextMenu={handlePRContextMenu}
                     />
                   ))}

@@ -9,11 +9,20 @@ use reqwest::{
    header::{ACCEPT, AUTHORIZATION, HeaderMap, HeaderValue, USER_AGENT},
 };
 use serde::{Deserialize, Serialize};
-use std::{path::Path, process::Command, time::Duration};
+use std::{
+   path::Path,
+   process::Command,
+   sync::{LazyLock, Mutex},
+   thread,
+   time::{Duration, Instant},
+};
 
 const GITHUB_API_BASE: &str = "https://api.github.com";
 const GITHUB_API_VERSION: &str = "2022-11-28";
 const USER_AGENT_VALUE: &str = "Athas";
+const GITHUB_REQUEST_INTERVAL: Duration = Duration::from_millis(200);
+
+static GITHUB_REQUEST_GATE: LazyLock<Mutex<Instant>> = LazyLock::new(|| Mutex::new(Instant::now()));
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -181,6 +190,17 @@ impl GitHubApi {
       })
    }
 
+   fn new_authenticated(github_token: Option<String>) -> Result<Self, String> {
+      if github_token
+         .as_deref()
+         .is_none_or(|token| token.trim().is_empty())
+      {
+         return Err("GitHub account required. Connect GitHub in Athas and try again.".to_string());
+      }
+
+      Self::new(github_token)
+   }
+
    fn get(&self, path: &str, accept: &str) -> RequestBuilder {
       self.apply_headers(self.client.get(format!("{GITHUB_API_BASE}{path}")), accept)
    }
@@ -236,9 +256,20 @@ impl GitHubApi {
 }
 
 fn send_github_request(request: RequestBuilder) -> Result<Response, String> {
+   let mut next_allowed_request_at = GITHUB_REQUEST_GATE
+      .lock()
+      .map_err(|_| "GitHub API request queue failed.".to_string())?;
+
+   let now = Instant::now();
+   if *next_allowed_request_at > now {
+      thread::sleep(*next_allowed_request_at - now);
+   }
+
    let response = request
       .send()
       .map_err(|e| format!("Failed to call GitHub API: {e}"))?;
+   *next_allowed_request_at = Instant::now() + GITHUB_REQUEST_INTERVAL;
+   drop(next_allowed_request_at);
 
    if response.status().is_success() {
       return Ok(response);
@@ -255,7 +286,14 @@ fn send_github_request(request: RequestBuilder) -> Result<Response, String> {
       .get("retry-after")
       .and_then(|value| value.to_str().ok())
       .map(ToOwned::to_owned);
+   let rate_reset = response
+      .headers()
+      .get("x-ratelimit-reset")
+      .and_then(|value| value.to_str().ok())
+      .map(ToOwned::to_owned);
    let body = response.text().unwrap_or_default();
+   let parsed_message = parse_github_error_message(&body).unwrap_or_else(|| body.clone());
+   let normalized_message = parsed_message.to_lowercase();
 
    if status.as_u16() == 401 {
       return Err(
@@ -264,17 +302,34 @@ fn send_github_request(request: RequestBuilder) -> Result<Response, String> {
    }
 
    if status.as_u16() == 403 && rate_remaining.as_deref() == Some("0") {
-      return Err("GitHub API rate limit reached. Try again after the limit resets.".to_string());
+      let reset_suffix = rate_reset
+         .as_deref()
+         .map(|reset| format!(" Reset epoch: {reset}."))
+         .unwrap_or_default();
+      return Err(format!(
+         "GitHub API rate limit reached. Try again after the limit resets.{reset_suffix}"
+      ));
    }
 
-   if status.as_u16() == 429 || retry_after.is_some() {
-      return Err(
-         "GitHub API temporarily rate limited the request. Try again shortly.".to_string(),
-      );
+   if status.as_u16() == 429
+      || retry_after.is_some()
+      || (status.as_u16() == 403
+         && (normalized_message.contains("secondary rate limit")
+            || normalized_message.contains("abuse detection")
+            || normalized_message.contains("rate limit")))
+   {
+      let retry_suffix = retry_after
+         .as_deref()
+         .map(|seconds| format!(" Retry after {seconds} seconds."))
+         .unwrap_or_default();
+      return Err(format!(
+         "GitHub API temporarily rate limited the request. Try again shortly.{retry_suffix}"
+      ));
    }
 
-   let message = parse_github_error_message(&body).unwrap_or(body);
-   Err(format!("GitHub API request failed ({status}): {message}"))
+   Err(format!(
+      "GitHub API request failed ({status}): {parsed_message}"
+   ))
 }
 
 fn parse_github_error_message(body: &str) -> Option<String> {
@@ -602,7 +657,7 @@ pub fn github_check_auth(github_token: Option<String>) -> Result<GitHubAuthStatu
       return Ok(GitHubAuthStatus::NotAuthenticated);
    }
 
-   let api = GitHubApi::new(github_token)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
    match get_current_user(&api) {
       Ok(_) => Ok(GitHubAuthStatus::Authenticated),
       Err(_) => Ok(GitHubAuthStatus::NotAuthenticated),
@@ -615,7 +670,7 @@ pub fn github_list_prs(
    github_token: Option<String>,
 ) -> Result<Vec<PullRequest>, String> {
    let slug = resolve_repo_slug(&repo_path_value)?;
-   let api = GitHubApi::new(github_token)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
 
    if filter == "review-requests" {
       let username = get_current_user(&api)?;
@@ -704,7 +759,7 @@ fn commit_value_from_rest(value: serde_json::Value) -> serde_json::Value {
 }
 
 pub fn github_get_current_user(github_token: Option<String>) -> Result<String, String> {
-   let api = GitHubApi::new(github_token)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
    get_current_user(&api)
 }
 
@@ -713,7 +768,7 @@ pub fn github_list_issues(
    github_token: Option<String>,
 ) -> Result<Vec<IssueListItem>, String> {
    let slug = resolve_repo_slug(&repo_path_value)?;
-   let api = GitHubApi::new(github_token)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
    let issues: Vec<RestIssue> = api.get_json_with_query(
       &repo_path(&slug, "issues"),
       &[
@@ -736,7 +791,7 @@ pub fn github_list_workflow_runs(
    github_token: Option<String>,
 ) -> Result<Vec<WorkflowRunListItem>, String> {
    let slug = resolve_repo_slug(&repo_path_value)?;
-   let api = GitHubApi::new(github_token)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
    let response: WorkflowRunsResponse = api.get_json_with_query(
       &repo_path(&slug, "actions/runs"),
       &[("per_page", "50".to_string())],
@@ -756,7 +811,7 @@ pub fn github_checkout_pr(
 ) -> Result<(), String> {
    let resolved_remote = resolve_repo_remote(&repo_path_value)?;
    let slug = resolved_remote.slug;
-   let api = GitHubApi::new(github_token)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
    let _: RestPullRequest = api.get_json(&repo_path(&slug, &format!("pulls/{pr_number}")))?;
 
    let branch = format!("pr-{pr_number}");
@@ -801,7 +856,7 @@ pub fn github_get_pr_details(
    github_token: Option<String>,
 ) -> Result<PullRequestDetails, String> {
    let slug = resolve_repo_slug(&repo_path_value)?;
-   let api = GitHubApi::new(github_token)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
    let pr: RestPullRequest = api.get_json(&repo_path(&slug, &format!("pulls/{pr_number}")))?;
    let commits: Vec<serde_json::Value> =
       api.get_json(&repo_path(&slug, &format!("pulls/{pr_number}/commits")))?;
@@ -853,7 +908,7 @@ pub fn github_get_pr_diff(
    github_token: Option<String>,
 ) -> Result<String, String> {
    let slug = resolve_repo_slug(&repo_path_value)?;
-   let api = GitHubApi::new(github_token)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
    api.get_text(
       &repo_path(&slug, &format!("pulls/{pr_number}")),
       "application/vnd.github.v3.diff",
@@ -866,7 +921,7 @@ pub fn github_get_pr_files(
    github_token: Option<String>,
 ) -> Result<Vec<PullRequestFile>, String> {
    let slug = resolve_repo_slug(&repo_path_value)?;
-   let api = GitHubApi::new(github_token)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
    let files: Vec<RestPullRequestFile> = api.get_json_with_query(
       &repo_path(&slug, &format!("pulls/{pr_number}/files")),
       &[("per_page", "100".to_string())],
@@ -881,7 +936,7 @@ pub fn github_get_pr_comments(
    github_token: Option<String>,
 ) -> Result<Vec<PullRequestComment>, String> {
    let slug = resolve_repo_slug(&repo_path_value)?;
-   let api = GitHubApi::new(github_token)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
    let comments: Vec<RestComment> = api.get_json_with_query(
       &repo_path(&slug, &format!("issues/{pr_number}/comments")),
       &[("per_page", "100".to_string())],
@@ -896,7 +951,7 @@ pub fn github_get_issue_details(
    github_token: Option<String>,
 ) -> Result<IssueDetails, String> {
    let slug = resolve_repo_slug(&repo_path_value)?;
-   let api = GitHubApi::new(github_token)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
    let issue: RestIssue = api.get_json(&repo_path(&slug, &format!("issues/{issue_number}")))?;
    let comments: Vec<RestComment> = api.get_json_with_query(
       &repo_path(&slug, &format!("issues/{issue_number}/comments")),
@@ -915,7 +970,7 @@ pub fn github_get_workflow_run_details(
    github_token: Option<String>,
 ) -> Result<WorkflowRunDetails, String> {
    let slug = resolve_repo_slug(&repo_path_value)?;
-   let api = GitHubApi::new(github_token)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
    let run: RestWorkflowRun = api.get_json(&repo_path(&slug, &format!("actions/runs/{run_id}")))?;
    let response: WorkflowJobsResponse = api.get_json_with_query(
       &repo_path(&slug, &format!("actions/runs/{run_id}/jobs")),
@@ -934,7 +989,7 @@ pub fn github_get_workflow_run_details(
 
 #[cfg(test)]
 mod api_tests {
-   use super::{order_remote_names, parse_github_remote_url};
+   use super::{GitHubApi, order_remote_names, parse_github_remote_url};
 
    #[test]
    fn parses_https_github_remote() {
@@ -961,6 +1016,12 @@ mod api_tests {
    fn rejects_nested_or_invalid_remote_paths() {
       assert!(parse_github_remote_url("https://github.com/athasdev/athas/extra.git").is_none());
       assert!(parse_github_remote_url("https://github.com/athasdev/../athas.git").is_none());
+   }
+
+   #[test]
+   fn rejects_missing_authenticated_token() {
+      assert!(GitHubApi::new_authenticated(None).is_err());
+      assert!(GitHubApi::new_authenticated(Some("   ".to_string())).is_err());
    }
 
    #[test]

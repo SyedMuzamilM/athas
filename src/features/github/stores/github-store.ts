@@ -353,53 +353,6 @@ export const useGitHubStore = create(
         }
       },
 
-      prefetchPR: async (repoPath: string, prNumber: number) => {
-        const cacheKey = getPRDetailsCacheKey(repoPath, prNumber);
-        const cached = get().prDetailsCache[cacheKey];
-        const hasFreshDetails =
-          cached?.details && isFresh(cached.fetchedAt, PR_DETAILS_CACHE_TTL_MS);
-
-        if (hasFreshDetails) {
-          return;
-        }
-
-        if (prDetailsInFlightByKey[cacheKey]) {
-          await prDetailsInFlightByKey[cacheKey];
-          return;
-        }
-
-        const requestId = (prDetailsRequestSeqByKey[cacheKey] ?? 0) + 1;
-        prDetailsRequestSeqByKey[cacheKey] = requestId;
-
-        const run = (async () => {
-          try {
-            const detailsResponse = await invoke<PullRequestDetails>("github_get_pr_details", {
-              repoPath,
-              prNumber,
-            });
-            const details = normalizePullRequestDetails(detailsResponse);
-
-            if (requestId !== prDetailsRequestSeqByKey[cacheKey]) return;
-
-            set((state) => ({
-              prDetailsCache: {
-                ...state.prDetailsCache,
-                [cacheKey]: {
-                  ...state.prDetailsCache[cacheKey],
-                  fetchedAt: Date.now(),
-                  details,
-                },
-              },
-            }));
-          } finally {
-            delete prDetailsInFlightByKey[cacheKey];
-          }
-        })();
-
-        prDetailsInFlightByKey[cacheKey] = run;
-        await run;
-      },
-
       selectPR: async (repoPath: string, prNumber: number, options?: { force?: boolean }) => {
         const force = options?.force ?? false;
         const cacheKey = getPRDetailsCacheKey(repoPath, prNumber);

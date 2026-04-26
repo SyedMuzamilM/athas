@@ -20,12 +20,7 @@ import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
 import GitHubSidebarLoadingBar from "./github-sidebar-loading-bar";
 import { useGitHubStore } from "../stores/github-store";
 import type { IssueListItem } from "../types/github";
-import {
-  GITHUB_ISSUE_DETAILS_TTL_MS,
-  GITHUB_ISSUE_LIST_TTL_MS,
-  githubIssueDetailsCache,
-  githubIssueListCache,
-} from "../utils/github-data-cache";
+import { GITHUB_ISSUE_LIST_TTL_MS, githubIssueListCache } from "../utils/github-data-cache";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 
@@ -33,14 +28,11 @@ interface IssueListItemProps {
   issue: IssueListItem;
   isActive: boolean;
   onSelect: () => void;
-  onPrefetch: () => void;
 }
 
-const IssueRow = memo(({ issue, isActive, onSelect, onPrefetch }: IssueListItemProps) => (
+const IssueRow = memo(({ issue, isActive, onSelect }: IssueListItemProps) => (
   <Button
     onClick={onSelect}
-    onMouseEnter={onPrefetch}
-    onFocus={onPrefetch}
     variant="ghost"
     size="sm"
     active={isActive}
@@ -120,16 +112,6 @@ const GitHubIssuesView = memo(({ refreshNonce = 0 }: GitHubIssuesViewProps) => {
           { force, ttlMs: GITHUB_ISSUE_LIST_TTL_MS },
         );
         startTransition(() => setIssues(nextIssues));
-
-        // Warm a few likely-next issue details so opening is near-instant.
-        for (const issue of nextIssues.slice(0, 3)) {
-          const cacheKey = `${repoPath}::${issue.number}`;
-          void githubIssueDetailsCache.load(
-            cacheKey,
-            () => invoke("github_get_issue_details", { repoPath, issueNumber: issue.number }),
-            { ttlMs: GITHUB_ISSUE_DETAILS_TTL_MS },
-          );
-        }
       } catch (nextError) {
         setError(nextError instanceof Error ? nextError.message : String(nextError));
       } finally {
@@ -198,16 +180,6 @@ const GitHubIssuesView = memo(({ refreshNonce = 0 }: GitHubIssuesViewProps) => {
                 key={issue.number}
                 issue={issue}
                 isActive={activeIssueNumber === issue.number}
-                onPrefetch={() => {
-                  if (!repoPath) return;
-                  const cacheKey = `${repoPath}::${issue.number}`;
-                  void githubIssueDetailsCache.load(
-                    cacheKey,
-                    () =>
-                      invoke("github_get_issue_details", { repoPath, issueNumber: issue.number }),
-                    { ttlMs: GITHUB_ISSUE_DETAILS_TTL_MS },
-                  );
-                }}
                 onSelect={() =>
                   startTransition(() => {
                     openGitHubIssueBuffer({
