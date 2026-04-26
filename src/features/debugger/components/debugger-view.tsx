@@ -6,6 +6,7 @@ import {
   Pause,
   Play,
   Stop,
+  Stack,
   Trash,
 } from "@phosphor-icons/react";
 import { useEffect, useMemo, useState } from "react";
@@ -20,6 +21,7 @@ import Select from "@/ui/select";
 import { cn } from "@/utils/cn";
 import { getBaseName, joinPath } from "@/utils/path-helpers";
 import {
+  sendDebugAdapterRequest,
   startDebugLaunchSession,
   stopDebugAdapterSession,
 } from "../services/debug-adapter-service";
@@ -67,6 +69,11 @@ export default function DebuggerView() {
   const userConfigs = useDebuggerStore.use.userConfigs();
   const activeConfigId = useDebuggerStore.use.activeConfigId();
   const activeSession = useDebuggerStore.use.activeSession();
+  const stoppedState = useDebuggerStore.use.stoppedState();
+  const stackFrames = useDebuggerStore.use.stackFrames();
+  const selectedFrameId = useDebuggerStore.use.selectedFrameId();
+  const scopes = useDebuggerStore.use.scopes();
+  const variablesByReference = useDebuggerStore.use.variablesByReference();
   const debuggerActions = useDebuggerStore.use.actions();
   const [customCommand, setCustomCommand] = useState("");
   const [launchLoadError, setLaunchLoadError] = useState<string | null>(null);
@@ -182,6 +189,31 @@ export default function DebuggerView() {
     debuggerActions.toggleBreakpoint(file.path, cursorPosition.line);
   };
 
+  const selectStackFrame = async (frameId: number, sourcePath?: string, line?: number) => {
+    debuggerActions.selectStackFrame(frameId);
+
+    if (activeSession?.id) {
+      try {
+        const seq = await sendDebugAdapterRequest(activeSession.id, "scopes", { frameId });
+        debuggerActions.registerAdapterRequest(seq, { command: "scopes", frameId });
+      } catch {
+        // Some adapters may not allow scope requests after the session moves on.
+      }
+    }
+
+    if (sourcePath && line && line > 0) {
+      await handleFileOpen?.(sourcePath, false);
+      window.dispatchEvent(
+        new CustomEvent("menu-go-to-line", {
+          detail: {
+            path: sourcePath,
+            line,
+          },
+        }),
+      );
+    }
+  };
+
   const sortedBreakpoints = useMemo(
     () =>
       [...breakpoints].sort((a, b) =>
@@ -288,10 +320,81 @@ export default function DebuggerView() {
           <div className="mt-1 truncate font-mono text-[11px] text-text-lighter">
             {activeSession.command}
           </div>
+          {stoppedState ? (
+            <div className="mt-1 truncate text-[11px] text-warning">
+              Paused: {stoppedState.description || stoppedState.reason}
+            </div>
+          ) : null}
         </div>
       ) : null}
 
       <div className="min-h-0 flex-1 overflow-auto">
+        <SectionHeader title="Call Stack" count={stackFrames.length} />
+        {stackFrames.length === 0 ? (
+          <div className="px-3 py-4 text-center text-text-lighter text-xs">No stack frames.</div>
+        ) : (
+          <div className="py-1">
+            {stackFrames.map((frame) => {
+              const isSelected = frame.id === selectedFrameId;
+              return (
+                <button
+                  key={frame.id}
+                  type="button"
+                  className={cn(
+                    "flex w-full items-start gap-2 px-3 py-1.5 text-left text-xs hover:bg-hover/70",
+                    isSelected && "bg-hover/80",
+                  )}
+                  onClick={() => void selectStackFrame(frame.id, frame.sourcePath, frame.line)}
+                >
+                  <Stack size={13} className="mt-0.5 shrink-0 text-text-lighter" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-text">{frame.name}</span>
+                    <span className="block truncate text-[11px] text-text-lighter">
+                      {frame.sourcePath
+                        ? `${getBaseName(frame.sourcePath, "file")}:${frame.line}`
+                        : `Line ${frame.line}`}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        <SectionHeader title="Variables" count={scopes.length} />
+        {scopes.length === 0 ? (
+          <div className="px-3 py-4 text-center text-text-lighter text-xs">No variables.</div>
+        ) : (
+          <div className="py-1">
+            {scopes.map((scope) => {
+              const variables = variablesByReference[scope.variablesReference] ?? [];
+              return (
+                <div key={`${scope.name}-${scope.variablesReference}`}>
+                  <div className="flex items-center justify-between px-3 py-1.5 text-xs">
+                    <span className="font-medium text-text">{scope.name}</span>
+                    <span className="text-[10px] text-text-lighter">{variables.length}</span>
+                  </div>
+                  {variables.length === 0 ? (
+                    <div className="px-6 pb-1.5 text-[11px] text-text-lighter">Empty</div>
+                  ) : (
+                    variables.map((variable) => (
+                      <div
+                        key={`${scope.variablesReference}-${variable.name}`}
+                        className="grid grid-cols-[minmax(0,0.45fr)_minmax(0,0.55fr)] gap-2 px-6 py-1 text-[11px]"
+                      >
+                        <span className="truncate text-text-lighter">{variable.name}</span>
+                        <span className="truncate font-mono text-text">
+                          {variable.value || variable.type || ""}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         <SectionHeader title="Breakpoints" count={sortedBreakpoints.length} />
         {sortedBreakpoints.length === 0 ? (
           <div className="px-3 py-6 text-center text-text-lighter text-xs">
