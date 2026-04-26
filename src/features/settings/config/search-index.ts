@@ -677,6 +677,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["diagnostics", "problems", "errors", "linting"],
   },
   {
+    id: "features-debugger",
+    tab: "features",
+    section: "Features",
+    label: "Debugger",
+    description: "Run and debug files with launch configurations and breakpoints",
+    keywords: ["debug", "debugger", "breakpoint", "launch", "run"],
+  },
+  {
     id: "features-ai-chat",
     tab: "features",
     section: "Features",

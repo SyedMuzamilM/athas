@@ -1,6 +1,7 @@
 import {
   FileText,
   FolderOpen,
+  BugBeetle,
   GitBranch,
   GitPullRequest,
   Hash,
@@ -13,7 +14,7 @@ import type { Action } from "../models/action.types";
 
 interface NavigationActionsParams {
   setIsSidebarVisible: (v: boolean) => void;
-  setActiveView: (view: "files" | "git" | "github-prs") => void;
+  setActiveView: (view: "files" | "git" | "github-prs" | "debugger") => void;
   setIsQuickOpenVisible: (v: boolean) => void;
   openSettingsDialog: (tab?: SettingsTab) => void;
   onClose: () => void;
@@ -59,6 +60,19 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       action: () => {
         setIsSidebarVisible(true);
         setActiveView("github-prs");
+        onClose();
+      },
+    },
+    {
+      id: "view-show-debugger",
+      label: "View: Show Run and Debug",
+      description: "Switch to debugger view",
+      icon: <BugBeetle />,
+      category: "Navigation",
+      commandId: "workbench.showDebugger",
+      action: () => {
+        setIsSidebarVisible(true);
+        setActiveView("debugger");
         onClose();
       },
     },

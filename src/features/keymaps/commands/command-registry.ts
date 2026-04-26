@@ -1,4 +1,9 @@
 import { editorAPI } from "@/features/editor/extensions/api";
+import {
+  buildDebugCommand,
+  createGeneratedDebugConfig,
+} from "@/features/debugger/utils/debugger-command";
+import { useDebuggerStore } from "@/features/debugger/stores/debugger-store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
 import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar-store";
@@ -10,6 +15,7 @@ import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useSettingsStore } from "@/features/settings/store";
 import { useWhatsNewStore } from "@/features/settings/stores/whats-new-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useProjectStore } from "@/features/window/stores/project-store";
 import { useZoomStore } from "@/features/window/stores/zoom-store";
 import { isMac } from "@/utils/platform";
 import { useKeymapStore } from "../stores/store";
@@ -307,6 +313,61 @@ const toggleTerminalPane = () => {
   }
 };
 
+const getActiveDebugFile = () => {
+  const bufferStore = useBufferStore.getState();
+  const activeBuffer = bufferStore.buffers.find(
+    (buffer) => buffer.id === bufferStore.activeBufferId,
+  );
+  if (!activeBuffer || activeBuffer.type !== "editor" || activeBuffer.isVirtual) return null;
+
+  return {
+    path: activeBuffer.path,
+    name: activeBuffer.name,
+    language: activeBuffer.language,
+  };
+};
+
+const toggleActiveBreakpoint = () => {
+  const activeFile = getActiveDebugFile();
+  if (!activeFile) return;
+
+  const line = useEditorStateStore.getState().cursorPosition.line;
+  useDebuggerStore.getState().actions.toggleBreakpoint(activeFile.path, line);
+};
+
+const startGeneratedDebugSession = () => {
+  const rootFolderPath = useProjectStore.getState().rootFolderPath;
+  const activeFile = getActiveDebugFile();
+  const config = createGeneratedDebugConfig(activeFile, rootFolderPath);
+  const command = buildDebugCommand(config);
+  if (!command.trim()) {
+    const state = useUIState.getState();
+    state.setActiveView("debugger");
+    state.setIsSidebarVisible(true);
+    return;
+  }
+
+  window.dispatchEvent(
+    new CustomEvent("create-terminal-with-command", {
+      detail: {
+        name: config.name,
+        command,
+        workingDirectory: config.cwd || rootFolderPath || undefined,
+      },
+    }),
+  );
+
+  useDebuggerStore.getState().actions.startSession({
+    id: `debug_${Date.now()}`,
+    name: config.name,
+    configId: config.id,
+    command,
+    cwd: config.cwd,
+    startedAt: Date.now(),
+    status: "running",
+  });
+};
+
 const viewCommands: Command[] = [
   {
     id: "workbench.toggleSidebar",
@@ -432,6 +493,45 @@ const viewCommands: Command[] = [
         state.setIsSidebarVisible(true);
       }
     },
+  },
+  {
+    id: "workbench.showDebugger",
+    title: "Show Run and Debug",
+    category: "View",
+    keybinding: "cmd+shift+d",
+    execute: () => {
+      const state = useUIState.getState();
+      if (state.isSidebarVisible && state.activeSidebarView === "debugger") {
+        state.setIsSidebarVisible(false);
+      } else {
+        state.setActiveView("debugger");
+        state.setIsSidebarVisible(true);
+      }
+    },
+  },
+  {
+    id: "debug.start",
+    title: "Start Debugging",
+    category: "Debug",
+    keybinding: "F5",
+    execute: startGeneratedDebugSession,
+  },
+  {
+    id: "debug.stop",
+    title: "Stop Debugging",
+    category: "Debug",
+    keybinding: "shift+F5",
+    execute: () => {
+      window.dispatchEvent(new CustomEvent("close-active-terminal"));
+      useDebuggerStore.getState().actions.stopSession();
+    },
+  },
+  {
+    id: "debug.toggleBreakpoint",
+    title: "Toggle Breakpoint",
+    category: "Debug",
+    keybinding: "F9",
+    execute: toggleActiveBreakpoint,
   },
   {
     id: "workbench.toggleSidebarPosition",

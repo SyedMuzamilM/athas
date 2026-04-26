@@ -15,6 +15,7 @@ export interface CoreFeaturesState {
   terminal: boolean;
   search: boolean;
   diagnostics: boolean;
+  debugger: boolean;
   aiChat: boolean;
   breadcrumbs: boolean;
   persistentCommands: boolean;

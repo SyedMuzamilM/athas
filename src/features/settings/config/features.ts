@@ -1,9 +1,9 @@
 import {
   Brain,
   Bug,
+  BugBeetle,
   GitBranch,
   GitPullRequest,
-  Icon,
   ChatCircleText as MessageSquare,
   NavigationArrow as Navigation,
   MagnifyingGlass as Search,
@@ -54,6 +54,13 @@ export const createCoreFeaturesList = (coreFeatures: CoreFeaturesState): CoreFea
     description: "Code diagnostics and error reporting",
     icon: Bug,
     enabled: coreFeatures.diagnostics,
+  },
+  {
+    id: "debugger",
+    name: "Debugger",
+    description: "Run and debug files with launch configurations and breakpoints",
+    icon: BugBeetle,
+    enabled: coreFeatures.debugger,
   },
   {
     id: "aiChat",

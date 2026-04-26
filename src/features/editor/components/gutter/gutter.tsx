@@ -3,6 +3,7 @@ import { parseDiffAccordionLine } from "@/features/git/utils/diff-editor-content
 import { EDITOR_CONSTANTS } from "../../config/constants";
 import { calculateTotalGutterWidth } from "../../utils/gutter";
 import { DiagnosticIndicators } from "./diagnostic-indicators";
+import { DebugBreakpointIndicators } from "@/features/debugger/components/debug-breakpoint-indicators";
 import { FoldIndicators } from "./fold-indicators";
 import { GitIndicators } from "./git-indicators";
 import { LineNumbers } from "./line-numbers";
@@ -268,6 +269,14 @@ function GutterComponent({
         ) : (
           <>
             {accordionGutterDecorations}
+            <DebugBreakpointIndicators
+              filePath={filePath}
+              lineHeight={lineHeight}
+              startLine={computedViewport.startLine}
+              endLine={computedViewport.endLine}
+              hiddenLines={accordionLineSet}
+            />
+
             <GitIndicators
               lineHeight={lineHeight}
               fontSize={fontSize}
