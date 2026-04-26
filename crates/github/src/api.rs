@@ -390,12 +390,11 @@ fn resolve_repo_remote(repo_path: &str) -> Result<RepoRemote, String> {
    for remote_name in
       order_remote_names(remote_names, current_branch_remote(&repository).as_deref())
    {
-      if let Ok(remote) = repository.find_remote(&remote_name) {
-         if let Some(url) = remote.url() {
-            if let Some(slug) = parse_github_remote_url(url) {
-               return Ok(RepoRemote { slug, remote_name });
-            }
-         }
+      if let Ok(remote) = repository.find_remote(&remote_name)
+         && let Some(url) = remote.url()
+         && let Some(slug) = parse_github_remote_url(url)
+      {
+         return Ok(RepoRemote { slug, remote_name });
       }
    }
 
@@ -420,10 +419,10 @@ fn current_branch_remote(repository: &Repository) -> Option<String> {
 fn order_remote_names(remote_names: Vec<String>, upstream_remote: Option<&str>) -> Vec<String> {
    let mut ordered = Vec::with_capacity(remote_names.len());
 
-   if let Some(upstream_remote) = upstream_remote {
-      if remote_names.iter().any(|name| name == upstream_remote) {
-         ordered.push(upstream_remote.to_string());
-      }
+   if let Some(upstream_remote) = upstream_remote
+      && remote_names.iter().any(|name| name == upstream_remote)
+   {
+      ordered.push(upstream_remote.to_string());
    }
 
    if remote_names.iter().any(|name| name == "origin")

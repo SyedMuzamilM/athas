@@ -131,6 +131,11 @@ where
 }
 
 fn configure_background_agent_command(command: &mut Command) {
+   #[cfg(not(target_os = "windows"))]
+   {
+      let _ = command;
+   }
+
    #[cfg(target_os = "windows")]
    {
       use std::os::windows::process::CommandExt;
