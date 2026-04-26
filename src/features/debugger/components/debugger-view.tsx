@@ -1,14 +1,4 @@
-import {
-  Bug,
-  CaretRight,
-  FolderOpen,
-  ListBullets,
-  Pause,
-  Play,
-  Stop,
-  Stack,
-  Trash,
-} from "@phosphor-icons/react";
+import { Bug, FolderOpen, ListBullets, Pause, Play, Square, Trash } from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
@@ -19,7 +9,7 @@ import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import Select from "@/ui/select";
 import { cn } from "@/utils/cn";
-import { getBaseName, joinPath } from "@/utils/path-helpers";
+import { joinPath } from "@/utils/path-helpers";
 import {
   sendDebugAdapterRequest,
   startDebugLaunchSession,
@@ -33,17 +23,14 @@ import {
   parseDebugLaunchJson,
   resolveDebugConfigVariables,
 } from "../utils/debugger-command";
-
-const SectionHeader = ({ title, count }: { title: string; count?: number }) => (
-  <div className="flex h-8 items-center justify-between border-border/70 border-b px-3">
-    <span className="font-medium text-text text-xs uppercase tracking-wide">{title}</span>
-    {typeof count === "number" ? (
-      <span className="rounded-md bg-secondary-bg px-1.5 py-0.5 text-[10px] text-text-lighter">
-        {count}
-      </span>
-    ) : null}
-  </div>
-);
+import {
+  DebugBreakpointsList,
+  DebugEmptyState,
+  DebugSection,
+  DebugSessionStatusIcon,
+  DebugStackFrames,
+} from "./debugger-panels";
+import { DebugVariablesPanel } from "./debugger-variables-panel";
 
 const getActiveDebuggableFile = () => {
   const bufferStore = useBufferStore.getState();
@@ -82,9 +69,6 @@ export default function DebuggerView() {
   const [customCommand, setCustomCommand] = useState("");
   const [launchLoadError, setLaunchLoadError] = useState<string | null>(null);
   const [startError, setStartError] = useState<string | null>(null);
-  const [expandedVariableReferences, setExpandedVariableReferences] = useState<Set<number>>(
-    () => new Set(),
-  );
   const syncedBreakpointFilesRef = useRef<Set<string>>(new Set());
 
   const activeFile = useMemo(() => getActiveDebuggableFile(), [activeBufferId, buffers]);
@@ -150,15 +134,17 @@ export default function DebuggerView() {
         : [],
     [activeSession, adapterOutput],
   );
+  const sortedBreakpoints = useMemo(
+    () =>
+      [...breakpoints].sort((a, b) =>
+        a.filePath === b.filePath ? a.line - b.line : a.filePath.localeCompare(b.filePath),
+      ),
+    [breakpoints],
+  );
 
   useEffect(() => {
     debuggerActions.hydrate();
   }, [debuggerActions]);
-
-  useEffect(() => {
-    setExpandedVariableReferences(new Set());
-  }, [activeSession?.id, selectedFrameId]);
-
   useEffect(() => {
     if (!activeSession?.id || !isAdapterSession) {
       syncedBreakpointFilesRef.current = new Set();
@@ -173,14 +159,10 @@ export default function DebuggerView() {
 
     syncDebugBreakpoints(activeSession.id, breakpoints, Array.from(filePaths))
       .then(() => {
-        if (isCurrentSync) {
-          syncedBreakpointFilesRef.current = filePaths;
-        }
+        if (isCurrentSync) syncedBreakpointFilesRef.current = filePaths;
       })
       .catch((error) => {
-        if (isCurrentSync) {
-          setStartError(error instanceof Error ? error.message : String(error));
-        }
+        if (isCurrentSync) setStartError(error instanceof Error ? error.message : String(error));
       });
 
     return () => {
@@ -191,6 +173,7 @@ export default function DebuggerView() {
   useEffect(() => {
     if (!rootFolderPath) {
       debuggerActions.setWorkspaceConfigs([]);
+      setLaunchLoadError(null);
       return;
     }
 
@@ -270,9 +253,7 @@ export default function DebuggerView() {
     setStartError(null);
     try {
       await sendDebugAdapterRequest(activeSession.id, command, { threadId: activeThreadId });
-      if (command !== "pause") {
-        debuggerActions.setSessionStatus("running");
-      }
+      if (command !== "pause") debuggerActions.setSessionStatus("running");
     } catch (error) {
       setStartError(error instanceof Error ? error.message : String(error));
     }
@@ -300,121 +281,21 @@ export default function DebuggerView() {
       await handleFileOpen?.(sourcePath, false);
       window.dispatchEvent(
         new CustomEvent("menu-go-to-line", {
-          detail: {
-            path: sourcePath,
-            line,
-          },
+          detail: { path: sourcePath, line },
         }),
       );
     }
   };
 
-  const toggleVariableExpansion = async (variablesReference: number) => {
-    if (!activeSession?.id || variablesReference <= 0) return;
-
-    const shouldLoadChildren =
-      !expandedVariableReferences.has(variablesReference) &&
-      !variablesByReference[variablesReference];
-
-    setExpandedVariableReferences((current) => {
-      const next = new Set(current);
-      if (next.has(variablesReference)) {
-        next.delete(variablesReference);
-      } else {
-        next.add(variablesReference);
-      }
-      return next;
-    });
-
-    if (!shouldLoadChildren) return;
-
-    try {
-      const seq = await sendDebugAdapterRequest(activeSession.id, "variables", {
-        variablesReference,
-      });
-      debuggerActions.registerAdapterRequest(seq, {
-        command: "variables",
-        variablesReference,
-      });
-    } catch {
-      setExpandedVariableReferences((current) => {
-        const next = new Set(current);
-        next.delete(variablesReference);
-        return next;
-      });
-    }
-  };
-
-  const isVariableReferencePending = (variablesReference: number) =>
-    Object.values(pendingRequests).some(
-      (request) =>
-        request.command === "variables" && request.variablesReference === variablesReference,
-    );
-
-  const renderVariables = (
-    variables: NonNullable<(typeof variablesByReference)[number]>,
-    parentReference: number,
-    depth = 0,
-  ) =>
-    variables.map((variable, index) => {
-      const canExpand = variable.variablesReference > 0;
-      const isExpanded = expandedVariableReferences.has(variable.variablesReference);
-      const childVariables = variablesByReference[variable.variablesReference] ?? [];
-      const isLoading = isVariableReferencePending(variable.variablesReference);
-
-      return (
-        <div key={`${parentReference}-${variable.name}-${index}`}>
-          <div
-            className="grid grid-cols-[minmax(0,0.45fr)_minmax(0,0.55fr)] gap-2 py-1 pr-3 text-[11px]"
-            style={{ paddingLeft: 24 + depth * 12 }}
-          >
-            <button
-              type="button"
-              className={cn(
-                "flex min-w-0 items-center gap-1 text-left text-text-lighter",
-                canExpand && "hover:text-text",
-              )}
-              disabled={!canExpand}
-              onClick={() => void toggleVariableExpansion(variable.variablesReference)}
-            >
-              <CaretRight
-                size={10}
-                className={cn(
-                  "shrink-0 transition-transform",
-                  isExpanded && "rotate-90",
-                  !canExpand && "opacity-0",
-                )}
-              />
-              <span className="truncate">{variable.name}</span>
-            </button>
-            <span className="truncate font-mono text-text">
-              {isLoading ? "Loading..." : variable.value || variable.type || ""}
-            </span>
-          </div>
-          {isExpanded && childVariables.length > 0
-            ? renderVariables(childVariables, variable.variablesReference, depth + 1)
-            : null}
-        </div>
-      );
-    });
-
-  const sortedBreakpoints = useMemo(
-    () =>
-      [...breakpoints].sort((a, b) =>
-        a.filePath === b.filePath ? a.line - b.line : a.filePath.localeCompare(b.filePath),
-      ),
-    [breakpoints],
-  );
-
   return (
     <div className="flex h-full min-h-0 flex-col bg-primary-bg text-text">
       <div className="flex h-10 shrink-0 items-center gap-2 border-border/70 border-b px-3">
         <Bug size={16} className="text-text-lighter" weight="duotone" />
-        <div className="min-w-0 flex-1 font-medium text-sm">Run and Debug</div>
+        <div className="min-w-0 flex-1 font-medium text-sm">Debug</div>
         <Button
           size="icon-sm"
           variant="ghost"
-          tooltip="Toggle Breakpoint"
+          tooltip="Toggle breakpoint on current line"
           onClick={toggleCurrentLineBreakpoint}
           disabled={!activeFile}
         >
@@ -422,14 +303,11 @@ export default function DebuggerView() {
         </Button>
       </div>
 
-      <div className="space-y-3 border-border/70 border-b p-3">
+      <div className="space-y-2 border-border/70 border-b p-2.5">
         <Select
           value={selectedConfig.id}
           onChange={(value) => debuggerActions.setActiveConfigId(value)}
-          options={allConfigs.map((config) => ({
-            value: config.id,
-            label: config.name,
-          }))}
+          options={allConfigs.map((config) => ({ value: config.id, label: config.name }))}
           size="sm"
           aria-label="Debug configuration"
         />
@@ -438,20 +316,19 @@ export default function DebuggerView() {
           <Input
             value={customCommand}
             onChange={(event) => setCustomCommand(event.target.value)}
-            placeholder="Debug command"
+            placeholder="Command to run"
             size="sm"
           />
         ) : (
-          <div className="min-h-7 rounded-md border border-border/60 bg-secondary-bg px-2 py-1.5 font-mono text-[11px] text-text-lighter">
+          <div className="truncate rounded-md border border-border/60 bg-secondary-bg px-2 py-1.5 font-mono text-[11px] text-text-lighter">
             {adapterCommandPreview || selectedCommand || "No command available"}
           </div>
         )}
 
-        <div className="flex items-center gap-2">
+        <div className="grid grid-cols-[1fr_auto_auto] gap-1.5">
           <Button
             size="sm"
             variant="primary"
-            className="flex-1"
             onClick={startDebugging}
             disabled={!canStartDebugging || isActiveSession}
             commandId="debug.start"
@@ -459,54 +336,15 @@ export default function DebuggerView() {
             <Play />
             Start
           </Button>
-          {isPaused ? (
-            <Button
-              size="icon-sm"
-              variant="secondary"
-              tooltip="Continue"
-              disabled={!canSendAdapterThreadRequest}
-              onClick={() => void sendAdapterThreadRequest("continue")}
-              aria-label="Continue Debugging"
-            >
-              <Play />
-            </Button>
-          ) : null}
           <Button
             size="icon-sm"
             variant="secondary"
-            tooltip="Pause"
-            disabled={!canSendAdapterThreadRequest || isPaused}
-            onClick={() => void sendAdapterThreadRequest("pause")}
-            aria-label="Pause Debugging"
+            tooltip={isPaused ? "Continue" : "Pause"}
+            disabled={!canSendAdapterThreadRequest}
+            onClick={() => void sendAdapterThreadRequest(isPaused ? "continue" : "pause")}
+            aria-label={isPaused ? "Continue debugging" : "Pause debugging"}
           >
-            <Pause />
-          </Button>
-          <Button
-            size="xs"
-            variant="secondary"
-            tooltip="Step Over"
-            disabled={!canStep}
-            onClick={() => void sendAdapterThreadRequest("next")}
-          >
-            Over
-          </Button>
-          <Button
-            size="xs"
-            variant="secondary"
-            tooltip="Step Into"
-            disabled={!canStep}
-            onClick={() => void sendAdapterThreadRequest("stepIn")}
-          >
-            Into
-          </Button>
-          <Button
-            size="xs"
-            variant="secondary"
-            tooltip="Step Out"
-            disabled={!canStep}
-            onClick={() => void sendAdapterThreadRequest("stepOut")}
-          >
-            Out
+            {isPaused ? <Play /> : <Pause />}
           </Button>
           <Button
             size="icon-sm"
@@ -516,184 +354,161 @@ export default function DebuggerView() {
             onClick={stopDebugging}
             commandId="debug.stop"
           >
-            <Stop />
+            <Square />
           </Button>
         </div>
 
-        <div className="flex items-center gap-1.5 text-[11px] text-text-lighter">
-          <FolderOpen size={12} />
-          <span className="truncate">{rootFolderPath || "Open a project to load launch.json"}</span>
+        <div className="grid grid-cols-3 gap-1.5">
+          <Button
+            size="xs"
+            variant="secondary"
+            tooltip="Step over"
+            disabled={!canStep}
+            onClick={() => void sendAdapterThreadRequest("next")}
+          >
+            Over
+          </Button>
+          <Button
+            size="xs"
+            variant="secondary"
+            tooltip="Step into"
+            disabled={!canStep}
+            onClick={() => void sendAdapterThreadRequest("stepIn")}
+          >
+            Into
+          </Button>
+          <Button
+            size="xs"
+            variant="secondary"
+            tooltip="Step out"
+            disabled={!canStep}
+            onClick={() => void sendAdapterThreadRequest("stepOut")}
+          >
+            Out
+          </Button>
         </div>
-        {launchLoadError && workspaceConfigs.length === 0 ? (
-          <div className="text-[11px] text-text-lighter">{launchLoadError}</div>
-        ) : null}
+
         {startError ? <div className="text-[11px] text-error">{startError}</div> : null}
       </div>
 
-      {activeSession ? (
+      {activeSession && activeSession.status !== "idle" ? (
         <div className="border-border/70 border-b px-3 py-2 text-xs">
           <div className="flex items-center gap-2">
-            <span
-              className={cn(
-                "size-2 rounded-full",
-                activeSession.status === "running" ? "bg-success" : "bg-text-lighter",
-              )}
-            />
+            <DebugSessionStatusIcon status={activeSession.status} />
             <span className="truncate font-medium">{activeSession.name}</span>
+            {stoppedState ? (
+              <span className="shrink-0 rounded bg-warning/10 px-1.5 py-0.5 text-[10px] text-warning">
+                Paused
+              </span>
+            ) : null}
           </div>
-          <div className="mt-1 truncate font-mono text-[11px] text-text-lighter">
-            {activeSession.command}
+          <div className="mt-1 truncate text-[11px] text-text-lighter">
+            {stoppedState?.description || stoppedState?.reason || activeSession.command}
           </div>
-          {stoppedState ? (
-            <div className="mt-1 truncate text-[11px] text-warning">
-              Paused: {stoppedState.description || stoppedState.reason}
-            </div>
-          ) : null}
         </div>
       ) : null}
 
       <div className="min-h-0 flex-1 overflow-auto">
-        <SectionHeader title="Call Stack" count={stackFrames.length} />
-        {stackFrames.length === 0 ? (
-          <div className="px-3 py-4 text-center text-text-lighter text-xs">No stack frames.</div>
-        ) : (
-          <div className="py-1">
-            {stackFrames.map((frame) => {
-              const isSelected = frame.id === selectedFrameId;
-              return (
-                <button
-                  key={frame.id}
-                  type="button"
-                  className={cn(
-                    "flex w-full items-start gap-2 px-3 py-1.5 text-left text-xs hover:bg-hover/70",
-                    isSelected && "bg-hover/80",
-                  )}
-                  onClick={() => void selectStackFrame(frame.id, frame.sourcePath, frame.line)}
-                >
-                  <Stack size={13} className="mt-0.5 shrink-0 text-text-lighter" />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-text">{frame.name}</span>
-                    <span className="block truncate text-[11px] text-text-lighter">
-                      {frame.sourcePath
-                        ? `${getBaseName(frame.sourcePath, "file")}:${frame.line}`
-                        : `Line ${frame.line}`}
-                    </span>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        )}
+        <DebugSection title="Stack" count={stackFrames.length}>
+          <DebugStackFrames
+            frames={stackFrames}
+            selectedFrameId={selectedFrameId}
+            onSelect={selectStackFrame}
+          />
+        </DebugSection>
 
-        <SectionHeader title="Variables" count={scopes.length} />
-        {scopes.length === 0 ? (
-          <div className="px-3 py-4 text-center text-text-lighter text-xs">No variables.</div>
-        ) : (
-          <div className="py-1">
-            {scopes.map((scope) => {
-              const variables = variablesByReference[scope.variablesReference] ?? [];
-              return (
-                <div key={`${scope.name}-${scope.variablesReference}`}>
-                  <div className="flex items-center justify-between px-3 py-1.5 text-xs">
-                    <span className="font-medium text-text">{scope.name}</span>
-                    <span className="text-[10px] text-text-lighter">{variables.length}</span>
-                  </div>
-                  {variables.length === 0 ? (
-                    <div className="px-6 pb-1.5 text-[11px] text-text-lighter">Empty</div>
-                  ) : (
-                    renderVariables(variables, scope.variablesReference)
+        <DebugSection title="Variables" count={scopes.length}>
+          <DebugVariablesPanel
+            activeSessionId={activeSession?.id}
+            selectedFrameId={selectedFrameId}
+            scopes={scopes}
+            variablesByReference={variablesByReference}
+            pendingRequests={pendingRequests}
+          />
+        </DebugSection>
+
+        <DebugSection
+          title="Console"
+          count={activeAdapterOutput.length}
+          defaultOpen={false}
+          action={
+            activeAdapterOutput.length > 0 ? (
+              <Button
+                size="icon-xs"
+                variant="ghost"
+                tooltip="Clear console"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  debuggerActions.clearAdapterTranscript();
+                }}
+              >
+                <Trash />
+              </Button>
+            ) : null
+          }
+        >
+          {activeAdapterOutput.length === 0 ? (
+            <DebugEmptyState>Adapter output appears here.</DebugEmptyState>
+          ) : (
+            <div className="py-1">
+              {activeAdapterOutput.map((output, index) => (
+                <div
+                  key={`${output.sessionId}-${index}`}
+                  className={cn(
+                    "whitespace-pre-wrap break-words px-3 py-1 font-mono text-[11px]",
+                    output.stream === "stderr" ? "text-error" : "text-text-lighter",
                   )}
+                >
+                  {output.data.trimEnd()}
                 </div>
+              ))}
+            </div>
+          )}
+        </DebugSection>
+
+        <DebugSection
+          title="Breakpoints"
+          count={sortedBreakpoints.length}
+          action={
+            sortedBreakpoints.length > 0 ? (
+              <Button
+                size="icon-xs"
+                variant="ghost"
+                tooltip="Clear breakpoints"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  debuggerActions.clearBreakpoints();
+                }}
+              >
+                <Trash />
+              </Button>
+            ) : null
+          }
+        >
+          <DebugBreakpointsList
+            breakpoints={sortedBreakpoints}
+            onOpen={async (breakpoint) => {
+              await handleFileOpen?.(breakpoint.filePath, false);
+              window.dispatchEvent(
+                new CustomEvent("menu-go-to-line", {
+                  detail: { path: breakpoint.filePath, line: breakpoint.line + 1 },
+                }),
               );
-            })}
-          </div>
-        )}
-
-        <SectionHeader title="Debug Console" count={activeAdapterOutput.length} />
-        {activeAdapterOutput.length === 0 ? (
-          <div className="px-3 py-4 text-center text-text-lighter text-xs">No debug output.</div>
-        ) : (
-          <div className="py-1">
-            {activeAdapterOutput.map((output, index) => (
-              <div
-                key={`${output.sessionId}-${index}`}
-                className={cn(
-                  "whitespace-pre-wrap break-words px-3 py-1 font-mono text-[11px]",
-                  output.stream === "stderr" ? "text-error" : "text-text-lighter",
-                )}
-              >
-                {output.data.trimEnd()}
-              </div>
-            ))}
-          </div>
-        )}
-
-        <SectionHeader title="Breakpoints" count={sortedBreakpoints.length} />
-        {sortedBreakpoints.length === 0 ? (
-          <div className="px-3 py-6 text-center text-text-lighter text-xs">
-            Click a gutter line or use Toggle Breakpoint to add one.
-          </div>
-        ) : (
-          <div className="py-1">
-            {sortedBreakpoints.map((breakpoint) => (
-              <div
-                key={breakpoint.id}
-                className="group flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-hover/70"
-              >
-                <button
-                  type="button"
-                  aria-label={breakpoint.enabled ? "Disable breakpoint" : "Enable breakpoint"}
-                  className={cn(
-                    "size-3 rounded-full border",
-                    breakpoint.enabled
-                      ? "border-error bg-error"
-                      : "border-text-lighter bg-transparent",
-                  )}
-                  onClick={() =>
-                    debuggerActions.setBreakpointEnabled(breakpoint.id, !breakpoint.enabled)
-                  }
-                />
-                <button
-                  type="button"
-                  className="min-w-0 flex-1 text-left"
-                  onClick={async () => {
-                    await handleFileOpen?.(breakpoint.filePath, false);
-                    window.dispatchEvent(
-                      new CustomEvent("menu-go-to-line", {
-                        detail: {
-                          path: breakpoint.filePath,
-                          line: breakpoint.line + 1,
-                        },
-                      }),
-                    );
-                  }}
-                >
-                  <div className="truncate text-text">
-                    {getBaseName(breakpoint.filePath, "file")}
-                  </div>
-                  <div className="truncate text-[11px] text-text-lighter">
-                    Line {breakpoint.line + 1}
-                  </div>
-                </button>
-                <Button
-                  size="icon-xs"
-                  variant="ghost"
-                  className="opacity-0 group-hover:opacity-100"
-                  tooltip="Remove Breakpoint"
-                  onClick={() => debuggerActions.removeBreakpoint(breakpoint.id)}
-                >
-                  <Trash />
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
+            }}
+            onToggle={(breakpoint) =>
+              debuggerActions.setBreakpointEnabled(breakpoint.id, !breakpoint.enabled)
+            }
+            onRemove={(breakpoint) => debuggerActions.removeBreakpoint(breakpoint.id)}
+          />
+        </DebugSection>
       </div>
 
       <div className="shrink-0 border-border/70 border-t px-3 py-2 text-[11px] text-text-lighter">
         <div className="flex items-center gap-1.5">
-          <CaretRight size={12} />
-          Terminal-backed debugging is ready for Bun, Node, Python, Rust, Go, and custom commands.
+          <FolderOpen size={12} />
+          <span className="truncate">
+            {rootFolderPath || launchLoadError || "Open a project to load launch.json"}
+          </span>
         </div>
       </div>
     </div>
