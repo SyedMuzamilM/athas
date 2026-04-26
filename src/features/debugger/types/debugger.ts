@@ -1,6 +1,6 @@
 export type DebuggerRuntime = "bun" | "node" | "python" | "rust" | "go" | "custom";
 
-export type DebugSessionStatus = "idle" | "running";
+export type DebugSessionStatus = "idle" | "running" | "paused";
 
 export interface DebugBreakpoint {
   id: string;
@@ -71,3 +71,41 @@ export interface DebugSessionEnded {
   sessionId: string;
   reason: string;
 }
+
+export interface DebugThread {
+  id: number;
+  name: string;
+}
+
+export interface DebugStackFrame {
+  id: number;
+  name: string;
+  sourcePath?: string;
+  line: number;
+  column: number;
+}
+
+export interface DebugScope {
+  name: string;
+  variablesReference: number;
+  expensive?: boolean;
+}
+
+export interface DebugVariable {
+  name: string;
+  value: string;
+  type?: string;
+  variablesReference: number;
+}
+
+export interface DebugStoppedState {
+  reason: string;
+  threadId?: number;
+  description?: string;
+}
+
+export type DebugRequestContext =
+  | { command: "threads" }
+  | { command: "stackTrace"; threadId: number }
+  | { command: "scopes"; frameId: number }
+  | { command: "variables"; variablesReference: number };

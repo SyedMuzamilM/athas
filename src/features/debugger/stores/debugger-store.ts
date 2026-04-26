@@ -5,8 +5,14 @@ import type {
   DebugLaunchConfig,
   DebugProcessOutput,
   DebugProtocolMessage,
+  DebugRequestContext,
+  DebugScope,
   DebugSession,
   DebugSessionEnded,
+  DebugStackFrame,
+  DebugStoppedState,
+  DebugThread,
+  DebugVariable,
 } from "@/features/debugger/types/debugger";
 
 const BREAKPOINTS_STORAGE_KEY = "athas-debugger-breakpoints";
@@ -21,6 +27,13 @@ interface DebuggerState {
   adapterMessages: DebugProtocolMessage[];
   adapterOutput: DebugProcessOutput[];
   endedSessions: DebugSessionEnded[];
+  threads: DebugThread[];
+  stackFrames: DebugStackFrame[];
+  selectedFrameId: number | null;
+  scopes: DebugScope[];
+  variablesByReference: Record<number, DebugVariable[]>;
+  stoppedState: DebugStoppedState | null;
+  pendingRequests: Record<number, DebugRequestContext>;
   actions: {
     hydrate: () => void;
     setWorkspaceConfigs: (configs: DebugLaunchConfig[]) => void;
@@ -31,9 +44,18 @@ interface DebuggerState {
     clearBreakpoints: () => void;
     startSession: (session: DebugSession) => void;
     stopSession: () => void;
+    setSessionStatus: (status: DebugSession["status"]) => void;
     recordAdapterMessage: (message: DebugProtocolMessage) => void;
     recordAdapterOutput: (output: DebugProcessOutput) => void;
     recordSessionEnded: (event: DebugSessionEnded) => void;
+    registerAdapterRequest: (seq: number, context: DebugRequestContext) => void;
+    clearAdapterRequest: (seq: number) => void;
+    setThreads: (threads: DebugThread[]) => void;
+    setStackFrames: (frames: DebugStackFrame[]) => void;
+    selectStackFrame: (frameId: number | null) => void;
+    setScopes: (scopes: DebugScope[]) => void;
+    setVariables: (variablesReference: number, variables: DebugVariable[]) => void;
+    setStoppedState: (stoppedState: DebugStoppedState | null) => void;
     clearAdapterTranscript: () => void;
     getBreakpointsForFile: (filePath: string) => DebugBreakpoint[];
   };
@@ -94,6 +116,13 @@ export const useDebuggerStore = createSelectors(
     adapterMessages: [],
     adapterOutput: [],
     endedSessions: [],
+    threads: [],
+    stackFrames: [],
+    selectedFrameId: null,
+    scopes: [],
+    variablesByReference: {},
+    stoppedState: null,
+    pendingRequests: {},
     actions: {
       hydrate: () => {
         set({
@@ -160,7 +189,16 @@ export const useDebuggerStore = createSelectors(
       },
 
       startSession: (session) => {
-        set({ activeSession: session });
+        set({
+          activeSession: session,
+          threads: [],
+          stackFrames: [],
+          selectedFrameId: null,
+          scopes: [],
+          variablesByReference: {},
+          stoppedState: null,
+          pendingRequests: {},
+        });
       },
 
       stopSession: () => {
@@ -168,6 +206,12 @@ export const useDebuggerStore = createSelectors(
           activeSession: state.activeSession
             ? { ...state.activeSession, status: "idle" }
             : state.activeSession,
+        }));
+      },
+
+      setSessionStatus: (status) => {
+        set((state) => ({
+          activeSession: state.activeSession ? { ...state.activeSession, status } : null,
         }));
       },
 
@@ -190,7 +234,57 @@ export const useDebuggerStore = createSelectors(
             state.activeSession?.id === event.sessionId
               ? { ...state.activeSession, status: "idle" }
               : state.activeSession,
+          stoppedState: null,
         }));
+      },
+
+      registerAdapterRequest: (seq, context) => {
+        set((state) => ({
+          pendingRequests: {
+            ...state.pendingRequests,
+            [seq]: context,
+          },
+        }));
+      },
+
+      clearAdapterRequest: (seq) => {
+        set((state) => {
+          const nextPendingRequests = { ...state.pendingRequests };
+          delete nextPendingRequests[seq];
+          return { pendingRequests: nextPendingRequests };
+        });
+      },
+
+      setThreads: (threads) => {
+        set({ threads });
+      },
+
+      setStackFrames: (stackFrames) => {
+        set({
+          stackFrames,
+          selectedFrameId: stackFrames[0]?.id ?? null,
+        });
+      },
+
+      selectStackFrame: (frameId) => {
+        set({ selectedFrameId: frameId });
+      },
+
+      setScopes: (scopes) => {
+        set({ scopes });
+      },
+
+      setVariables: (variablesReference, variables) => {
+        set((state) => ({
+          variablesByReference: {
+            ...state.variablesByReference,
+            [variablesReference]: variables,
+          },
+        }));
+      },
+
+      setStoppedState: (stoppedState) => {
+        set({ stoppedState });
       },
 
       clearAdapterTranscript: () => {
@@ -198,6 +292,7 @@ export const useDebuggerStore = createSelectors(
           adapterMessages: [],
           adapterOutput: [],
           endedSessions: [],
+          pendingRequests: {},
         });
       },
 
