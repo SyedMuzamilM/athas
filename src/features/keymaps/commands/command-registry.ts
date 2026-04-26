@@ -495,6 +495,20 @@ const viewCommands: Command[] = [
     },
   },
   {
+    id: "workbench.showGitHub",
+    title: "Show GitHub",
+    category: "View",
+    execute: () => {
+      const state = useUIState.getState();
+      if (state.isSidebarVisible && state.activeSidebarView === "github-prs") {
+        state.setIsSidebarVisible(false);
+      } else {
+        state.setActiveView("github-prs");
+        state.setIsSidebarVisible(true);
+      }
+    },
+  },
+  {
     id: "workbench.showDebugger",
     title: "Show Run and Debug",
     category: "View",

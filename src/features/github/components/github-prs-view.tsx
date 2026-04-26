@@ -56,6 +56,9 @@ const filterLabels: Record<PRFilter, string> = {
 };
 
 type GitHubSidebarSection = "pull-requests" | "issues" | "actions";
+type GitHubPaletteAction =
+  | { type: "show-section"; section: GitHubSidebarSection }
+  | { type: "refresh" };
 
 interface PRListItemProps {
   pr: PullRequest;
@@ -213,6 +216,27 @@ const GitHubPRsView = memo(() => {
 
     void fetchPRs(effectiveRepoPath, { force: true });
   }, [activeSection, effectiveRepoPath, fetchPRs]);
+
+  useEffect(() => {
+    const handlePaletteAction = (event: Event) => {
+      if (!(event instanceof CustomEvent)) return;
+
+      const detail = event.detail as GitHubPaletteAction;
+      if (!detail) return;
+
+      if (detail.type === "show-section") {
+        setActiveSection(detail.section);
+        return;
+      }
+
+      if (detail.type === "refresh") {
+        handleRefreshActiveSection();
+      }
+    };
+
+    window.addEventListener("athas:github-palette-action", handlePaletteAction);
+    return () => window.removeEventListener("athas:github-palette-action", handlePaletteAction);
+  }, [handleRefreshActiveSection]);
 
   const handleSelectRepository = useCallback(async () => {
     setIsSelectingRepo(true);

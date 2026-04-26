@@ -53,6 +53,13 @@ interface GitFileDiffStats {
 }
 
 type GitSidebarTab = "changes" | "history" | "worktrees";
+type GitPaletteAction =
+  | { type: "select-repository" }
+  | { type: "show-tab"; tab: GitSidebarTab }
+  | { type: "manage-remotes" }
+  | { type: "manage-tags" }
+  | { type: "view-stashes" }
+  | { type: "refresh" };
 
 const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   const MAX_STATUS_DIFF_STATS_FILES = 40;
@@ -260,6 +267,48 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       void updateSetting("gitLastPanelMode", activeTab);
     }
   }, [activeTab, settings.rememberLastGitPanelMode, settings.gitLastPanelMode, updateSetting]);
+
+  useEffect(() => {
+    const handlePaletteAction = (event: Event) => {
+      if (!(event instanceof CustomEvent)) return;
+
+      const detail = event.detail as GitPaletteAction;
+      if (!detail) return;
+
+      if (detail.type === "select-repository") {
+        void handleSelectRepository();
+        return;
+      }
+
+      if (detail.type === "show-tab") {
+        setActiveTab(detail.tab);
+        return;
+      }
+
+      if (detail.type === "manage-remotes") {
+        setShowRemoteManager(true);
+        return;
+      }
+
+      if (detail.type === "manage-tags") {
+        setShowTagManager(true);
+        return;
+      }
+
+      if (detail.type === "view-stashes") {
+        setShowStashList(true);
+        setStashSearchQuery("");
+        return;
+      }
+
+      if (detail.type === "refresh") {
+        void handleManualRefresh();
+      }
+    };
+
+    window.addEventListener("athas:git-palette-action", handlePaletteAction);
+    return () => window.removeEventListener("athas:git-palette-action", handlePaletteAction);
+  }, [handleManualRefresh, handleSelectRepository]);
 
   useEffect(() => {
     if (!activeRepoPath || !visibleGitFiles.length) {

@@ -57,6 +57,7 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
       description: "Switch to GitHub Pull Requests view",
       icon: <GitPullRequest />,
       category: "Navigation",
+      commandId: "workbench.showGitHub",
       action: () => {
         setIsSidebarVisible(true);
         setActiveView("github-prs");
