@@ -164,11 +164,23 @@ function normalizePullRequest(pr: PullRequest): PullRequest {
 
 function normalizePullRequestDetails(details: PullRequestDetails): PullRequestDetails {
   const record = details as PullRequestDetails & Record<string, unknown>;
+  const statusChecks =
+    details.statusChecks ??
+    (Array.isArray(record.statusCheckRollup)
+      ? (record.statusCheckRollup as PullRequestDetails["statusChecks"])
+      : []);
+  const linkedIssues =
+    details.linkedIssues ??
+    (Array.isArray(record.closingIssuesReferences)
+      ? (record.closingIssuesReferences as PullRequestDetails["linkedIssues"])
+      : []);
 
   return {
     ...details,
     headRef: getStringValue(record, ["headRef", "headRefName", "head_ref"]),
     baseRef: getStringValue(record, ["baseRef", "baseRefName", "base_ref"]),
+    statusChecks,
+    linkedIssues,
   };
 }
 

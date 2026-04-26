@@ -143,6 +143,17 @@ pub async fn github_get_workflow_run_details(
 }
 
 #[tauri::command]
+pub async fn github_get_workflow_job_logs(
+   app: tauri::AppHandle,
+   repo_path: String,
+   job_id: i64,
+) -> Result<String, String> {
+   let github_token = get_stored_github_token(&app);
+   run_blocking(move || athas_github::github_get_workflow_job_logs(repo_path, job_id, github_token))
+      .await
+}
+
+#[tauri::command]
 pub async fn store_github_token(app: tauri::AppHandle, token: String) -> Result<(), String> {
    store_secret(&app, "github_token", &token)
 }

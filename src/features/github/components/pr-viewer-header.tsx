@@ -12,6 +12,13 @@ import type { ReactNode } from "react";
 import { Button } from "@/ui/button";
 import Tooltip from "@/ui/tooltip";
 import type { PullRequestDetails } from "../types/github";
+import {
+  AssigneesList,
+  CIStatusIndicator,
+  LabelBadges,
+  LinkedIssuesList,
+  MergeStatusBadge,
+} from "./pr-status";
 
 interface PRViewerHeaderProps {
   pr: PullRequestDetails;
@@ -170,8 +177,14 @@ export function PRViewerHeader({
           </Button>
 
           <OverviewField icon={<Check />}>
-            {pr.statusChecks?.length > 0 && <CheckCircle2 className="mr-1 inline text-green-500" />}
-            <span className="text-text-light">{checksSummary}</span>
+            {pr.statusChecks?.length > 0 ? (
+              <CIStatusIndicator checks={pr.statusChecks} />
+            ) : (
+              <>
+                <CheckCircle2 className="mr-1 inline text-text-lighter" />
+                <span className="text-text-light">{checksSummary}</span>
+              </>
+            )}
           </OverviewField>
 
           <OverviewField icon={<GitPullRequest />}>
@@ -202,6 +215,17 @@ export function PRViewerHeader({
               </span>
             )}
           </OverviewField>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <MergeStatusBadge
+            mergeStateStatus={pr.mergeStateStatus}
+            mergeable={pr.mergeable}
+            reviewDecision={pr.reviewDecision}
+          />
+          <AssigneesList assignees={pr.assignees ?? []} />
+          <LinkedIssuesList issues={pr.linkedIssues ?? []} />
+          <LabelBadges labels={pr.labels ?? []} />
         </div>
 
         {metaItems.length > 0 && (

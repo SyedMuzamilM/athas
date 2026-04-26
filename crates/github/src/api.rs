@@ -1,7 +1,7 @@
 use crate::models::{
    IssueComment, IssueDetails, IssueListItem, Label, PullRequest, PullRequestAuthor,
-   PullRequestComment, PullRequestDetails, PullRequestFile, ReviewRequest, WorkflowRunDetails,
-   WorkflowRunJob, WorkflowRunListItem, WorkflowRunStep,
+   PullRequestComment, PullRequestDetails, PullRequestFile, ReviewRequest, StatusCheck,
+   WorkflowRunDetails, WorkflowRunJob, WorkflowRunListItem, WorkflowRunStep,
 };
 use git2::Repository;
 use reqwest::{
@@ -63,6 +63,7 @@ struct RestLabel {
 struct RestBranchRef {
    #[serde(rename = "ref")]
    ref_name: Option<String>,
+   sha: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -143,6 +144,30 @@ struct WorkflowJobsResponse {
 }
 
 #[derive(Deserialize)]
+struct CheckRunsResponse {
+   check_runs: Vec<RestCheckRun>,
+}
+
+#[derive(Deserialize)]
+struct RestCheckRun {
+   id: Option<i64>,
+   name: Option<String>,
+   status: Option<String>,
+   conclusion: Option<String>,
+   check_suite: Option<RestCheckSuite>,
+}
+
+#[derive(Deserialize)]
+struct RestCheckSuite {
+   app: Option<RestCheckApp>,
+}
+
+#[derive(Deserialize)]
+struct RestCheckApp {
+   name: Option<String>,
+}
+
+#[derive(Deserialize)]
 struct RestWorkflowRun {
    id: i64,
    name: Option<String>,
@@ -159,12 +184,15 @@ struct RestWorkflowRun {
 
 #[derive(Deserialize)]
 struct RestWorkflowJob {
+   id: Option<i64>,
    name: Option<String>,
    status: Option<String>,
    conclusion: Option<String>,
    started_at: Option<String>,
    completed_at: Option<String>,
    html_url: Option<String>,
+   runner_name: Option<String>,
+   labels: Option<Vec<String>>,
    steps: Option<Vec<RestWorkflowStep>>,
 }
 
@@ -503,6 +531,7 @@ fn pr_details_from_rest(
    commits: Vec<serde_json::Value>,
    files: Vec<PullRequestFile>,
    review_requests: Vec<ReviewRequest>,
+   status_checks: Vec<StatusCheck>,
 ) -> PullRequestDetails {
    PullRequestDetails {
       number: pr.number,
@@ -523,7 +552,7 @@ fn pr_details_from_rest(
          .changed_files
          .unwrap_or_else(|| i64::try_from(files.len()).unwrap_or_default()),
       commits,
-      status_checks: Vec::new(),
+      status_checks,
       linked_issues: Vec::new(),
       review_requests,
       merge_state_status: pr.mergeable_state,
@@ -624,12 +653,15 @@ fn workflow_details_from_rest(
 
 fn workflow_job_from_rest(job: RestWorkflowJob) -> WorkflowRunJob {
    WorkflowRunJob {
+      id: job.id,
       name: job.name.unwrap_or_default(),
       status: job.status,
       conclusion: job.conclusion,
       started_at: job.started_at,
       completed_at: job.completed_at,
       url: job.html_url,
+      runner_name: job.runner_name,
+      labels: job.labels.unwrap_or_default(),
       steps: job
          .steps
          .unwrap_or_default()
@@ -858,13 +890,24 @@ pub fn github_get_pr_details(
    let slug = resolve_repo_slug(&repo_path_value)?;
    let api = GitHubApi::new_authenticated(github_token)?;
    let pr: RestPullRequest = api.get_json(&repo_path(&slug, &format!("pulls/{pr_number}")))?;
+   let head_sha = pr.head.as_ref().and_then(|head| head.sha.clone());
    let commits: Vec<serde_json::Value> =
       api.get_json(&repo_path(&slug, &format!("pulls/{pr_number}/commits")))?;
    let commits = commits.into_iter().map(commit_value_from_rest).collect();
    let files = github_get_pr_files(repo_path_value.clone(), pr_number, api.github_token.clone())?;
    let review_requests = get_review_requests(&api, &slug, pr_number).unwrap_or_default();
+   let status_checks = head_sha
+      .as_deref()
+      .map(|sha| get_status_checks(&api, &slug, sha).unwrap_or_default())
+      .unwrap_or_default();
 
-   Ok(pr_details_from_rest(pr, commits, files, review_requests))
+   Ok(pr_details_from_rest(
+      pr,
+      commits,
+      files,
+      review_requests,
+      status_checks,
+   ))
 }
 
 fn get_review_requests(
@@ -900,6 +943,32 @@ fn get_review_requests(
    );
 
    Ok(requests)
+}
+
+fn get_status_checks(
+   api: &GitHubApi,
+   slug: &RepoSlug,
+   head_sha: &str,
+) -> Result<Vec<StatusCheck>, String> {
+   let response: CheckRunsResponse = api.get_json_with_query(
+      &repo_path(slug, &format!("commits/{head_sha}/check-runs")),
+      &[("per_page", "100".to_string())],
+   )?;
+
+   Ok(response
+      .check_runs
+      .into_iter()
+      .map(|check| StatusCheck {
+         id: check.id,
+         name: check.name,
+         status: check.status.map(|status| status.to_uppercase()),
+         conclusion: check.conclusion.map(|conclusion| conclusion.to_uppercase()),
+         workflow_name: check
+            .check_suite
+            .and_then(|suite| suite.app)
+            .and_then(|app| app.name),
+      })
+      .collect())
 }
 
 pub fn github_get_pr_diff(
@@ -985,6 +1054,19 @@ pub fn github_get_workflow_run_details(
          .map(workflow_job_from_rest)
          .collect(),
    ))
+}
+
+pub fn github_get_workflow_job_logs(
+   repo_path_value: String,
+   job_id: i64,
+   github_token: Option<String>,
+) -> Result<String, String> {
+   let slug = resolve_repo_slug(&repo_path_value)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
+   api.get_text(
+      &repo_path(&slug, &format!("actions/jobs/{job_id}/logs")),
+      "text/plain",
+   )
 }
 
 #[cfg(test)]
