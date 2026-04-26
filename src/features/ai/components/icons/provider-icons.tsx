@@ -37,17 +37,9 @@ export function GeminiIcon({ size, className, ...props }: IconProps) {
 
 export function V0Icon({ size, className, ...props }: IconProps) {
   return (
-    <svg
-      aria-hidden="true"
-      {...defaultProps(size, className)}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      {...props}
-    >
-      <path d="M5 6l4 12 3-7 7-3-12-2z" />
+    <svg aria-hidden="true" {...defaultProps(size, className)} {...props}>
+      <path d="M3.2 5.2h3.36l3.02 9.76 3.06-9.76H16l-4.42 13.6H7.54L3.2 5.2Z" />
+      <path d="M16.36 5.2h2.1c1.45 0 2.34.85 2.34 2.24v9.12c0 1.39-.89 2.24-2.34 2.24h-2.1c-1.45 0-2.34-.85-2.34-2.24V7.44c0-1.39.89-2.24 2.34-2.24Zm.7 2.6v8.4h.68V7.8h-.68Z" />
     </svg>
   );
 }
@@ -55,9 +47,8 @@ export function V0Icon({ size, className, ...props }: IconProps) {
 export function XAIIcon({ size, className, ...props }: IconProps) {
   return (
     <svg aria-hidden="true" {...defaultProps(size, className)} {...props}>
-      <path d="m1.075 20.864 7.17-10.377L1.5 1.136h4.287l4.615 6.584L15.015 1.136h4.288l-6.746 9.353L20.025 20.864h-4.288l-5.23-7.469-5.144 7.469z" />
-      <path d="M18.222 1.136h3.278L14.016 10.489l-.947-1.35z" />
-      <path d="M2.5 20.864h3.278l6.065-8.668-.947-1.35z" />
+      <path d="M3.1 4h4.2l4.76 6.07L16.64 4h4.26l-6.72 8.46L21 20h-4.28l-4.96-6.23L7.02 20H2.78l6.86-8.62L3.1 4Z" />
+      <path d="M18.12 4h2.78L7.02 20H4.24L18.12 4Z" />
     </svg>
   );
 }
@@ -65,7 +56,8 @@ export function XAIIcon({ size, className, ...props }: IconProps) {
 export function DeepSeekIcon({ size, className, ...props }: IconProps) {
   return (
     <svg aria-hidden="true" {...defaultProps(size, className)} {...props}>
-      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z" />
+      <path d="M12.9 3.1c3.83.32 6.9 3.3 7.34 7.11.36 3.1-.96 5.75-3.18 7.38-1.8 1.32-4.1 1.77-6.24 1.22l-3.66 2.08c-.57.32-1.24-.23-1.03-.85l.96-2.86A7.86 7.86 0 0 1 3.8 10.1c.46-4.2 4.27-7.4 9.1-7Zm-.47 3.3c-2.72 0-4.92 1.74-5.18 4.03-.2 1.75.72 3.38 2.28 4.23.41.22.6.7.45 1.14l-.3.9 1.4-.8c.24-.14.52-.17.79-.09 1.24.39 2.6.18 3.65-.6a4.62 4.62 0 0 0 1.82-4.52c-.26-2.36-2.28-4.1-4.91-4.28Z" />
+      <path d="M9.24 10.78a1.06 1.06 0 1 1 2.12 0 1.06 1.06 0 0 1-2.12 0Zm4.1 0a1.06 1.06 0 1 1 2.12 0 1.06 1.06 0 0 1-2.12 0Z" />
     </svg>
   );
 }

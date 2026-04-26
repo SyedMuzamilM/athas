@@ -1,6 +1,6 @@
 import { listen } from "@tauri-apps/api/event";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import ProviderApiKeyModal from "@/features/ai/components/provider-api-key-modal";
+import { ProviderApiKeyCommand } from "@/features/ai/components/provider-api-key-command";
 import {
   appendChatAcpEvent,
   type ChatAcpEventInput,
@@ -172,7 +172,7 @@ const AIChat = memo(function AIChat({
     shouldAutoScrollRef.current = distanceFromBottom < 48;
   }, []);
 
-  const buildContext = async (agentId: string): Promise<ContextInfo> => {
+  const buildContext = async (agentId: string, providerId: string): Promise<ContextInfo> => {
     const selectedBuffers = buffers.filter(
       (buffer) => buffer.type !== "agent" && chatState.selectedBufferIds.has(buffer.id),
     );
@@ -196,7 +196,7 @@ const AIChat = memo(function AIChat({
       selectedFiles,
       selectedProjectFiles: Array.from(chatState.selectedFilesPaths),
       projectRoot: rootFolderPath,
-      providerId: settings.aiProviderId,
+      providerId,
       agentId,
     };
 
@@ -290,7 +290,8 @@ const AIChat = memo(function AIChat({
       allProjectFiles,
     );
 
-    const context = await buildContext(currentAgentId);
+    const latestSettings = useSettingsStore.getState().settings;
+    const context = await buildContext(currentAgentId, latestSettings.aiProviderId);
     const userMessage: Message = {
       id: Date.now().toString(),
       content: messageContent.trim(),
@@ -377,8 +378,8 @@ const AIChat = memo(function AIChat({
 
       await getChatCompletionStream(
         currentAgentId,
-        settings.aiProviderId,
-        settings.aiModelId,
+        latestSettings.aiProviderId,
+        latestSettings.aiModelId,
         enhancedMessage,
         context,
         (chunk: string) => {
@@ -898,7 +899,7 @@ details: ${errorDetails || mainError}
             onStopStreaming={stopStreaming}
           />
 
-          <ProviderApiKeyModal
+          <ProviderApiKeyCommand
             isOpen={chatState.apiKeyModalState.isOpen}
             onClose={() =>
               chatActions.setApiKeyModalState({
@@ -906,14 +907,7 @@ details: ${errorDetails || mainError}
                 providerId: null,
               })
             }
-            providerId={chatState.apiKeyModalState.providerId || ""}
-            onSave={chatActions.saveApiKey}
-            onRemove={chatActions.removeApiKey}
-            hasExistingKey={
-              chatState.apiKeyModalState.providerId
-                ? chatActions.hasProviderApiKey(chatState.apiKeyModalState.providerId)
-                : false
-            }
+            initialProviderId={chatState.apiKeyModalState.providerId}
           />
         </>
       )}

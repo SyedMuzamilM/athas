@@ -1,3 +1,4 @@
+import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import {
   AIProvider,
   type ProviderHeaders,
@@ -7,12 +8,8 @@ import {
 
 export class OpenRouterProvider extends AIProvider {
   async getModels(apiKey?: string): Promise<ProviderModel[]> {
-    if (!apiKey) {
-      return [];
-    }
-
     try {
-      const response = await fetch("https://openrouter.ai/api/v1/models", {
+      const response = await tauriFetch("https://openrouter.ai/api/v1/models", {
         method: "GET",
         headers: this.buildHeaders(apiKey),
       });
@@ -29,13 +26,11 @@ export class OpenRouterProvider extends AIProvider {
         }>;
       };
 
-      return (data.data || [])
-        .filter((model) => isSupportedOpenRouterModel(model.id))
-        .map((model) => ({
-          id: model.id,
-          name: model.name || model.id,
-          maxTokens: model.top_provider?.max_completion_tokens,
-        }));
+      return (data.data || []).map((model) => ({
+        id: model.id,
+        name: model.name || model.id,
+        maxTokens: model.top_provider?.max_completion_tokens,
+      }));
     } catch (error) {
       console.error(`${this.id} model fetch error:`, error);
       return [];
@@ -68,7 +63,7 @@ export class OpenRouterProvider extends AIProvider {
 
   async validateApiKey(apiKey: string): Promise<boolean> {
     try {
-      const response = await fetch("https://openrouter.ai/api/v1/key", {
+      const response = await tauriFetch("https://openrouter.ai/api/v1/key", {
         method: "GET",
         headers: {
           Authorization: `Bearer ${apiKey}`,
@@ -81,8 +76,4 @@ export class OpenRouterProvider extends AIProvider {
       return false;
     }
   }
-}
-
-function isSupportedOpenRouterModel(modelId: string): boolean {
-  return /^(anthropic|google|openai|x-ai)\//.test(modelId);
 }

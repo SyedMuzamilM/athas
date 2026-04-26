@@ -12,7 +12,9 @@ import {
   Trash as Trash2,
 } from "@phosphor-icons/react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ProviderModelSelector } from "@/features/ai/components/selectors/provider-model-selector";
+import { ProviderApiKeyCommand } from "@/features/ai/components/provider-api-key-command";
+import { ModelSelector } from "@/features/ai/components/selectors/model-selector";
+import { ProviderSelector } from "@/features/ai/components/selectors/provider-selector";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { AgentConfig, SessionConfigOption } from "@/features/ai/types/acp";
 import { getAvailableProviders, updateAgentStatus } from "@/features/ai/types/providers";
@@ -73,6 +75,7 @@ export const AISettings = () => {
   const [autocompleteModels, setAutocompleteModels] = useState(DEFAULT_AUTOCOMPLETE_MODELS);
   const [isLoadingAutocompleteModels, setIsLoadingAutocompleteModels] = useState(false);
   const [autocompleteModelError, setAutocompleteModelError] = useState<string | null>(null);
+  const [isApiKeyManagerOpen, setIsApiKeyManagerOpen] = useState(false);
 
   // Ollama URL state
   const [ollamaUrl, setOllamaUrl] = useState(settings.ollamaBaseUrl || DEFAULT_OLLAMA_BASE_URL);
@@ -236,8 +239,8 @@ export const AISettings = () => {
     <div className="space-y-4">
       <Section title="Athas Agent">
         <SettingRow
-          label="Provider & Model"
-          description="Choose the provider and model used by Athas Agent"
+          label="Provider"
+          description="Choose the provider used by Athas Agent"
           onReset={() => {
             updateSetting("aiProviderId", getDefaultSetting("aiProviderId"));
             updateSetting("aiModelId", getDefaultSetting("aiModelId"));
@@ -247,12 +250,36 @@ export const AISettings = () => {
             settings.aiModelId !== getDefaultSetting("aiModelId")
           }
         >
-          <ProviderModelSelector
+          <ProviderSelector
+            providerId={settings.aiProviderId}
+            onChange={(id) => handleProviderChange(id)}
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Model"
+          description="Choose the model used by Athas Agent"
+          onReset={() => updateSetting("aiModelId", getDefaultSetting("aiModelId"))}
+          canReset={settings.aiModelId !== getDefaultSetting("aiModelId")}
+        >
+          <ModelSelector
             providerId={settings.aiProviderId}
             modelId={settings.aiModelId}
-            onProviderChange={(id) => handleProviderChange(id)}
-            onModelChange={(id) => updateSetting("aiModelId", id)}
+            onChange={(id) => updateSetting("aiModelId", id)}
           />
+        </SettingRow>
+
+        <SettingRow label="API Keys" description="Manage provider API keys separately">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => setIsApiKeyManagerOpen(true)}
+            className="w-fit"
+          >
+            <Key />
+            <span>Manage keys</span>
+          </Button>
         </SettingRow>
       </Section>
 
@@ -382,6 +409,12 @@ export const AISettings = () => {
           )}
         </Section>
       )}
+
+      <ProviderApiKeyCommand
+        isOpen={isApiKeyManagerOpen}
+        onClose={() => setIsApiKeyManagerOpen(false)}
+        initialProviderId={settings.aiProviderId}
+      />
 
       {providersNeedingAuth.length > 0 && (
         <Section title="Authentication">

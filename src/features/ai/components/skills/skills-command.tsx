@@ -1,4 +1,5 @@
 import {
+  CloudArrowDown,
   FloppyDisk,
   MagnifyingGlass as Search,
   PencilSimple,
@@ -6,6 +7,7 @@ import {
   Trash,
 } from "@phosphor-icons/react";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { fuzzyScore } from "@/features/global-search/utils/fuzzy-search";
 import { useSettingsStore } from "@/features/settings/store";
 import { useSettingsSyncStore } from "@/features/settings/stores/settings-sync-store";
@@ -26,6 +28,7 @@ interface SkillsCommandProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectSkill: (skill: AIChatSkill) => void;
+  initialView?: SkillsView;
 }
 
 type SkillsView = "list" | "editor";
@@ -41,7 +44,12 @@ function getSyncLabel(enabled: boolean, status: string) {
   return "Account sync";
 }
 
-export function SkillsCommand({ isOpen, onClose, onSelectSkill }: SkillsCommandProps) {
+export function SkillsCommand({
+  isOpen,
+  onClose,
+  onSelectSkill,
+  initialView = "list",
+}: SkillsCommandProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
@@ -90,6 +98,10 @@ export function SkillsCommand({ isOpen, onClose, onSelectSkill }: SkillsCommandP
     setView("editor");
     requestAnimationFrame(() => titleInputRef.current?.focus());
   }, [resetEditor]);
+
+  const openBrowseSkills = useCallback(() => {
+    void openUrl("https://skills.sh");
+  }, []);
 
   const openSkillEditor = useCallback((skill: AIChatSkill) => {
     setEditingSkillId(skill.id);
@@ -160,9 +172,16 @@ export function SkillsCommand({ isOpen, onClose, onSelectSkill }: SkillsCommandP
     if (!isOpen) return;
     setQuery("");
     setSelectedIndex(0);
-    setView("list");
-    requestAnimationFrame(() => inputRef.current?.focus());
-  }, [isOpen]);
+    resetEditor();
+    setView(initialView);
+    requestAnimationFrame(() => {
+      if (initialView === "editor") {
+        titleInputRef.current?.focus();
+        return;
+      }
+      inputRef.current?.focus();
+    });
+  }, [initialView, isOpen, resetEditor]);
 
   useEffect(() => {
     setSelectedIndex(0);
@@ -230,6 +249,16 @@ export function SkillsCommand({ isOpen, onClose, onSelectSkill }: SkillsCommandP
               <Plus />
               <span>New skill</span>
             </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              onClick={openBrowseSkills}
+              className="shrink-0 ui-text-sm"
+            >
+              <CloudArrowDown />
+              <span>Browse</span>
+            </Button>
           </CommandHeader>
 
           <CommandList ref={resultsRef}>
@@ -239,6 +268,10 @@ export function SkillsCommand({ isOpen, onClose, onSelectSkill }: SkillsCommandP
                 <Button type="button" variant="secondary" size="xs" onClick={openNewSkill}>
                   <Plus />
                   <span>New skill</span>
+                </Button>
+                <Button type="button" variant="ghost" size="xs" onClick={openBrowseSkills}>
+                  <CloudArrowDown />
+                  <span>Browse skills</span>
                 </Button>
               </div>
             ) : filteredSkills.length === 0 ? (

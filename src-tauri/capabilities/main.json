@@ -55,6 +55,12 @@
           "url": "https://athas.dev/**"
         },
         {
+          "url": "https://api.openai.com/**"
+        },
+        {
+          "url": "https://openrouter.ai/**"
+        },
+        {
           "url": "http://localhost:3000/**"
         },
         {

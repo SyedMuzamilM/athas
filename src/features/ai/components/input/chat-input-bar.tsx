@@ -2,6 +2,7 @@ import {
   BookOpen,
   CircleNotch,
   Command as CommandIcon,
+  Key,
   Microphone as Mic,
   PaperPlaneTilt,
   Stop,
@@ -10,11 +11,14 @@ import {
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { shouldIgnoreFile } from "@/features/quick-open/utils/file-filtering";
 import { getPrimarySessionConfigOption } from "@/features/ai/lib/session-config-option-classifier";
+import { AI_CHAT_INSERT_SKILL_EVENT } from "@/features/ai/lib/skill-events";
 import { useAIChatStore } from "@/features/ai/store/store";
 import type { InlineDropdownPosition } from "@/features/ai/store/types";
 import type { AIChatSkill } from "@/features/ai/types/skills";
 import type { SlashCommand } from "@/features/ai/types/acp";
 import type { AIChatInputBarProps } from "@/features/ai/types/ai-chat";
+import { getProviderById } from "@/features/ai/types/providers";
+import { useSettingsStore } from "@/features/settings/store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { toast } from "@/ui/toast";
@@ -23,8 +27,11 @@ import { isMac } from "@/utils/platform";
 import { FileMentionDropdown } from "../mentions/file-mention-dropdown";
 import { SlashCommandDropdown } from "../mentions/slash-command-dropdown";
 import { AcpConfigSelector } from "../selectors/acp-config-selector";
+import { ModelSelector } from "../selectors/model-selector";
+import { ProviderSelector } from "../selectors/provider-selector";
 import { ModeSelector } from "../selectors/mode-selector";
 import { ContextSelector } from "../selectors/context-selector";
+import { ProviderApiKeyCommand } from "../provider-api-key-command";
 import { SkillsCommand } from "../skills/skills-command";
 import {
   chatComposerControlClassName,
@@ -50,9 +57,10 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const [isListening, setIsListening] = useState(false);
   const [interimTranscript, setInterimTranscript] = useState("");
   const [activeInlineControl, setActiveInlineControl] = useState<
-    "model" | "mode" | "commands" | null
+    "provider" | "model" | "mode" | "commands" | null
   >(null);
   const [isSkillsOpen, setIsSkillsOpen] = useState(false);
+  const [isApiKeyManagerOpen, setIsApiKeyManagerOpen] = useState(false);
   const slashCommandRangeRef = useRef({ startIndex: 0, endIndex: 0 });
 
   // Get state from store - DO NOT subscribe to 'input' to avoid re-renders on every keystroke
@@ -68,6 +76,9 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const sessionConfigOptions = useAIChatStore((state) => state.sessionConfigOptions);
   const sessionModeState = useAIChatStore((state) => state.sessionModeState);
   const acpStatus = useAIChatStore((state) => state.acpStatus);
+  const aiProviderId = useSettingsStore((state) => state.settings.aiProviderId);
+  const aiModelId = useSettingsStore((state) => state.settings.aiModelId);
+  const updateSetting = useSettingsStore((state) => state.updateSetting);
 
   // Check if current agent is "custom" (only show model selector for custom agent)
   const currentAgentId = getCurrentAgentId();
@@ -107,6 +118,24 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const selectPreviousSlashCommand = useAIChatStore((state) => state.selectPreviousSlashCommand);
   const getFilteredSlashCommands = useAIChatStore((state) => state.getFilteredSlashCommands);
   const changeSessionConfigOption = useAIChatStore((state) => state.changeSessionConfigOption);
+
+  const handleAthasProviderChange = useCallback(
+    (nextProviderId: string) => {
+      const provider = getProviderById(nextProviderId);
+      void updateSetting("aiProviderId", nextProviderId);
+      if (provider && provider.models.length > 0) {
+        void updateSetting("aiModelId", provider.models[0].id);
+      }
+    },
+    [updateSetting],
+  );
+
+  const handleAthasModelChange = useCallback(
+    (nextModelId: string) => {
+      void updateSetting("aiModelId", nextModelId);
+    },
+    [updateSetting],
+  );
 
   // Pasted images state and actions
   const pastedImages = useAIChatStore((state) => state.pastedImages);
@@ -636,6 +665,17 @@ const AIChatInputBar = memo(function AIChatInputBar({
     [getPlainTextFromDiv, handleInputChange],
   );
 
+  useEffect(() => {
+    const handleInsertSkill = (event: Event) => {
+      const skill = (event as CustomEvent<AIChatSkill>).detail;
+      if (!skill) return;
+      insertSkillAtCursor(skill);
+    };
+
+    window.addEventListener(AI_CHAT_INSERT_SKILL_EVENT, handleInsertSkill);
+    return () => window.removeEventListener(AI_CHAT_INSERT_SKILL_EVENT, handleInsertSkill);
+  }, [insertSkillAtCursor]);
+
   // Handle paste - strip HTML formatting, keep only plain text. Images are added to preview.
   const handlePaste = useCallback(
     (e: React.ClipboardEvent<HTMLDivElement>) => {
@@ -1144,6 +1184,58 @@ const AIChatInputBar = memo(function AIChatInputBar({
               />
             )}
 
+            {isCustomAgent && (
+              <>
+                <ProviderSelector
+                  providerId={aiProviderId}
+                  onChange={handleAthasProviderChange}
+                  appearance="composer"
+                  open={activeInlineControl === "provider"}
+                  onOpenChange={(open) => {
+                    if (open) {
+                      closeInlineMenus();
+                      setActiveInlineControl("provider");
+                      return;
+                    }
+                    setActiveInlineControl((current) => (current === "provider" ? null : current));
+                  }}
+                  triggerClassName="max-w-[128px]"
+                  tooltip="Select provider"
+                />
+                <ModelSelector
+                  providerId={aiProviderId}
+                  modelId={aiModelId}
+                  onChange={handleAthasModelChange}
+                  appearance="composer"
+                  open={activeInlineControl === "model"}
+                  onOpenChange={(open) => {
+                    if (open) {
+                      closeInlineMenus();
+                      setActiveInlineControl("model");
+                      return;
+                    }
+                    setActiveInlineControl((current) => (current === "model" ? null : current));
+                  }}
+                  triggerClassName="max-w-[176px]"
+                  tooltip="Select model"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  className={chatComposerIconButtonClassName()}
+                  tooltip="API keys"
+                  aria-label="Manage API keys"
+                  onClick={() => {
+                    closeInlineMenus();
+                    setIsApiKeyManagerOpen(true);
+                  }}
+                >
+                  <Key />
+                </Button>
+              </>
+            )}
+
             {!isAcpMetadataLoading && (
               <ModeSelector
                 open={activeInlineControl === "mode"}
@@ -1227,6 +1319,12 @@ const AIChatInputBar = memo(function AIChatInputBar({
         isOpen={isSkillsOpen}
         onClose={() => setIsSkillsOpen(false)}
         onSelectSkill={insertSkillAtCursor}
+      />
+
+      <ProviderApiKeyCommand
+        isOpen={isApiKeyManagerOpen}
+        onClose={() => setIsApiKeyManagerOpen(false)}
+        initialProviderId={aiProviderId}
       />
     </div>
   );

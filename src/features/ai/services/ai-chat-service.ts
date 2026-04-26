@@ -5,7 +5,11 @@ import type { AcpEvent } from "@/features/ai/types/acp";
 import type { ContextInfo } from "@/features/ai/types/ai-context";
 import { AGENT_OPTIONS, type AgentType } from "@/features/ai/types/ai-chat";
 import type { AIMessage } from "@/features/ai/types/messages";
-import { getModelById, getProviderById } from "@/features/ai/types/providers";
+import {
+  getAvailableProviders,
+  getModelById,
+  getProviderById,
+} from "@/features/ai/types/providers";
 import { getProvider } from "@/features/ai/services/providers/ai-provider-registry";
 import { isOllamaCloudUrl } from "@/features/ai/services/providers/ollama-provider";
 import { processStreamingResponse } from "@/utils/stream-utils";
@@ -23,6 +27,78 @@ export const isAcpAgent = (agentId: AgentType): boolean => {
   const agent = AGENT_OPTIONS.find((a) => a.id === agentId);
   return agent?.isAcp ?? false;
 };
+
+function resolveProviderModelPair(providerId: string, modelId: string) {
+  const requestedProvider = getProviderById(providerId);
+  const requestedStaticModel = getModelById(providerId, modelId);
+  if (requestedProvider && requestedStaticModel) {
+    return {
+      providerId,
+      modelId,
+      provider: requestedProvider,
+      model: requestedStaticModel,
+    };
+  }
+
+  const { dynamicModels } = useAIChatStore.getState();
+  const requestedDynamicModel = dynamicModels[providerId]?.find((model) => model.id === modelId);
+  if (requestedProvider && requestedDynamicModel) {
+    return {
+      providerId,
+      modelId,
+      provider: requestedProvider,
+      model: {
+        ...requestedDynamicModel,
+        maxTokens: requestedDynamicModel.maxTokens || 4096,
+      },
+    };
+  }
+
+  if (requestedProvider?.id === "openrouter" && modelId.trim().length > 0) {
+    return {
+      providerId,
+      modelId,
+      provider: requestedProvider,
+      model: {
+        id: modelId,
+        name: modelId,
+        maxTokens: 4096,
+      },
+    };
+  }
+
+  for (const provider of getAvailableProviders()) {
+    const staticModel = provider.models.find((model) => model.id === modelId);
+    if (staticModel) {
+      return {
+        providerId: provider.id,
+        modelId,
+        provider,
+        model: staticModel,
+      };
+    }
+
+    const dynamicModel = dynamicModels[provider.id]?.find((model) => model.id === modelId);
+    if (dynamicModel) {
+      return {
+        providerId: provider.id,
+        modelId,
+        provider,
+        model: {
+          ...dynamicModel,
+          maxTokens: dynamicModel.maxTokens || 4096,
+        },
+      };
+    }
+  }
+
+  return {
+    providerId,
+    modelId,
+    provider: requestedProvider,
+    model: undefined,
+  };
+}
 
 // Generic streaming chat completion function that works with any agent/provider
 export const getChatCompletionStream = async (
@@ -69,22 +145,13 @@ export const getChatCompletionStream = async (
       return;
     }
 
-    // For "custom" agent, use HTTP API providers
-    const provider = getProviderById(providerId);
-
-    // Check for model in static list or dynamic store
-    let model = getModelById(providerId, modelId);
-    if (!model) {
-      const { dynamicModels } = useAIChatStore.getState();
-      const providerModels = dynamicModels[providerId];
-      const dynamicModel = providerModels?.find((m) => m.id === modelId);
-      if (dynamicModel) {
-        model = {
-          ...dynamicModel,
-          maxTokens: dynamicModel.maxTokens || 4096, // Default max tokens if missing
-        };
-      }
-    }
+    // For "custom" agent, use HTTP API providers. Resolve stale provider/model
+    // pairs defensively so a recent selector change cannot call the wrong API.
+    const resolved = resolveProviderModelPair(providerId, modelId);
+    providerId = resolved.providerId;
+    modelId = resolved.modelId;
+    const provider = resolved.provider;
+    const model = resolved.model;
 
     if (!provider || !model) {
       throw new Error(`Provider or model not found: ${providerId}/${modelId}`);
