@@ -69,6 +69,7 @@ export default function DebuggerView() {
   const userConfigs = useDebuggerStore.use.userConfigs();
   const activeConfigId = useDebuggerStore.use.activeConfigId();
   const activeSession = useDebuggerStore.use.activeSession();
+  const threads = useDebuggerStore.use.threads();
   const stoppedState = useDebuggerStore.use.stoppedState();
   const stackFrames = useDebuggerStore.use.stackFrames();
   const selectedFrameId = useDebuggerStore.use.selectedFrameId();
@@ -92,8 +93,16 @@ export default function DebuggerView() {
 
   const selectedConfig =
     allConfigs.find((config) => config.id === activeConfigId) ?? generatedConfig;
+  const activeConfig = activeSession
+    ? (allConfigs.find((config) => config.id === activeSession.configId) ?? selectedConfig)
+    : selectedConfig;
   const resolvedSelectedConfig = resolveDebugConfigVariables(
     selectedConfig,
+    activeFile,
+    rootFolderPath,
+  );
+  const resolvedActiveConfig = resolveDebugConfigVariables(
+    activeConfig,
     activeFile,
     rootFolderPath,
   );
@@ -104,6 +113,21 @@ export default function DebuggerView() {
           ...resolvedSelectedConfig,
           command: resolvedSelectedConfig.command || customCommand,
         });
+  const adapterCommandPreview = [
+    resolvedSelectedConfig.adapterCommand,
+    ...(resolvedSelectedConfig.adapterArgs ?? []),
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const canStartDebugging = resolvedSelectedConfig.adapterCommand
+    ? Boolean(resolvedSelectedConfig.adapterCommand.trim())
+    : Boolean(selectedCommand.trim());
+  const isActiveSession = activeSession?.status === "running" || activeSession?.status === "paused";
+  const isAdapterSession = Boolean(isActiveSession && resolvedActiveConfig.adapterCommand);
+  const activeThreadId = stoppedState?.threadId ?? threads[0]?.id;
+  const canSendAdapterThreadRequest = Boolean(isAdapterSession && activeThreadId);
+  const isPaused = activeSession?.status === "paused";
+  const canStep = Boolean(canSendAdapterThreadRequest && isPaused);
 
   useEffect(() => {
     debuggerActions.hydrate();
@@ -175,12 +199,28 @@ export default function DebuggerView() {
   };
 
   const stopDebugging = () => {
-    if (activeSession && resolvedSelectedConfig.adapterCommand) {
+    if (activeSession && resolvedActiveConfig.adapterCommand) {
       void stopDebugAdapterSession(activeSession.id).catch(() => {});
     } else {
       window.dispatchEvent(new CustomEvent("close-active-terminal"));
     }
     debuggerActions.stopSession();
+  };
+
+  const sendAdapterThreadRequest = async (
+    command: "continue" | "pause" | "next" | "stepIn" | "stepOut",
+  ) => {
+    if (!activeSession?.id || !activeThreadId || !isAdapterSession) return;
+
+    setStartError(null);
+    try {
+      await sendDebugAdapterRequest(activeSession.id, command, { threadId: activeThreadId });
+      if (command !== "pause") {
+        debuggerActions.setSessionStatus("running");
+      }
+    } catch (error) {
+      setStartError(error instanceof Error ? error.message : String(error));
+    }
   };
 
   const toggleCurrentLineBreakpoint = () => {
@@ -259,7 +299,7 @@ export default function DebuggerView() {
           />
         ) : (
           <div className="min-h-7 rounded-md border border-border/60 bg-secondary-bg px-2 py-1.5 font-mono text-[11px] text-text-lighter">
-            {selectedCommand || "No command available"}
+            {adapterCommandPreview || selectedCommand || "No command available"}
           </div>
         )}
 
@@ -269,26 +309,66 @@ export default function DebuggerView() {
             variant="primary"
             className="flex-1"
             onClick={startDebugging}
-            disabled={!selectedCommand.trim()}
+            disabled={!canStartDebugging || isActiveSession}
             commandId="debug.start"
           >
             <Play />
             Start
           </Button>
+          {isPaused ? (
+            <Button
+              size="icon-sm"
+              variant="secondary"
+              tooltip="Continue"
+              disabled={!canSendAdapterThreadRequest}
+              onClick={() => void sendAdapterThreadRequest("continue")}
+              aria-label="Continue Debugging"
+            >
+              <Play />
+            </Button>
+          ) : null}
           <Button
             size="icon-sm"
             variant="secondary"
             tooltip="Pause"
-            disabled
+            disabled={!canSendAdapterThreadRequest || isPaused}
+            onClick={() => void sendAdapterThreadRequest("pause")}
             aria-label="Pause Debugging"
           >
             <Pause />
           </Button>
           <Button
+            size="xs"
+            variant="secondary"
+            tooltip="Step Over"
+            disabled={!canStep}
+            onClick={() => void sendAdapterThreadRequest("next")}
+          >
+            Over
+          </Button>
+          <Button
+            size="xs"
+            variant="secondary"
+            tooltip="Step Into"
+            disabled={!canStep}
+            onClick={() => void sendAdapterThreadRequest("stepIn")}
+          >
+            Into
+          </Button>
+          <Button
+            size="xs"
+            variant="secondary"
+            tooltip="Step Out"
+            disabled={!canStep}
+            onClick={() => void sendAdapterThreadRequest("stepOut")}
+          >
+            Out
+          </Button>
+          <Button
             size="icon-sm"
             variant="danger"
             tooltip="Stop"
-            disabled={!activeSession || activeSession.status !== "running"}
+            disabled={!isActiveSession}
             onClick={stopDebugging}
             commandId="debug.stop"
           >
