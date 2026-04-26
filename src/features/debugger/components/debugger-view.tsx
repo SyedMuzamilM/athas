@@ -75,10 +75,14 @@ export default function DebuggerView() {
   const selectedFrameId = useDebuggerStore.use.selectedFrameId();
   const scopes = useDebuggerStore.use.scopes();
   const variablesByReference = useDebuggerStore.use.variablesByReference();
+  const pendingRequests = useDebuggerStore.use.pendingRequests();
   const debuggerActions = useDebuggerStore.use.actions();
   const [customCommand, setCustomCommand] = useState("");
   const [launchLoadError, setLaunchLoadError] = useState<string | null>(null);
   const [startError, setStartError] = useState<string | null>(null);
+  const [expandedVariableReferences, setExpandedVariableReferences] = useState<Set<number>>(
+    () => new Set(),
+  );
 
   const activeFile = useMemo(() => getActiveDebuggableFile(), [activeBufferId, buffers]);
   const generatedConfig = useMemo(
@@ -132,6 +136,10 @@ export default function DebuggerView() {
   useEffect(() => {
     debuggerActions.hydrate();
   }, [debuggerActions]);
+
+  useEffect(() => {
+    setExpandedVariableReferences(new Set());
+  }, [activeSession?.id, selectedFrameId]);
 
   useEffect(() => {
     if (!rootFolderPath) {
@@ -253,6 +261,95 @@ export default function DebuggerView() {
       );
     }
   };
+
+  const toggleVariableExpansion = async (variablesReference: number) => {
+    if (!activeSession?.id || variablesReference <= 0) return;
+
+    const shouldLoadChildren =
+      !expandedVariableReferences.has(variablesReference) &&
+      !variablesByReference[variablesReference];
+
+    setExpandedVariableReferences((current) => {
+      const next = new Set(current);
+      if (next.has(variablesReference)) {
+        next.delete(variablesReference);
+      } else {
+        next.add(variablesReference);
+      }
+      return next;
+    });
+
+    if (!shouldLoadChildren) return;
+
+    try {
+      const seq = await sendDebugAdapterRequest(activeSession.id, "variables", {
+        variablesReference,
+      });
+      debuggerActions.registerAdapterRequest(seq, {
+        command: "variables",
+        variablesReference,
+      });
+    } catch {
+      setExpandedVariableReferences((current) => {
+        const next = new Set(current);
+        next.delete(variablesReference);
+        return next;
+      });
+    }
+  };
+
+  const isVariableReferencePending = (variablesReference: number) =>
+    Object.values(pendingRequests).some(
+      (request) =>
+        request.command === "variables" && request.variablesReference === variablesReference,
+    );
+
+  const renderVariables = (
+    variables: NonNullable<(typeof variablesByReference)[number]>,
+    parentReference: number,
+    depth = 0,
+  ) =>
+    variables.map((variable, index) => {
+      const canExpand = variable.variablesReference > 0;
+      const isExpanded = expandedVariableReferences.has(variable.variablesReference);
+      const childVariables = variablesByReference[variable.variablesReference] ?? [];
+      const isLoading = isVariableReferencePending(variable.variablesReference);
+
+      return (
+        <div key={`${parentReference}-${variable.name}-${index}`}>
+          <div
+            className="grid grid-cols-[minmax(0,0.45fr)_minmax(0,0.55fr)] gap-2 py-1 pr-3 text-[11px]"
+            style={{ paddingLeft: 24 + depth * 12 }}
+          >
+            <button
+              type="button"
+              className={cn(
+                "flex min-w-0 items-center gap-1 text-left text-text-lighter",
+                canExpand && "hover:text-text",
+              )}
+              disabled={!canExpand}
+              onClick={() => void toggleVariableExpansion(variable.variablesReference)}
+            >
+              <CaretRight
+                size={10}
+                className={cn(
+                  "shrink-0 transition-transform",
+                  isExpanded && "rotate-90",
+                  !canExpand && "opacity-0",
+                )}
+              />
+              <span className="truncate">{variable.name}</span>
+            </button>
+            <span className="truncate font-mono text-text">
+              {isLoading ? "Loading..." : variable.value || variable.type || ""}
+            </span>
+          </div>
+          {isExpanded && childVariables.length > 0
+            ? renderVariables(childVariables, variable.variablesReference, depth + 1)
+            : null}
+        </div>
+      );
+    });
 
   const sortedBreakpoints = useMemo(
     () =>
@@ -457,17 +554,7 @@ export default function DebuggerView() {
                   {variables.length === 0 ? (
                     <div className="px-6 pb-1.5 text-[11px] text-text-lighter">Empty</div>
                   ) : (
-                    variables.map((variable) => (
-                      <div
-                        key={`${scope.variablesReference}-${variable.name}`}
-                        className="grid grid-cols-[minmax(0,0.45fr)_minmax(0,0.55fr)] gap-2 px-6 py-1 text-[11px]"
-                      >
-                        <span className="truncate text-text-lighter">{variable.name}</span>
-                        <span className="truncate font-mono text-text">
-                          {variable.value || variable.type || ""}
-                        </span>
-                      </div>
-                    ))
+                    renderVariables(variables, scope.variablesReference)
                   )}
                 </div>
               );
