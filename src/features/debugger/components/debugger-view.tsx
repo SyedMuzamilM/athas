@@ -76,6 +76,7 @@ export default function DebuggerView() {
   const selectedFrameId = useDebuggerStore.use.selectedFrameId();
   const scopes = useDebuggerStore.use.scopes();
   const variablesByReference = useDebuggerStore.use.variablesByReference();
+  const adapterOutput = useDebuggerStore.use.adapterOutput();
   const pendingRequests = useDebuggerStore.use.pendingRequests();
   const debuggerActions = useDebuggerStore.use.actions();
   const [customCommand, setCustomCommand] = useState("");
@@ -141,6 +142,13 @@ export default function DebuggerView() {
         .sort()
         .join("|"),
     [breakpoints],
+  );
+  const activeAdapterOutput = useMemo(
+    () =>
+      activeSession
+        ? adapterOutput.filter((output) => output.sessionId === activeSession.id).slice(-80)
+        : [],
+    [activeSession, adapterOutput],
   );
 
   useEffect(() => {
@@ -598,6 +606,25 @@ export default function DebuggerView() {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        <SectionHeader title="Debug Console" count={activeAdapterOutput.length} />
+        {activeAdapterOutput.length === 0 ? (
+          <div className="px-3 py-4 text-center text-text-lighter text-xs">No debug output.</div>
+        ) : (
+          <div className="py-1">
+            {activeAdapterOutput.map((output, index) => (
+              <div
+                key={`${output.sessionId}-${index}`}
+                className={cn(
+                  "whitespace-pre-wrap break-words px-3 py-1 font-mono text-[11px]",
+                  output.stream === "stderr" ? "text-error" : "text-text-lighter",
+                )}
+              >
+                {output.data.trimEnd()}
+              </div>
+            ))}
           </div>
         )}
 
