@@ -97,7 +97,7 @@ export const defaultSettings: Settings = {
     terminal: true,
     search: true,
     diagnostics: true,
-    debugger: true,
+    debugger: false,
     aiChat: true,
     breadcrumbs: true,
     persistentCommands: true,

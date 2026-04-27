@@ -1,10 +1,4 @@
-import {
-  BugBeetle,
-  Folder,
-  GitBranch,
-  GitPullRequest,
-  MagnifyingGlass,
-} from "@phosphor-icons/react";
+import { Folder, GitBranch, GitPullRequest, MagnifyingGlass } from "@phosphor-icons/react";
 import { Fragment, useMemo } from "react";
 import type { CoreFeaturesState } from "@/features/settings/types/feature";
 import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
@@ -101,24 +95,6 @@ export const SidebarPaneSelector = ({
             tooltip: {
               content: "Source Control",
               shortcut: "Mod+Shift+G",
-              side: tooltipSide,
-            },
-          } satisfies TabsItem,
-        ]
-      : []),
-    ...(coreFeatures.debugger
-      ? [
-          {
-            id: "debugger",
-            icon: <BugBeetle className={compact ? "size-4" : undefined} weight="duotone" />,
-            isActive: activeSidebarView === "debugger",
-            onClick: () => onViewChange("debugger"),
-            role: "tab",
-            ariaLabel: "Run and Debug",
-            className: compact ? "min-w-7 [&_svg]:size-4" : "w-8 rounded-md",
-            tooltip: {
-              content: "Run and Debug",
-              shortcut: "Mod+Shift+D",
               side: tooltipSide,
             },
           } satisfies TabsItem,
