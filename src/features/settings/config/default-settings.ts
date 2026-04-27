@@ -112,6 +112,8 @@ export const defaultSettings: Settings = {
   horizontalTabScroll: false,
   //// File tree
   fileTreeIndentSize: 20,
+  showHiddenFilesInFileTree: true,
+  showGitignoredFilesInFileTree: true,
   hiddenFilePatterns: [],
   hiddenDirectoryPatterns: [],
   gitChangesFolderView: true,

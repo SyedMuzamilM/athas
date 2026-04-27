@@ -3,6 +3,7 @@ import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
 import NumberInput from "@/ui/number-input";
 import Section, { SETTINGS_CONTROL_WIDTHS, SettingRow } from "../settings-section";
 import { controlFieldSurfaceVariants } from "@/ui/control-field";
+import Switch from "@/ui/switch";
 import { cn } from "@/utils/cn";
 
 export const FileTreeSettings = () => {
@@ -55,6 +56,47 @@ export const FileTreeSettings = () => {
             onChange={(val) => updateSetting("fileTreeIndentSize", val)}
             className={SETTINGS_CONTROL_WIDTHS.numberCompact}
             size="xs"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Show Hidden Files"
+          description="Show dotfiles and hidden directories"
+          onReset={() =>
+            updateSetting(
+              "showHiddenFilesInFileTree",
+              getDefaultSetting("showHiddenFilesInFileTree"),
+            )
+          }
+          canReset={
+            settings.showHiddenFilesInFileTree !== getDefaultSetting("showHiddenFilesInFileTree")
+          }
+        >
+          <Switch
+            checked={settings.showHiddenFilesInFileTree}
+            onChange={(checked) => updateSetting("showHiddenFilesInFileTree", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Show Gitignored Files"
+          description="Show files matched by .gitignore"
+          onReset={() =>
+            updateSetting(
+              "showGitignoredFilesInFileTree",
+              getDefaultSetting("showGitignoredFilesInFileTree"),
+            )
+          }
+          canReset={
+            settings.showGitignoredFilesInFileTree !==
+            getDefaultSetting("showGitignoredFilesInFileTree")
+          }
+        >
+          <Switch
+            checked={settings.showGitignoredFilesInFileTree}
+            onChange={(checked) => updateSetting("showGitignoredFilesInFileTree", checked)}
+            size="sm"
           />
         </SettingRow>
       </Section>

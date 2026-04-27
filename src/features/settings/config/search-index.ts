@@ -152,6 +152,22 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["indent", "indentation", "nesting", "depth", "tree", "file explorer", "spacing"],
   },
   {
+    id: "file-tree-show-hidden-files",
+    tab: "file-explorer",
+    section: "Display",
+    label: "Show Hidden Files",
+    description: "Show dotfiles and hidden directories in the file tree",
+    keywords: ["hidden", "dotfiles", "dotfile", "files", "folders", "directories", "visibility"],
+  },
+  {
+    id: "file-tree-show-gitignored-files",
+    tab: "file-explorer",
+    section: "Display",
+    label: "Show Gitignored Files",
+    description: "Show files matched by .gitignore in the file tree",
+    keywords: ["gitignore", "ignored", "git", "files", "visibility"],
+  },
+  {
     id: "file-tree-hidden-file-patterns",
     tab: "file-explorer",
     section: "Filters",

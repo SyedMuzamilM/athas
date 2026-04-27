@@ -35,6 +35,8 @@ const ALWAYS_HIDDEN_FILE_NAMES = new Set([".ds_store"]);
 const isAlwaysHiddenFileName = (name: string): boolean =>
   ALWAYS_HIDDEN_FILE_NAMES.has(name.toLowerCase());
 
+const isHiddenFileTreeName = (name: string): boolean => name.startsWith(".") && name.length > 1;
+
 const getPathBaseName = (path: string): string => {
   const trimmedPath = path.replace(/[\\/]+$/, "");
   if (!trimmedPath) return path;
@@ -243,15 +245,29 @@ function FileExplorerTreeComponent({
   const filteredFiles = useMemo(() => {
     const startedAt = performance.now();
     const process = (items: FileEntry[]): FileEntry[] =>
-      items
-        .filter(
-          (item) => !isAlwaysHiddenFileName(item.name) && !isUserHidden(item.path, item.isDir),
-        )
-        .map((item) => ({
-          ...item,
-          ignored: isGitIgnored(item.path, item.isDir),
-          children: item.children ? process(item.children) : undefined,
-        }));
+      items.flatMap((item) => {
+        const ignored = isGitIgnored(item.path, item.isDir);
+
+        if (isAlwaysHiddenFileName(item.name) || isUserHidden(item.path, item.isDir)) {
+          return [];
+        }
+
+        if (!settings.showHiddenFilesInFileTree && isHiddenFileTreeName(item.name)) {
+          return [];
+        }
+
+        if (!settings.showGitignoredFilesInFileTree && ignored) {
+          return [];
+        }
+
+        return [
+          {
+            ...item,
+            ignored,
+            children: item.children ? process(item.children) : undefined,
+          },
+        ];
+      });
 
     const result = process(files);
     frontendTrace("info", "file-tree", "filteredFiles:computed", {
@@ -260,7 +276,13 @@ function FileExplorerTreeComponent({
       durationMs: Math.round((performance.now() - startedAt) * 100) / 100,
     });
     return result;
-  }, [files, isGitIgnored, isUserHidden]);
+  }, [
+    files,
+    isGitIgnored,
+    isUserHidden,
+    settings.showGitignoredFilesInFileTree,
+    settings.showHiddenFilesInFileTree,
+  ]);
 
   useFileExplorerSync({
     activePath,
@@ -443,7 +465,15 @@ function FileExplorerTreeComponent({
             continue;
           }
 
-          if (isUserHidden(entry.path, isDir) || isGitIgnored(entry.path, isDir)) {
+          if (isUserHidden(entry.path, isDir)) {
+            continue;
+          }
+
+          if (!settings.showHiddenFilesInFileTree && isHiddenFileTreeName(entryName)) {
+            continue;
+          }
+
+          if (!settings.showGitignoredFilesInFileTree && isGitIgnored(entry.path, isDir)) {
             continue;
           }
 
@@ -457,7 +487,12 @@ function FileExplorerTreeComponent({
 
       return collected;
     },
-    [isUserHidden, isGitIgnored],
+    [
+      isUserHidden,
+      isGitIgnored,
+      settings.showGitignoredFilesInFileTree,
+      settings.showHiddenFilesInFileTree,
+    ],
   );
 
   const handleOpenAllFilesInDirectory = useCallback(
