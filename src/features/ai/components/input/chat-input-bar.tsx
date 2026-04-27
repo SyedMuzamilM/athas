@@ -1,6 +1,5 @@
 import {
   BookOpen,
-  CircleNotch,
   Command as CommandIcon,
   Key,
   Microphone as Mic,
@@ -33,6 +32,7 @@ import { ModeSelector } from "../selectors/mode-selector";
 import { ContextSelector } from "../selectors/context-selector";
 import { ProviderApiKeyCommand } from "../provider-api-key-command";
 import { SkillsCommand } from "../skills/skills-command";
+import { ChatLoadingIndicator } from "../chat/chat-loading-indicator";
 import {
   chatComposerControlClassName,
   chatComposerIconButtonClassName,
@@ -1139,173 +1139,153 @@ const AIChatInputBar = memo(function AIChatInputBar({
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-2 px-1 pt-1.5">
-          <div className="flex min-w-0 items-center gap-1">
-            {isAcpMetadataLoading && (
-              <>
-                <Button
-                  type="button"
-                  disabled
-                  variant="ghost"
-                  size="xs"
-                  className={chatComposerControlClassName("w-fit")}
-                >
-                  <CircleNotch className="animate-spin" />
-                  <span>Model</span>
-                </Button>
-                <Button
-                  type="button"
-                  disabled
-                  variant="ghost"
-                  size="xs"
-                  className={chatComposerControlClassName("w-fit")}
-                >
-                  <CircleNotch className="animate-spin" />
-                  <span>Mode</span>
-                </Button>
-              </>
-            )}
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-1 pt-1.5">
+          {isAcpMetadataLoading ? (
+            <ChatLoadingIndicator label="loading session" compact />
+          ) : (
+            <>
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+                {acpModelOption && (
+                  <AcpConfigSelector
+                    option={acpModelOption}
+                    onChange={(value) => void changeSessionConfigOption(acpModelOption.id, value)}
+                    open={activeInlineControl === "model"}
+                    onOpenChange={(open) => {
+                      if (open) {
+                        closeInlineMenus();
+                        setActiveInlineControl("model");
+                        return;
+                      }
+                      setActiveInlineControl((current) => (current === "model" ? null : current));
+                    }}
+                    className="max-w-[180px]"
+                    menuClassName="!min-w-0 w-max max-w-[240px]"
+                  />
+                )}
 
-            {!isAcpMetadataLoading && acpModelOption && (
-              <AcpConfigSelector
-                option={acpModelOption}
-                onChange={(value) => void changeSessionConfigOption(acpModelOption.id, value)}
-                open={activeInlineControl === "model"}
-                onOpenChange={(open) => {
-                  if (open) {
-                    closeInlineMenus();
-                    setActiveInlineControl("model");
-                    return;
-                  }
-                  setActiveInlineControl((current) => (current === "model" ? null : current));
-                }}
-                className="max-w-[180px]"
-                menuClassName="w-[min(280px,calc(100vw-16px))]"
-              />
-            )}
+                {isCustomAgent && (
+                  <>
+                    <ProviderSelector
+                      providerId={aiProviderId}
+                      onChange={handleAthasProviderChange}
+                      appearance="composer"
+                      open={activeInlineControl === "provider"}
+                      onOpenChange={(open) => {
+                        if (open) {
+                          closeInlineMenus();
+                          setActiveInlineControl("provider");
+                          return;
+                        }
+                        setActiveInlineControl((current) =>
+                          current === "provider" ? null : current,
+                        );
+                      }}
+                      triggerClassName="max-w-[128px]"
+                      tooltip="Select provider"
+                    />
+                    <ModelSelector
+                      providerId={aiProviderId}
+                      modelId={aiModelId}
+                      onChange={handleAthasModelChange}
+                      appearance="composer"
+                      open={activeInlineControl === "model"}
+                      onOpenChange={(open) => {
+                        if (open) {
+                          closeInlineMenus();
+                          setActiveInlineControl("model");
+                          return;
+                        }
+                        setActiveInlineControl((current) => (current === "model" ? null : current));
+                      }}
+                      triggerClassName="max-w-[176px]"
+                      tooltip="Select model"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-xs"
+                      className={chatComposerIconButtonClassName()}
+                      tooltip="API keys"
+                      aria-label="Manage API keys"
+                      onClick={() => {
+                        closeInlineMenus();
+                        setIsApiKeyManagerOpen(true);
+                      }}
+                    >
+                      <Key />
+                    </Button>
+                  </>
+                )}
 
-            {isCustomAgent && (
-              <>
-                <ProviderSelector
-                  providerId={aiProviderId}
-                  onChange={handleAthasProviderChange}
-                  appearance="composer"
-                  open={activeInlineControl === "provider"}
+                <ModeSelector
+                  open={activeInlineControl === "mode"}
                   onOpenChange={(open) => {
                     if (open) {
                       closeInlineMenus();
-                      setActiveInlineControl("provider");
+                      setActiveInlineControl("mode");
                       return;
                     }
-                    setActiveInlineControl((current) => (current === "provider" ? null : current));
+                    setActiveInlineControl((current) => (current === "mode" ? null : current));
                   }}
-                  triggerClassName="max-w-[128px]"
-                  tooltip="Select provider"
+                  iconOnly
                 />
-                <ModelSelector
-                  providerId={aiProviderId}
-                  modelId={aiModelId}
-                  onChange={handleAthasModelChange}
-                  appearance="composer"
-                  open={activeInlineControl === "model"}
-                  onOpenChange={(open) => {
-                    if (open) {
-                      closeInlineMenus();
-                      setActiveInlineControl("model");
-                      return;
-                    }
-                    setActiveInlineControl((current) => (current === "model" ? null : current));
-                  }}
-                  triggerClassName="max-w-[176px]"
-                  tooltip="Select model"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-xs"
-                  className={chatComposerIconButtonClassName()}
-                  tooltip="API keys"
-                  aria-label="Manage API keys"
-                  onClick={() => {
-                    closeInlineMenus();
-                    setIsApiKeyManagerOpen(true);
-                  }}
-                >
-                  <Key />
-                </Button>
-              </>
-            )}
 
-            {!isAcpMetadataLoading && (
-              <ModeSelector
-                open={activeInlineControl === "mode"}
-                onOpenChange={(open) => {
-                  if (open) {
-                    closeInlineMenus();
-                    setActiveInlineControl("mode");
-                    return;
-                  }
-                  setActiveInlineControl((current) => (current === "mode" ? null : current));
-                }}
-                className="max-w-[120px]"
-                iconOnly
-              />
-            )}
+                {hasSlashCommands && (
+                  <Button
+                    onClick={() => {
+                      if (inputRef.current && isInputEnabled) {
+                        if (slashCommandState.active) {
+                          setActiveInlineControl(null);
+                          hideSlashCommands();
+                          return;
+                        }
+                        closeInlineMenus();
+                        inputRef.current.textContent = "/";
+                        setInput("/");
+                        setHasInputText(true);
+                        inputRef.current.focus();
+                        const selection = window.getSelection();
+                        if (selection) {
+                          const range = document.createRange();
+                          range.selectNodeContents(inputRef.current);
+                          range.collapse(false);
+                          selection.removeAllRanges();
+                          selection.addRange(range);
+                        }
+                        slashCommandRangeRef.current = { startIndex: 0, endIndex: 1 };
+                        setActiveInlineControl("commands");
+                        showSlashCommands(getSlashDropdownPosition(), "");
+                      }
+                    }}
+                    variant="ghost"
+                    size="icon-xs"
+                    active={slashCommandState.active}
+                    className={chatComposerIconButtonClassName()}
+                    tooltip="Show slash commands"
+                    aria-label="Show slash commands"
+                  >
+                    <CommandIcon size={12} />
+                  </Button>
+                )}
+              </div>
 
-            {hasSlashCommands && (
               <Button
+                type="button"
                 onClick={() => {
-                  if (inputRef.current && isInputEnabled) {
-                    if (slashCommandState.active) {
-                      setActiveInlineControl(null);
-                      hideSlashCommands();
-                      return;
-                    }
-                    closeInlineMenus();
-                    inputRef.current.textContent = "/";
-                    setInput("/");
-                    setHasInputText(true);
-                    inputRef.current.focus();
-                    const selection = window.getSelection();
-                    if (selection) {
-                      const range = document.createRange();
-                      range.selectNodeContents(inputRef.current);
-                      range.collapse(false);
-                      selection.removeAllRanges();
-                      selection.addRange(range);
-                    }
-                    slashCommandRangeRef.current = { startIndex: 0, endIndex: 1 };
-                    setActiveInlineControl("commands");
-                    showSlashCommands(getSlashDropdownPosition(), "");
-                  }
+                  closeInlineMenus();
+                  setIsSkillsOpen(true);
                 }}
                 variant="ghost"
-                size="icon-xs"
-                active={slashCommandState.active}
-                className={chatComposerIconButtonClassName()}
-                tooltip="Show slash commands"
-                aria-label="Show slash commands"
+                size="xs"
+                className={chatComposerControlClassName("ml-auto w-fit shrink-0 px-2")}
+                tooltip="Skills"
+                aria-label="Skills"
               >
-                <CommandIcon size={12} />
+                <BookOpen />
+                <span>Skills</span>
               </Button>
-            )}
-          </div>
-
-          <Button
-            type="button"
-            onClick={() => {
-              closeInlineMenus();
-              setIsSkillsOpen(true);
-            }}
-            variant="ghost"
-            size="xs"
-            className={chatComposerControlClassName("w-fit px-2")}
-            tooltip="Skills"
-            aria-label="Skills"
-          >
-            <BookOpen />
-            <span>Skills</span>
-          </Button>
+            </>
+          )}
         </div>
       </div>
 

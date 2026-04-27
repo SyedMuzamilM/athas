@@ -1,6 +1,5 @@
 import {
   CheckCircle,
-  Key,
   MagnifyingGlass as Search,
   Trash,
   WarningCircle,
@@ -277,7 +276,6 @@ export function ProviderApiKeyCommand({
                     disabled={!apiKey.trim() || isValidating || apiKey.startsWith("•")}
                     className={cn(isValidating && "opacity-70")}
                   >
-                    <Key />
                     <span>{isValidating ? "Validating" : "Save key"}</span>
                   </Button>
                 </div>
