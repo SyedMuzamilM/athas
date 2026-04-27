@@ -41,7 +41,7 @@ describe("text objects", () => {
     });
   });
 
-  it.todo("aw falls back to leading space when no trailing space (BUG: aw whitespace logic is broken)", () => {
+  it("aw falls back to leading space when no trailing space", () => {
     const obj = getTextObject("w");
     expect(obj).toBeDefined();
     const lines = ["hello world"];

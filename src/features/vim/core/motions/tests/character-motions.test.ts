@@ -43,7 +43,7 @@ describe("charRight (l)", () => {
     expect(range.end.column).toBe(3);
   });
 
-  it.todo("does not move past last character (BUG: charRight clamps to line.length instead of line.length - 1)", () => {
+  it("does not move past last character", () => {
     const lines = ["hi"];
     const range = charRight.calculate({ line: 0, column: 1, offset: 1 }, lines);
     expect(range.end.column).toBe(1);
@@ -87,7 +87,7 @@ describe("find char motions", () => {
     expect(range.end.column).toBe(4); // No previous 'o' before column 4
   });
 
-  it.todo("does not corrupt ; direction after using , (BUG: , mutates global lastFindDirection)", () => {
+  it("does not corrupt ; direction after using ,", () => {
     const motion = createFindCharMotion("o", "forward", "find");
     const lines = ["hello world"];
     motion.calculate({ line: 0, column: 0, offset: 0 }, lines);

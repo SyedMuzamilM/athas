@@ -70,9 +70,14 @@ export const executeVimCommand = (keys: string[]): boolean => {
         }
       }
 
-      // Execute the action multiple times if count is specified
+      // Execute the action multiple times if count is specified.
+      // Refresh context after each iteration so mutating actions (e.g., J)
+      // see updated lines and cursor on subsequent loops.
       for (let i = 0; i < count; i++) {
         action.execute(context);
+        if (i < count - 1) {
+          refreshEditorContext(context);
+        }
       }
 
       return true;
@@ -165,6 +170,16 @@ export const executeVimCommand = (keys: string[]): boolean => {
 /**
  * Get the current editor context
  */
+/**
+ * Refresh context fields after a mutating action so the next loop
+ * iteration sees current editor state.
+ */
+const refreshEditorContext = (context: EditorContext): void => {
+  context.lines = context.facade.getLines();
+  context.content = context.lines.join("\n");
+  context.cursor = context.facade.getCursorPosition();
+};
+
 const getEditorContext = (): EditorContext | null => {
   const cursorState = useEditorStateStore.getState();
   const viewState = useEditorViewStore.getState();
@@ -234,5 +249,14 @@ export const executeReplaceCommand = (char: string, options: { count?: number } 
   const replaceAction = createReplaceAction(char, count);
 
   replaceAction.execute(context);
+
+  // Track for repeat (.) functionality
+  const vimStore = useVimStore.getState();
+  vimStore.actions.setLastOperation({
+    type: "action",
+    keys: ["r", char],
+    count: options.count,
+  });
+
   return true;
 };

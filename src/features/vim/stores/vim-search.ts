@@ -76,7 +76,7 @@ const useVimSearchStoreBase = create(
           }
         },
 
-        performSearch: (term: string) => {
+        performSearch: (term: string, options?: { autoJump?: boolean }) => {
           const lines = useEditorViewStore.getState().lines;
           const matches: SearchMatch[] = [];
 
@@ -84,8 +84,8 @@ const useVimSearchStoreBase = create(
           for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
             const line = lines[lineIndex];
 
-            // Use global regex to find all matches in the line
-            const regex = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
+            // Use global case-sensitive regex by default (matches vim default)
+            const regex = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g");
             let match: RegExpExecArray | null = regex.exec(line);
 
             while (match !== null) {
@@ -108,14 +108,16 @@ const useVimSearchStoreBase = create(
             }
           }
 
+          const autoJump = options?.autoJump ?? true;
+
           set((state) => {
             state.matches = matches;
             state.currentMatchIndex = matches.length > 0 ? 0 : -1;
             state.lastSearchTerm = term;
           });
 
-          // Move cursor to first match if found
-          if (matches.length > 0) {
+          // Move cursor to first match if found (only when autoJump is enabled)
+          if (autoJump && matches.length > 0) {
             useVimSearchStoreBase.getState().actions.goToMatch(0);
           }
         },
@@ -159,7 +161,14 @@ const useVimSearchStoreBase = create(
         findNext: () => {
           const state = get();
           if (state.lastSearchTerm && state.matches.length === 0) {
-            useVimSearchStoreBase.getState().actions.performSearch(state.lastSearchTerm);
+            // Re-run search without auto-jumping, then go to first match
+            useVimSearchStoreBase
+              .getState()
+              .actions.performSearch(state.lastSearchTerm, { autoJump: false });
+            const refreshed = useVimSearchStoreBase.getState();
+            if (refreshed.matches.length > 0) {
+              useVimSearchStoreBase.getState().actions.goToMatch(0);
+            }
             return;
           }
 
@@ -181,7 +190,14 @@ const useVimSearchStoreBase = create(
         findPrevious: () => {
           const state = get();
           if (state.lastSearchTerm && state.matches.length === 0) {
-            useVimSearchStoreBase.getState().actions.performSearch(state.lastSearchTerm);
+            // Re-run search without auto-jumping, then go to last match
+            useVimSearchStoreBase
+              .getState()
+              .actions.performSearch(state.lastSearchTerm, { autoJump: false });
+            const refreshed = useVimSearchStoreBase.getState();
+            if (refreshed.matches.length > 0) {
+              useVimSearchStoreBase.getState().actions.goToMatch(refreshed.matches.length - 1);
+            }
             return;
           }
 
