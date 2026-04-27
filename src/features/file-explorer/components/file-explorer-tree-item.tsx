@@ -4,6 +4,7 @@ import {
   FILE_TREE_DENSITY_CONFIG,
   type FileTreeDensity,
 } from "@/features/file-explorer/lib/file-tree-density";
+import { getHighlightedFileTreeNameParts } from "@/features/file-explorer/lib/file-tree-filter";
 import type { FileTreeGitStatusDecoration } from "@/features/file-explorer/lib/file-tree-git-status";
 import { useFileClipboardStore } from "@/features/file-explorer/stores/file-explorer-clipboard-store";
 import type { FileEntry } from "@/features/file-system/types/app";
@@ -47,6 +48,7 @@ interface FileExplorerTreeItemProps {
   nextDepth: number;
   indentSize: number;
   density: FileTreeDensity;
+  searchQuery: string;
   isExpanded: boolean;
   isActive: boolean;
   dragOverPath: string | null;
@@ -67,6 +69,7 @@ function FileExplorerTreeItemComponent({
   nextDepth,
   indentSize,
   density,
+  searchQuery,
   isExpanded,
   isActive,
   dragOverPath,
@@ -84,6 +87,7 @@ function FileExplorerTreeItemComponent({
   const paddingLeft = 14 + depth * indentSize;
   const densityConfig = FILE_TREE_DENSITY_CONFIG[density];
   const gitStatusDecoration = getGitStatusDecoration(file);
+  const nameParts = getHighlightedFileTreeNameParts(displayName ?? file.name, searchQuery);
   const guideLevels = Array.from({ length: depth }, (_, level) => level);
   const renderTreeGuides = () => (
     <div className="file-tree-guides">
@@ -207,7 +211,15 @@ function FileExplorerTreeItemComponent({
             gitStatusDecoration?.colorClassName,
           )}
         >
-          {displayName ?? file.name}
+          {nameParts.map((part, index) =>
+            part.isMatch ? (
+              <mark key={`${part.text}-${index}`} className="file-tree-search-match">
+                {part.text}
+              </mark>
+            ) : (
+              <span key={`${part.text}-${index}`}>{part.text}</span>
+            ),
+          )}
         </span>
         {gitStatusDecoration ? (
           <span
@@ -232,6 +244,7 @@ export const FileExplorerTreeItem = memo(
     prev.nextDepth === next.nextDepth &&
     prev.indentSize === next.indentSize &&
     prev.density === next.density &&
+    prev.searchQuery === next.searchQuery &&
     prev.isExpanded === next.isExpanded &&
     prev.isActive === next.isActive &&
     prev.dragOverPath === next.dragOverPath &&

@@ -4,7 +4,9 @@ import {
   ArrowClockwise,
   FilePlus,
   FolderPlus,
+  MagnifyingGlass,
   Warning as AlertTriangle,
+  X,
 } from "@phosphor-icons/react";
 import type React from "react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -22,6 +24,10 @@ import {
   type FileTreeGitStatusLookup,
 } from "@/features/file-explorer/lib/file-tree-git-status";
 import { FILE_TREE_DENSITY_CONFIG } from "@/features/file-explorer/lib/file-tree-density";
+import {
+  filterFileTree,
+  getHighlightedFileTreeNameParts,
+} from "@/features/file-explorer/lib/file-tree-filter";
 import { getFileTreeSummary } from "@/features/file-explorer/lib/file-tree-summary";
 import { fileOpenBenchmark } from "@/features/editor/utils/file-open-benchmark";
 import { findFileInTree } from "@/features/file-system/controllers/file-tree-utils";
@@ -32,6 +38,7 @@ import { useGitStore } from "@/features/git/stores/git-store";
 import { useSettingsStore } from "@/features/settings/store";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
+import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import { frontendTrace } from "@/utils/frontend-trace";
 import {
@@ -70,10 +77,13 @@ interface FileExplorerToolbarProps {
   canCreateFile: boolean;
   canCreateFolder: boolean;
   canRefresh: boolean;
+  searchQuery: string;
+  searchMatchCount: number;
   onCreateFile: () => void;
   onCreateFolder: () => void;
   onRefresh: () => void;
   onCollapseAll: () => void;
+  onSearchChange: (query: string) => void;
 }
 
 function FileExplorerToolbar({
@@ -83,64 +93,92 @@ function FileExplorerToolbar({
   canCreateFile,
   canCreateFolder,
   canRefresh,
+  searchQuery,
+  searchMatchCount,
   onCreateFile,
   onCreateFolder,
   onRefresh,
   onCollapseAll,
+  onSearchChange,
 }: FileExplorerToolbarProps) {
   const rootName = rootFolderPath ? getPathBaseName(rootFolderPath) : "Files";
 
   return (
     <div className="file-tree-toolbar">
-      <div className="min-w-0 flex-1">
-        <div className="truncate font-medium text-text text-xs" title={rootFolderPath}>
-          {rootName}
+      <div className="file-tree-toolbar-main">
+        <div className="min-w-0 flex-1">
+          <div className="truncate font-medium text-text text-xs" title={rootFolderPath}>
+            {rootName}
+          </div>
+          <div className="mt-0.5 truncate text-[10px] text-text-lighter">
+            {searchQuery
+              ? `${searchMatchCount} matches`
+              : `${folderCount} folders / ${fileCount} files`}
+          </div>
         </div>
-        <div className="mt-0.5 truncate text-[10px] text-text-lighter">
-          {folderCount} folders / {fileCount} files
+        <div className="file-tree-toolbar-actions">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            tooltip="New File"
+            shortcut="⌘N"
+            disabled={!canCreateFile}
+            onClick={onCreateFile}
+          >
+            <FilePlus />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            tooltip="New Folder"
+            shortcut="⇧⌘N"
+            disabled={!canCreateFolder}
+            onClick={onCreateFolder}
+          >
+            <FolderPlus />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            tooltip="Refresh"
+            disabled={!canRefresh}
+            onClick={onRefresh}
+          >
+            <ArrowClockwise />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            tooltip="Collapse All"
+            onClick={onCollapseAll}
+          >
+            <ArrowsInLineVertical />
+          </Button>
         </div>
       </div>
-      <div className="file-tree-toolbar-actions">
+      <div className="file-tree-search">
+        <Input
+          type="search"
+          size="xs"
+          leftIcon={MagnifyingGlass}
+          value={searchQuery}
+          placeholder="Filter files"
+          disabled={!rootFolderPath}
+          onChange={(event) => onSearchChange(event.target.value)}
+        />
         <Button
           type="button"
           variant="ghost"
           size="icon-xs"
-          tooltip="New File"
-          shortcut="⌘N"
-          disabled={!canCreateFile}
-          onClick={onCreateFile}
+          tooltip="Clear Filter"
+          disabled={!searchQuery}
+          onClick={() => onSearchChange("")}
         >
-          <FilePlus />
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          tooltip="New Folder"
-          shortcut="⇧⌘N"
-          disabled={!canCreateFolder}
-          onClick={onCreateFolder}
-        >
-          <FolderPlus />
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          tooltip="Refresh"
-          disabled={!canRefresh}
-          onClick={onRefresh}
-        >
-          <ArrowClockwise />
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          tooltip="Collapse All"
-          onClick={onCollapseAll}
-        >
-          <ArrowsInLineVertical />
+          <X />
         </Button>
       </div>
     </div>
@@ -192,6 +230,7 @@ function FileExplorerTreeComponent({
   } | null>(null);
   const [isDeletingPath, setIsDeletingPath] = useState(false);
   const [editingValue, setEditingValue] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const documentRef = useRef<Document>(document);
 
@@ -259,6 +298,10 @@ function FileExplorerTreeComponent({
     };
 
     loadGitignore();
+  }, [rootFolderPath]);
+
+  useEffect(() => {
+    setSearchQuery("");
   }, [rootFolderPath]);
 
   const gitStatus =
@@ -342,6 +385,12 @@ function FileExplorerTreeComponent({
     settings.showHiddenFilesInFileTree,
   ]);
   const fileTreeSummary = useMemo(() => getFileTreeSummary(filteredFiles), [filteredFiles]);
+  const filteredSearchResult = useMemo(
+    () => filterFileTree(filteredFiles, searchQuery),
+    [filteredFiles, searchQuery],
+  );
+  const treeRows = searchQuery.trim() ? filteredSearchResult.files : filteredFiles;
+  const forcedExpandedPaths = searchQuery.trim() ? filteredSearchResult.expandedPaths : undefined;
 
   useFileExplorerSync({
     activePath,
@@ -350,9 +399,10 @@ function FileExplorerTreeComponent({
   });
 
   const { visibleRows, rowVirtualizer } = useFileExplorerVisibleRows({
-    files: filteredFiles,
+    files: treeRows,
     activePath,
     containerRef,
+    forcedExpandedPaths,
   });
 
   // No sticky overlays or global guides
@@ -809,10 +859,13 @@ function FileExplorerTreeComponent({
         canCreateFile={Boolean(rootFolderPath && onUpdateFiles)}
         canCreateFolder={Boolean(rootFolderPath && onUpdateFiles && onCreateNewFolderInDirectory)}
         canRefresh={Boolean(rootFolderPath && onRefreshDirectory)}
+        searchQuery={searchQuery}
+        searchMatchCount={filteredSearchResult.matchCount}
         onCreateFile={handleCreateRootFile}
         onCreateFolder={handleCreateRootFolder}
         onRefresh={handleRefreshRoot}
         onCollapseAll={handleCollapseAll}
+        onSearchChange={setSearchQuery}
       />
       <div
         className={cn(
@@ -1015,6 +1068,12 @@ function FileExplorerTreeComponent({
               <span className="text-[0.78em] text-text-lighter">Folder is empty</span>
             </div>
           </div>
+        ) : treeRows.length === 0 ? (
+          <div className="file-tree-empty-state absolute inset-0 flex items-center justify-center">
+            <div className="ui-font flex flex-col items-center text-center">
+              <span className="text-[0.78em] text-text-lighter">No matching files</span>
+            </div>
+          </div>
         ) : (
           <div className="w-max min-w-full">
             {(() => {
@@ -1027,6 +1086,9 @@ function FileExplorerTreeComponent({
                 ? getStickyAncestorRow(visibleRows, items[0].index)
                 : null;
               const stickyAncestorLabel = stickyAncestor?.displayName ?? stickyAncestor?.file.name;
+              const stickyAncestorLabelParts = stickyAncestorLabel
+                ? getHighlightedFileTreeNameParts(stickyAncestorLabel, searchQuery)
+                : [];
               const stickyAncestorGitStatus = stickyAncestor
                 ? getGitStatusDecoration(stickyAncestor.file)
                 : null;
@@ -1064,7 +1126,18 @@ function FileExplorerTreeComponent({
                             stickyAncestorGitStatus?.colorClassName,
                           )}
                         >
-                          {stickyAncestorLabel}
+                          {stickyAncestorLabelParts.map((part, index) =>
+                            part.isMatch ? (
+                              <mark
+                                key={`${part.text}-${index}`}
+                                className="file-tree-search-match"
+                              >
+                                {part.text}
+                              </mark>
+                            ) : (
+                              <span key={`${part.text}-${index}`}>{part.text}</span>
+                            ),
+                          )}
                         </span>
                         {stickyAncestorGitStatus ? (
                           <span
@@ -1112,6 +1185,7 @@ function FileExplorerTreeComponent({
                         nextDepth={nextRow?.depth ?? 0}
                         indentSize={settings.fileTreeIndentSize}
                         density={fileTreeDensity}
+                        searchQuery={searchQuery}
                         isExpanded={row.isExpanded}
                         isActive={activePath === row.file.path}
                         dragOverPath={dragState.dragOverPath}
