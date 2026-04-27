@@ -1,13 +1,5 @@
 import ignore from "ignore";
-import {
-  ArrowsInLineVertical,
-  ArrowClockwise,
-  FilePlus,
-  FolderPlus,
-  MagnifyingGlass,
-  Warning as AlertTriangle,
-  X,
-} from "@phosphor-icons/react";
+import { Warning as AlertTriangle } from "@phosphor-icons/react";
 import type React from "react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useEventListener } from "usehooks-ts";
@@ -24,11 +16,6 @@ import {
   type FileTreeGitStatusLookup,
 } from "@/features/file-explorer/lib/file-tree-git-status";
 import { FILE_TREE_DENSITY_CONFIG } from "@/features/file-explorer/lib/file-tree-density";
-import {
-  filterFileTree,
-  getHighlightedFileTreeNameParts,
-} from "@/features/file-explorer/lib/file-tree-filter";
-import { getFileTreeSummary } from "@/features/file-explorer/lib/file-tree-summary";
 import { fileOpenBenchmark } from "@/features/editor/utils/file-open-benchmark";
 import { findFileInTree } from "@/features/file-system/controllers/file-tree-utils";
 import { readDirectory, readFile } from "@/features/file-system/controllers/platform";
@@ -38,7 +25,6 @@ import { useGitStore } from "@/features/git/stores/git-store";
 import { useSettingsStore } from "@/features/settings/store";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
-import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import { frontendTrace } from "@/utils/frontend-trace";
 import {
@@ -69,121 +55,6 @@ const getPathBaseName = (path: string): string => {
   const segments = trimmedPath.split(/[\\/]/);
   return segments[segments.length - 1] || path;
 };
-
-interface FileExplorerToolbarProps {
-  rootFolderPath?: string;
-  fileCount: number;
-  folderCount: number;
-  canCreateFile: boolean;
-  canCreateFolder: boolean;
-  canRefresh: boolean;
-  searchQuery: string;
-  searchMatchCount: number;
-  onCreateFile: () => void;
-  onCreateFolder: () => void;
-  onRefresh: () => void;
-  onCollapseAll: () => void;
-  onSearchChange: (query: string) => void;
-}
-
-function FileExplorerToolbar({
-  rootFolderPath,
-  fileCount,
-  folderCount,
-  canCreateFile,
-  canCreateFolder,
-  canRefresh,
-  searchQuery,
-  searchMatchCount,
-  onCreateFile,
-  onCreateFolder,
-  onRefresh,
-  onCollapseAll,
-  onSearchChange,
-}: FileExplorerToolbarProps) {
-  const rootName = rootFolderPath ? getPathBaseName(rootFolderPath) : "Files";
-
-  return (
-    <div className="file-tree-toolbar">
-      <div className="file-tree-toolbar-main">
-        <div className="min-w-0 flex-1">
-          <div className="truncate font-medium text-text text-xs" title={rootFolderPath}>
-            {rootName}
-          </div>
-          <div className="mt-0.5 truncate text-[10px] text-text-lighter">
-            {searchQuery
-              ? `${searchMatchCount} matches`
-              : `${folderCount} folders / ${fileCount} files`}
-          </div>
-        </div>
-        <div className="file-tree-toolbar-actions">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            tooltip="New File"
-            shortcut="⌘N"
-            disabled={!canCreateFile}
-            onClick={onCreateFile}
-          >
-            <FilePlus />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            tooltip="New Folder"
-            shortcut="⇧⌘N"
-            disabled={!canCreateFolder}
-            onClick={onCreateFolder}
-          >
-            <FolderPlus />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            tooltip="Refresh"
-            disabled={!canRefresh}
-            onClick={onRefresh}
-          >
-            <ArrowClockwise />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            tooltip="Collapse All"
-            onClick={onCollapseAll}
-          >
-            <ArrowsInLineVertical />
-          </Button>
-        </div>
-      </div>
-      <div className="file-tree-search">
-        <Input
-          type="search"
-          size="xs"
-          leftIcon={MagnifyingGlass}
-          value={searchQuery}
-          placeholder="Filter files"
-          disabled={!rootFolderPath}
-          onChange={(event) => onSearchChange(event.target.value)}
-        />
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          tooltip="Clear Filter"
-          disabled={!searchQuery}
-          onClick={() => onSearchChange("")}
-        >
-          <X />
-        </Button>
-      </div>
-    </div>
-  );
-}
 
 interface FileExplorerTreeProps {
   files: FileEntry[];
@@ -230,7 +101,6 @@ function FileExplorerTreeComponent({
   } | null>(null);
   const [isDeletingPath, setIsDeletingPath] = useState(false);
   const [editingValue, setEditingValue] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const documentRef = useRef<Document>(document);
 
@@ -298,10 +168,6 @@ function FileExplorerTreeComponent({
     };
 
     loadGitignore();
-  }, [rootFolderPath]);
-
-  useEffect(() => {
-    setSearchQuery("");
   }, [rootFolderPath]);
 
   const gitStatus =
@@ -384,13 +250,6 @@ function FileExplorerTreeComponent({
     settings.showGitignoredFilesInFileTree,
     settings.showHiddenFilesInFileTree,
   ]);
-  const fileTreeSummary = useMemo(() => getFileTreeSummary(filteredFiles), [filteredFiles]);
-  const filteredSearchResult = useMemo(
-    () => filterFileTree(filteredFiles, searchQuery),
-    [filteredFiles, searchQuery],
-  );
-  const treeRows = searchQuery.trim() ? filteredSearchResult.files : filteredFiles;
-  const forcedExpandedPaths = searchQuery.trim() ? filteredSearchResult.expandedPaths : undefined;
 
   useFileExplorerSync({
     activePath,
@@ -399,92 +258,55 @@ function FileExplorerTreeComponent({
   });
 
   const { visibleRows, rowVirtualizer } = useFileExplorerVisibleRows({
-    files: treeRows,
+    files: filteredFiles,
     activePath,
     containerRef,
-    forcedExpandedPaths,
   });
 
   // No sticky overlays or global guides
 
-  const startInlineEditing = useCallback(
-    (parentPath: string, isFolder: boolean) => {
-      if (!onUpdateFiles) return;
+  const startInlineEditing = (parentPath: string, isFolder: boolean) => {
+    if (!onUpdateFiles) return;
 
-      const newItem: FileEntry = {
-        name: "",
-        path: `${parentPath}/`,
-        isDir: isFolder,
-        isEditing: true,
-        isNewItem: true,
-      };
+    const newItem: FileEntry = {
+      name: "",
+      path: `${parentPath}/`,
+      isDir: isFolder,
+      isEditing: true,
+      isNewItem: true,
+    };
 
-      const addNewItemToTree = (items: FileEntry[], targetPath: string): FileEntry[] => {
-        return items.map((item) => {
-          if (item.path === targetPath && item.isDir) {
-            return { ...item, children: [...(item.children || []), newItem] };
-          }
-          if (item.children) {
-            return {
-              ...item,
-              children: addNewItemToTree(item.children, targetPath),
-            };
-          }
-          return item;
-        });
-      };
+    const addNewItemToTree = (items: FileEntry[], targetPath: string): FileEntry[] => {
+      return items.map((item) => {
+        if (item.path === targetPath && item.isDir) {
+          return { ...item, children: [...(item.children || []), newItem] };
+        }
+        if (item.children) {
+          return {
+            ...item,
+            children: addNewItemToTree(item.children, targetPath),
+          };
+        }
+        return item;
+      });
+    };
 
-      if (parentPath === getDirName(files[0]?.path ?? "") || !parentPath) {
-        onUpdateFiles([...files, newItem]);
-      } else {
-        onUpdateFiles(addNewItemToTree(files, parentPath));
-      }
+    if (parentPath === getDirName(files[0]?.path ?? "") || !parentPath) {
+      onUpdateFiles([...files, newItem]);
+    } else {
+      onUpdateFiles(addNewItemToTree(files, parentPath));
+    }
 
-      // Ensure the target folder is expanded in UI
-      try {
-        const current = useFileTreeStore.getState().getExpandedPaths();
-        const next = new Set(current);
-        next.add(parentPath);
-        useFileTreeStore.getState().setExpandedPaths(next);
-      } catch {}
+    // Ensure the target folder is expanded in UI
+    try {
+      const current = useFileTreeStore.getState().getExpandedPaths();
+      const next = new Set(current);
+      next.add(parentPath);
+      useFileTreeStore.getState().setExpandedPaths(next);
+    } catch {}
 
-      setEditingValue("");
-    },
-    [files, onUpdateFiles],
-  );
-
-  const handleCreateRootFile = useCallback(() => {
-    if (!rootFolderPath) return;
-    startInlineEditing(rootFolderPath, false);
-  }, [rootFolderPath, startInlineEditing]);
-
-  const handleCreateRootFolder = useCallback(() => {
-    if (!rootFolderPath || !onCreateNewFolderInDirectory) return;
-    startInlineEditing(rootFolderPath, true);
-  }, [onCreateNewFolderInDirectory, rootFolderPath, startInlineEditing]);
-
-  const handleRefreshRoot = useCallback(() => {
-    if (!rootFolderPath) return;
-    onRefreshDirectory?.(rootFolderPath);
-  }, [onRefreshDirectory, rootFolderPath]);
-
-  const handleCollapseAll = useCallback(() => {
-    useFileTreeStore.getState().collapseAll();
-  }, []);
-
-  const handleCreateFileInDirectory = useCallback(
-    (directoryPath: string) => startInlineEditing(directoryPath, false),
-    [startInlineEditing],
-  );
-
-  const handleCreateFolderInDirectory = useCallback(
-    (directoryPath: string) => startInlineEditing(directoryPath, true),
-    [startInlineEditing],
-  );
-
-  const handleRequestDeletePath = useCallback((path: string, isDir: boolean) => {
-    setDeleteCandidate({ path, isDir });
-  }, []);
+    setEditingValue("");
+  };
 
   const finishInlineEditing = (item: FileEntry, newName: string) => {
     if (!onUpdateFiles) return;
@@ -868,407 +690,337 @@ function FileExplorerTreeComponent({
   }, [activePath]);
 
   return (
-    <div className="file-tree-shell">
-      <FileExplorerToolbar
-        rootFolderPath={rootFolderPath}
-        fileCount={fileTreeSummary.files}
-        folderCount={fileTreeSummary.folders}
-        canCreateFile={Boolean(rootFolderPath && onUpdateFiles)}
-        canCreateFolder={Boolean(rootFolderPath && onUpdateFiles && onCreateNewFolderInDirectory)}
-        canRefresh={Boolean(rootFolderPath && onRefreshDirectory)}
-        searchQuery={searchQuery}
-        searchMatchCount={filteredSearchResult.matchCount}
-        onCreateFile={handleCreateRootFile}
-        onCreateFolder={handleCreateRootFolder}
-        onRefresh={handleRefreshRoot}
-        onCollapseAll={handleCollapseAll}
-        onSearchChange={setSearchQuery}
-      />
-      <div
-        className={cn(
-          "file-tree-container relative flex min-w-full flex-1 select-none flex-col overflow-auto p-1",
-          dragState.dragOverPath === "__ROOT__" &&
-            "border-2! border-dashed! border-accent! bg-accent! bg-opacity-10!",
-        )}
-        ref={containerRef}
-        style={{ scrollBehavior: "auto", overscrollBehavior: "contain" }}
-        role="tree"
-        tabIndex={0}
-        onKeyDown={(e) => {
-          // Let inputs handle their own keys
-          const tag = (e.target as HTMLElement).tagName;
-          if (
-            tag === "INPUT" ||
-            tag === "TEXTAREA" ||
-            (e.target as HTMLElement).isContentEditable
-          ) {
+    <div
+      className={cn(
+        "file-tree-container relative flex min-w-full flex-1 select-none flex-col overflow-auto p-1",
+        dragState.dragOverPath === "__ROOT__" &&
+          "border-2! border-dashed! border-accent! bg-accent! bg-opacity-10!",
+      )}
+      ref={containerRef}
+      style={{ scrollBehavior: "auto", overscrollBehavior: "contain" }}
+      role="tree"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        // Let inputs handle their own keys
+        const tag = (e.target as HTMLElement).tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement).isContentEditable) {
+          return;
+        }
+        const index = visibleRows.findIndex((r) => r.file.path === activePath);
+        const curIndex = index === -1 ? 0 : index;
+        const current = visibleRows[curIndex]?.file;
+        const isDir = visibleRows[curIndex]?.file.isDir;
+
+        const clipboardActions = useFileClipboardStore.getState().actions;
+        const mod = e.metaKey || e.ctrlKey;
+        if (mod && current) {
+          if (e.key === "c") {
+            e.preventDefault();
+            clipboardActions.copy([{ path: current.path, is_dir: !!isDir }]);
             return;
           }
-          const index = visibleRows.findIndex((r) => r.file.path === activePath);
-          const curIndex = index === -1 ? 0 : index;
-          const current = visibleRows[curIndex]?.file;
-          const isDir = visibleRows[curIndex]?.file.isDir;
-
-          const clipboardActions = useFileClipboardStore.getState().actions;
-          const mod = e.metaKey || e.ctrlKey;
-          if (mod) {
-            if (e.key === "n") {
-              e.preventDefault();
-              if (e.shiftKey) {
-                handleCreateRootFolder();
-              } else {
-                handleCreateRootFile();
-              }
-              return;
-            }
-
-            if (current) {
-              if (e.key === "c") {
-                e.preventDefault();
-                clipboardActions.copy([{ path: current.path, is_dir: !!isDir }]);
-                return;
-              }
-              if (e.key === "x") {
-                e.preventDefault();
-                clipboardActions.cut([{ path: current.path, is_dir: !!isDir }]);
-                return;
-              }
-              if (e.key === "v") {
-                e.preventDefault();
-                const sep = current.path.includes("\\") ? "\\" : "/";
-                const targetDir = isDir
-                  ? current.path
-                  : current.path.split(sep).slice(0, -1).join(sep);
-                if (targetDir) {
-                  clipboardActions.paste(targetDir).then(() => {
-                    onRefreshDirectory?.(targetDir);
-                  });
-                }
-                return;
-              }
-            }
+          if (e.key === "x") {
+            e.preventDefault();
+            clipboardActions.cut([{ path: current.path, is_dir: !!isDir }]);
+            return;
           }
+          if (e.key === "v") {
+            e.preventDefault();
+            const sep = current.path.includes("\\") ? "\\" : "/";
+            const targetDir = isDir ? current.path : current.path.split(sep).slice(0, -1).join(sep);
+            if (targetDir) {
+              clipboardActions.paste(targetDir).then(() => {
+                onRefreshDirectory?.(targetDir);
+              });
+            }
+            return;
+          }
+        }
 
-          switch (e.key) {
-            case "Escape": {
-              e.preventDefault();
-              e.stopPropagation();
-              setContextMenu(null);
-              containerRef.current?.focus();
-              break;
+        switch (e.key) {
+          case "Escape": {
+            e.preventDefault();
+            e.stopPropagation();
+            setContextMenu(null);
+            containerRef.current?.focus();
+            break;
+          }
+          case "ArrowDown": {
+            e.preventDefault();
+            const next = Math.min(visibleRows.length - 1, curIndex + 1);
+            const p = visibleRows[next]?.file.path;
+            if (p) {
+              updateActivePath?.(p);
+              rowVirtualizer.scrollToIndex(next);
             }
-            case "ArrowDown": {
-              e.preventDefault();
-              const next = Math.min(visibleRows.length - 1, curIndex + 1);
-              const p = visibleRows[next]?.file.path;
-              if (p) {
-                updateActivePath?.(p);
-                rowVirtualizer.scrollToIndex(next);
-              }
-              break;
+            break;
+          }
+          case "ArrowUp": {
+            e.preventDefault();
+            const prev = Math.max(0, curIndex - 1);
+            const p = visibleRows[prev]?.file.path;
+            if (p) {
+              updateActivePath?.(p);
+              rowVirtualizer.scrollToIndex(prev);
             }
-            case "ArrowUp": {
-              e.preventDefault();
-              const prev = Math.max(0, curIndex - 1);
-              const p = visibleRows[prev]?.file.path;
-              if (p) {
-                updateActivePath?.(p);
-                rowVirtualizer.scrollToIndex(prev);
-              }
-              break;
+            break;
+          }
+          case "Home": {
+            e.preventDefault();
+            if (visibleRows[0]) {
+              updateActivePath?.(visibleRows[0].file.path);
+              rowVirtualizer.scrollToIndex(0);
             }
-            case "Home": {
-              e.preventDefault();
-              if (visibleRows[0]) {
-                updateActivePath?.(visibleRows[0].file.path);
-                rowVirtualizer.scrollToIndex(0);
-              }
-              break;
+            break;
+          }
+          case "End": {
+            e.preventDefault();
+            if (visibleRows.length) {
+              const last = visibleRows.length - 1;
+              updateActivePath?.(visibleRows[last].file.path);
+              rowVirtualizer.scrollToIndex(last);
             }
-            case "End": {
-              e.preventDefault();
-              if (visibleRows.length) {
-                const last = visibleRows.length - 1;
-                updateActivePath?.(visibleRows[last].file.path);
-                rowVirtualizer.scrollToIndex(last);
-              }
-              break;
-            }
-            case "ArrowRight": {
-              if (!current) break;
-              e.preventDefault();
-              if (isDir) {
-                const expanded = useFileTreeStore.getState().isExpanded(current.path);
-                if (!expanded) {
-                  void toggleDirectory(current.path);
-                } else {
-                  const child = visibleRows[curIndex + 1];
-                  if (child && child.depth === visibleRows[curIndex].depth + 1) {
-                    updateActivePath?.(child.file.path);
-                    rowVirtualizer.scrollToIndex(curIndex + 1);
-                  }
-                }
-              }
-              break;
-            }
-            case "ArrowLeft": {
-              if (!current) break;
-              e.preventDefault();
-              if (isDir && useFileTreeStore.getState().isExpanded(current.path)) {
+            break;
+          }
+          case "ArrowRight": {
+            if (!current) break;
+            e.preventDefault();
+            if (isDir) {
+              const expanded = useFileTreeStore.getState().isExpanded(current.path);
+              if (!expanded) {
                 void toggleDirectory(current.path);
               } else {
-                const sep = current.path.includes("\\") ? "\\" : "/";
-                const parentPath = current.path.split(sep).slice(0, -1).join(sep);
-                const parentIdx = visibleRows.findIndex((r) => r.file.path === parentPath);
-                if (parentIdx >= 0) {
-                  updateActivePath?.(parentPath);
-                  rowVirtualizer.scrollToIndex(parentIdx);
+                const child = visibleRows[curIndex + 1];
+                if (child && child.depth === visibleRows[curIndex].depth + 1) {
+                  updateActivePath?.(child.file.path);
+                  rowVirtualizer.scrollToIndex(curIndex + 1);
                 }
               }
-              break;
             }
-            case "Enter": {
-              if (!current) break;
-              e.preventDefault();
-              if (isDir) {
-                void toggleDirectory(current.path);
-              } else {
-                void Promise.resolve(onFileOpen?.(current.path, false));
-              }
-              break;
-            }
-            case "F2": {
-              if (!current) break;
-              e.preventDefault();
-              onRenamePath?.(current.path);
-              break;
-            }
-            case "Delete":
-            case "Backspace": {
-              if (!current || !onDeletePath) break;
-              e.preventDefault();
-              setDeleteCandidate({ path: current.path, isDir: !!isDir });
-              break;
-            }
+            break;
           }
-        }}
-        onDragOver={(e) => {
-          e.preventDefault();
-          e.dataTransfer.dropEffect = dragState.draggedItem ? "move" : "copy";
-        }}
-        onDrop={handleRootDrop}
-        onClick={handleContainerClick}
-        onDoubleClick={handleContainerDoubleClick}
-        onContextMenu={handleContainerContextMenu}
-        onMouseDown={handleContainerMouseDown}
-        onMouseMove={handleContainerMouseMove}
-        onMouseUp={handleContainerMouseUp}
-        onMouseLeave={handleContainerMouseLeave}
-      >
-        {!rootFolderPath ? (
-          <div className="file-tree-empty-state absolute inset-0 flex items-center justify-center">
-            <div className="ui-font flex flex-col items-center text-center">
-              <span className="text-[0.78em] text-text-lighter">No folder open</span>
-              <Button
-                onClick={handleOpenFolder}
-                variant="ghost"
-                size="sm"
-                className="mt-1.5 text-[0.78em] text-accent hover:text-accent/80"
-              >
-                Open Folder
-              </Button>
-            </div>
+          case "ArrowLeft": {
+            if (!current) break;
+            e.preventDefault();
+            if (isDir && useFileTreeStore.getState().isExpanded(current.path)) {
+              void toggleDirectory(current.path);
+            } else {
+              const sep = current.path.includes("\\") ? "\\" : "/";
+              const parentPath = current.path.split(sep).slice(0, -1).join(sep);
+              const parentIdx = visibleRows.findIndex((r) => r.file.path === parentPath);
+              if (parentIdx >= 0) {
+                updateActivePath?.(parentPath);
+                rowVirtualizer.scrollToIndex(parentIdx);
+              }
+            }
+            break;
+          }
+          case "Enter": {
+            if (!current) break;
+            e.preventDefault();
+            if (isDir) {
+              void toggleDirectory(current.path);
+            } else {
+              void Promise.resolve(onFileOpen?.(current.path, false));
+            }
+            break;
+          }
+          case "F2": {
+            if (!current) break;
+            e.preventDefault();
+            onRenamePath?.(current.path);
+            break;
+          }
+        }
+      }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = dragState.draggedItem ? "move" : "copy";
+      }}
+      onDrop={handleRootDrop}
+      onClick={handleContainerClick}
+      onDoubleClick={handleContainerDoubleClick}
+      onContextMenu={handleContainerContextMenu}
+      onMouseDown={handleContainerMouseDown}
+      onMouseMove={handleContainerMouseMove}
+      onMouseUp={handleContainerMouseUp}
+      onMouseLeave={handleContainerMouseLeave}
+    >
+      {!rootFolderPath ? (
+        <div className="file-tree-empty-state absolute inset-0 flex items-center justify-center">
+          <div className="ui-font flex flex-col items-center text-center">
+            <span className="text-[0.78em] text-text-lighter">No folder open</span>
+            <Button
+              onClick={handleOpenFolder}
+              variant="ghost"
+              size="sm"
+              className="mt-1.5 text-[0.78em] text-accent hover:text-accent/80"
+            >
+              Open Folder
+            </Button>
           </div>
-        ) : filteredFiles.length === 0 ? (
-          <div className="file-tree-empty-state absolute inset-0 flex items-center justify-center">
-            <div className="ui-font flex flex-col items-center text-center">
-              <span className="text-[0.78em] text-text-lighter">Folder is empty</span>
-            </div>
+        </div>
+      ) : filteredFiles.length === 0 ? (
+        <div className="file-tree-empty-state absolute inset-0 flex items-center justify-center">
+          <div className="ui-font flex flex-col items-center text-center">
+            <span className="text-[0.78em] text-text-lighter">Folder is empty</span>
           </div>
-        ) : treeRows.length === 0 ? (
-          <div className="file-tree-empty-state absolute inset-0 flex items-center justify-center">
-            <div className="ui-font flex flex-col items-center text-center">
-              <span className="text-[0.78em] text-text-lighter">No matching files</span>
-            </div>
-          </div>
-        ) : (
-          <div className="w-max min-w-full">
-            {(() => {
-              const items = rowVirtualizer.getVirtualItems();
-              const paddingTop = items.length ? items[0].start : 0;
-              const paddingBottom = items.length
-                ? rowVirtualizer.getTotalSize() - items[items.length - 1].end
-                : 0;
-              const stickyAncestor = items.length
-                ? getStickyAncestorRow(visibleRows, items[0].index)
-                : null;
-              const stickyAncestorLabel = stickyAncestor?.displayName ?? stickyAncestor?.file.name;
-              const stickyAncestorLabelParts = stickyAncestorLabel
-                ? getHighlightedFileTreeNameParts(stickyAncestorLabel, searchQuery)
-                : [];
-              const stickyAncestorGitStatus = stickyAncestor
-                ? getGitStatusDecoration(stickyAncestor.file)
-                : null;
-              const stickyAncestorPaddingLeft = stickyAncestor
-                ? 14 + stickyAncestor.depth * settings.fileTreeIndentSize
-                : 14;
-              const densityConfig = FILE_TREE_DENSITY_CONFIG[fileTreeDensity];
-              return (
-                <>
-                  {stickyAncestor ? (
-                    <div className="file-tree-sticky-ancestor">
-                      <button
-                        type="button"
-                        data-file-path={stickyAncestor.file.path}
-                        data-is-dir={stickyAncestor.file.isDir}
-                        data-path={stickyAncestor.file.path}
-                        data-depth={stickyAncestor.depth}
-                        title={stickyAncestor.file.path}
-                        className={cn(
-                          "file-tree-row ui-font flex w-full min-w-max cursor-pointer select-none items-center whitespace-nowrap rounded-md border-none bg-secondary-bg/95 text-left text-text text-xs shadow-sm outline-none backdrop-blur transition-colors duration-150 hover:bg-hover focus:outline-none",
-                          densityConfig.rowClassName,
-                        )}
-                        style={{ paddingLeft: `${stickyAncestorPaddingLeft}px` }}
-                      >
-                        <FileExplorerIcon
-                          fileName={stickyAncestor.file.name}
-                          isDir={stickyAncestor.file.isDir}
-                          isExpanded={stickyAncestor.isExpanded}
-                          isSymlink={stickyAncestor.file.isSymlink}
-                          className="relative z-1 shrink-0 text-text-lighter"
-                        />
-                        <span
-                          className={cn(
-                            "relative z-1 select-none whitespace-nowrap",
-                            stickyAncestorGitStatus?.colorClassName,
-                          )}
-                        >
-                          {stickyAncestorLabelParts.map((part, index) =>
-                            part.isMatch ? (
-                              <mark
-                                key={`${part.text}-${index}`}
-                                className="file-tree-search-match"
-                              >
-                                {part.text}
-                              </mark>
-                            ) : (
-                              <span key={`${part.text}-${index}`}>{part.text}</span>
-                            ),
-                          )}
-                        </span>
-                        {stickyAncestorGitStatus ? (
-                          <span
-                            aria-label={`Git status: ${stickyAncestorGitStatus.label}`}
-                            className={cn(
-                              "file-tree-git-indicator ml-auto",
-                              stickyAncestorGitStatus.colorClassName,
-                            )}
-                            title={stickyAncestorGitStatus.label}
-                          />
-                        ) : null}
-                      </button>
-                    </div>
-                  ) : null}
-                  <div style={{ height: paddingTop }} />
-                  {items.map((vi) => {
-                    const row = visibleRows[vi.index];
-                    const previousRow = visibleRows[vi.index - 1];
-                    const nextRow = visibleRows[vi.index + 1];
-                    const guideTargets: Array<FileTreeGuideTarget | null> = getGuideAncestorRows(
-                      visibleRows,
-                      vi.index,
-                    ).map((ancestor) =>
-                      ancestor
-                        ? {
-                            path: ancestor.file.path,
-                            name: ancestor.displayName ?? ancestor.file.name,
-                            isDir: ancestor.file.isDir,
-                            isActive: activePath
-                              ? activePath === ancestor.file.path ||
-                                activePath.startsWith(`${ancestor.file.path}/`) ||
-                                activePath.startsWith(`${ancestor.file.path}\\`)
-                              : false,
-                          }
-                        : null,
-                    );
-                    return (
-                      <FileExplorerTreeItem
-                        key={row.file.path}
-                        file={row.file}
-                        depth={row.depth}
-                        displayName={row.displayName}
-                        guideTargets={guideTargets}
-                        previousDepth={previousRow?.depth ?? 0}
-                        nextDepth={nextRow?.depth ?? 0}
-                        indentSize={settings.fileTreeIndentSize}
-                        density={fileTreeDensity}
-                        searchQuery={searchQuery}
-                        isExpanded={row.isExpanded}
-                        isActive={activePath === row.file.path}
-                        dragOverPath={dragState.dragOverPath}
-                        isDragging={dragState.isDragging}
-                        editingValue={editingValue}
-                        onEditingValueChange={setEditingValue}
-                        onKeyDown={handleKeyDown}
-                        onBlur={handleBlur}
-                        onCreateFileInDirectory={handleCreateFileInDirectory}
-                        onCreateFolderInDirectory={
-                          onCreateNewFolderInDirectory ? handleCreateFolderInDirectory : undefined
-                        }
-                        onRefreshDirectory={onRefreshDirectory}
-                        onRenamePath={onRenamePath}
-                        onDeletePath={onDeletePath ? handleRequestDeletePath : undefined}
-                        getGitStatusDecoration={getGitStatusDecoration}
-                      />
-                    );
-                  })}
-                  <div style={{ height: paddingBottom }} />
-                </>
-              );
-            })()}
-          </div>
-        )}
-
-        {contextMenuElement}
-        {deleteCandidate && (
-          <Dialog
-            title={deleteCandidate.isDir ? "Delete Folder" : "Delete File"}
-            icon={AlertTriangle}
-            onClose={() => {
-              if (!isDeletingPath) setDeleteCandidate(null);
-            }}
-            size="sm"
-            footer={
+        </div>
+      ) : (
+        <div className="w-max min-w-full">
+          {(() => {
+            const items = rowVirtualizer.getVirtualItems();
+            const paddingTop = items.length ? items[0].start : 0;
+            const paddingBottom = items.length
+              ? rowVirtualizer.getTotalSize() - items[items.length - 1].end
+              : 0;
+            const stickyAncestor = items.length
+              ? getStickyAncestorRow(visibleRows, items[0].index)
+              : null;
+            const stickyAncestorLabel = stickyAncestor?.displayName ?? stickyAncestor?.file.name;
+            const stickyAncestorGitStatus = stickyAncestor
+              ? getGitStatusDecoration(stickyAncestor.file)
+              : null;
+            const stickyAncestorPaddingLeft = stickyAncestor
+              ? 14 + stickyAncestor.depth * settings.fileTreeIndentSize
+              : 14;
+            const densityConfig = FILE_TREE_DENSITY_CONFIG[fileTreeDensity];
+            return (
               <>
-                <Button
-                  onClick={() => setDeleteCandidate(null)}
-                  disabled={isDeletingPath}
-                  variant="outline"
-                  size="sm"
-                  className="disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={() => void handleDeleteConfirm()}
-                  disabled={isDeletingPath}
-                  variant="danger"
-                  size="sm"
-                  className="disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isDeletingPath ? "Deleting..." : "Delete"}
-                </Button>
+                {stickyAncestor ? (
+                  <div className="file-tree-sticky-ancestor">
+                    <button
+                      type="button"
+                      data-file-path={stickyAncestor.file.path}
+                      data-is-dir={stickyAncestor.file.isDir}
+                      data-path={stickyAncestor.file.path}
+                      data-depth={stickyAncestor.depth}
+                      title={stickyAncestor.file.path}
+                      className={cn(
+                        "file-tree-row ui-font flex w-full min-w-max cursor-pointer select-none items-center whitespace-nowrap rounded-md border-none bg-secondary-bg/95 text-left text-text text-xs shadow-sm outline-none backdrop-blur transition-colors duration-150 hover:bg-hover focus:outline-none",
+                        densityConfig.rowClassName,
+                      )}
+                      style={{ paddingLeft: `${stickyAncestorPaddingLeft}px` }}
+                    >
+                      <FileExplorerIcon
+                        fileName={stickyAncestor.file.name}
+                        isDir={stickyAncestor.file.isDir}
+                        isExpanded={stickyAncestor.isExpanded}
+                        isSymlink={stickyAncestor.file.isSymlink}
+                        className="relative z-1 shrink-0 text-text-lighter"
+                      />
+                      <span
+                        className={cn(
+                          "relative z-1 select-none whitespace-nowrap",
+                          stickyAncestorGitStatus?.colorClassName,
+                        )}
+                      >
+                        {stickyAncestorLabel}
+                      </span>
+                      {stickyAncestorGitStatus ? (
+                        <span
+                          aria-label={`Git status: ${stickyAncestorGitStatus.label}`}
+                          className={cn(
+                            "file-tree-git-indicator ml-1.5",
+                            stickyAncestorGitStatus.colorClassName,
+                          )}
+                          title={stickyAncestorGitStatus.label}
+                        />
+                      ) : null}
+                    </button>
+                  </div>
+                ) : null}
+                <div style={{ height: paddingTop }} />
+                {items.map((vi) => {
+                  const row = visibleRows[vi.index];
+                  const previousRow = visibleRows[vi.index - 1];
+                  const nextRow = visibleRows[vi.index + 1];
+                  const guideTargets: Array<FileTreeGuideTarget | null> = getGuideAncestorRows(
+                    visibleRows,
+                    vi.index,
+                  ).map((ancestor) =>
+                    ancestor
+                      ? {
+                          path: ancestor.file.path,
+                          name: ancestor.displayName ?? ancestor.file.name,
+                          isDir: ancestor.file.isDir,
+                          isActive: activePath
+                            ? activePath === ancestor.file.path ||
+                              activePath.startsWith(`${ancestor.file.path}/`) ||
+                              activePath.startsWith(`${ancestor.file.path}\\`)
+                            : false,
+                        }
+                      : null,
+                  );
+                  return (
+                    <FileExplorerTreeItem
+                      key={row.file.path}
+                      file={row.file}
+                      depth={row.depth}
+                      displayName={row.displayName}
+                      guideTargets={guideTargets}
+                      previousDepth={previousRow?.depth ?? 0}
+                      nextDepth={nextRow?.depth ?? 0}
+                      indentSize={settings.fileTreeIndentSize}
+                      density={fileTreeDensity}
+                      isExpanded={row.isExpanded}
+                      isActive={activePath === row.file.path}
+                      dragOverPath={dragState.dragOverPath}
+                      isDragging={dragState.isDragging}
+                      editingValue={editingValue}
+                      onEditingValueChange={setEditingValue}
+                      onKeyDown={handleKeyDown}
+                      onBlur={handleBlur}
+                      getGitStatusDecoration={getGitStatusDecoration}
+                    />
+                  );
+                })}
+                <div style={{ height: paddingBottom }} />
               </>
-            }
-          >
-            <p className="text-text text-xs">
-              {deleteCandidate.isDir
-                ? `Are you sure you want to delete the folder "${getPathBaseName(deleteCandidate.path)}" and all its contents? This action cannot be undone.`
-                : `Are you sure you want to delete the file "${getPathBaseName(deleteCandidate.path)}"? This action cannot be undone.`}
-            </p>
-          </Dialog>
-        )}
-      </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {contextMenuElement}
+      {deleteCandidate && (
+        <Dialog
+          title={deleteCandidate.isDir ? "Delete Folder" : "Delete File"}
+          icon={AlertTriangle}
+          onClose={() => {
+            if (!isDeletingPath) setDeleteCandidate(null);
+          }}
+          size="sm"
+          footer={
+            <>
+              <Button
+                onClick={() => setDeleteCandidate(null)}
+                disabled={isDeletingPath}
+                variant="outline"
+                size="sm"
+                className="disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => void handleDeleteConfirm()}
+                disabled={isDeletingPath}
+                variant="danger"
+                size="sm"
+                className="disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isDeletingPath ? "Deleting..." : "Delete"}
+              </Button>
+            </>
+          }
+        >
+          <p className="text-text text-xs">
+            {deleteCandidate.isDir
+              ? `Are you sure you want to delete the folder "${getPathBaseName(deleteCandidate.path)}" and all its contents? This action cannot be undone.`
+              : `Are you sure you want to delete the file "${getPathBaseName(deleteCandidate.path)}"? This action cannot be undone.`}
+          </p>
+        </Dialog>
+      )}
     </div>
   );
 }

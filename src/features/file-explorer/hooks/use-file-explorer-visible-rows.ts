@@ -14,14 +14,12 @@ interface UseFileExplorerVisibleRowsOptions {
   files: FileEntry[];
   activePath?: string;
   containerRef: RefObject<HTMLDivElement | null>;
-  forcedExpandedPaths?: ReadonlySet<string>;
 }
 
 export function useFileExplorerVisibleRows({
   files,
   activePath,
   containerRef,
-  forcedExpandedPaths,
 }: UseFileExplorerVisibleRowsOptions) {
   const expandedPaths = useFileTreeStore((state) => state.expandedPaths);
   const compactFolders = useSettingsStore((state) => state.settings.compactFoldersInFileTree);
@@ -29,10 +27,8 @@ export function useFileExplorerVisibleRows({
   const rowHeight = FILE_TREE_DENSITY_CONFIG[density].rowHeight;
 
   const visibleRows = useMemo(() => {
-    return buildVisibleFileTreeRows(files, forcedExpandedPaths ?? expandedPaths, {
-      compactFolders,
-    });
-  }, [compactFolders, expandedPaths, files, forcedExpandedPaths]);
+    return buildVisibleFileTreeRows(files, expandedPaths, { compactFolders });
+  }, [compactFolders, expandedPaths, files]);
 
   const rowVirtualizer = useVirtualizer({
     count: visibleRows.length,
