@@ -1,8 +1,45 @@
 /* Hide native scrollbar completely */
+.file-tree-shell,
 .file-tree-container,
 .file-tree-container * {
   scrollbar-width: none !important;
   -ms-overflow-style: none !important;
+}
+
+.file-tree-shell {
+  display: flex;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+  background:
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--color-secondary-bg) 72%, transparent),
+      transparent 64px
+    ),
+    var(--color-primary-bg);
+}
+
+.file-tree-toolbar {
+  display: flex;
+  min-height: 40px;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 72%, transparent);
+  padding: 7px 8px 6px;
+}
+
+.file-tree-toolbar-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 52%, transparent);
+  border-radius: 7px;
+  background-color: color-mix(in srgb, var(--color-secondary-bg) 58%, transparent);
+  padding: 2px;
 }
 
 .file-tree-container::-webkit-scrollbar,
