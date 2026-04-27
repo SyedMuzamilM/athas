@@ -73,6 +73,17 @@
   isolation: isolate;
 }
 
+.file-tree-git-indicator {
+  position: relative;
+  z-index: 1;
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: 9999px;
+  background-color: currentColor;
+  opacity: 0.9;
+}
+
 .file-tree-guides {
   pointer-events: none;
   position: absolute;

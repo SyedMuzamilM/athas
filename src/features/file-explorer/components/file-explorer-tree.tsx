@@ -9,13 +9,18 @@ import {
   getGuideAncestorRows,
   getStickyAncestorRow,
 } from "@/features/file-explorer/lib/visible-file-tree-rows";
+import {
+  createFileTreeGitStatusLookup,
+  getFileTreeEntryGitStatusDecoration,
+  type FileTreeGitStatusDecoration,
+  type FileTreeGitStatusLookup,
+} from "@/features/file-explorer/lib/file-tree-git-status";
 import { fileOpenBenchmark } from "@/features/editor/utils/file-open-benchmark";
 import { findFileInTree } from "@/features/file-system/controllers/file-tree-utils";
 import { readDirectory, readFile } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import type { FileEntry } from "@/features/file-system/types/app";
 import { useGitStore } from "@/features/git/stores/git-store";
-import type { GitFile } from "@/features/git/types/git-types";
 import { useSettingsStore } from "@/features/settings/store";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
@@ -181,72 +186,26 @@ function FileExplorerTreeComponent({
     [gitIgnore, rootFolderPath],
   );
 
-  const gitStatusClassLookup = useMemo(() => {
+  const gitStatusDecorationLookup = useMemo(() => {
     const startedAt = performance.now();
     if (!gitStatus || !settings.showGitStatusInFileTree)
-      return null as null | {
-        files: Map<string, string>;
-        directories: Map<string, string>;
-      };
+      return null as FileTreeGitStatusLookup | null;
 
-    const mapStatus = (status: GitFile): string => {
-      switch (status.status) {
-        case "modified":
-          return status.staged ? "text-git-modified-staged" : "text-git-modified";
-        case "added":
-          return "text-git-added";
-        case "deleted":
-          return "text-git-deleted";
-        case "untracked":
-          return "text-git-untracked";
-        case "renamed":
-          return "text-git-renamed";
-        default:
-          return "";
-      }
-    };
+    const lookup = createFileTreeGitStatusLookup(gitStatus);
 
-    const files = new Map<string, string>();
-    const directories = new Map<string, string>();
-
-    for (const gitFile of gitStatus.files) {
-      const statusClass = mapStatus(gitFile);
-      if (!statusClass) continue;
-
-      files.set(gitFile.path, statusClass);
-
-      const segments = gitFile.path.split("/");
-      let currentPath = "";
-      for (let index = 0; index < segments.length - 1; index++) {
-        currentPath = currentPath ? `${currentPath}/${segments[index]}` : segments[index];
-        if (!directories.has(currentPath)) {
-          directories.set(currentPath, statusClass);
-        }
-      }
-    }
-
-    frontendTrace("info", "file-tree", "gitStatusClassLookup:computed", {
+    frontendTrace("info", "file-tree", "gitStatusDecorationLookup:computed", {
       gitFiles: gitStatus.files.length,
-      filesMapSize: files.size,
-      directoriesMapSize: directories.size,
+      filesMapSize: lookup.files.size,
+      directoriesMapSize: lookup.directories.size,
       durationMs: Math.round((performance.now() - startedAt) * 100) / 100,
     });
-    return { files, directories };
+    return lookup;
   }, [gitStatus, settings.showGitStatusInFileTree]);
 
-  const getGitStatusClass = useCallback(
-    (file: FileEntry): string => {
-      if (!rootFolderPath || !gitStatusClassLookup) return "";
-      const rel = getRelativePath(file.path, rootFolderPath);
-      if (!rel) return "";
-      const fileStatus = gitStatusClassLookup.files.get(rel);
-      if (fileStatus) return fileStatus;
-      if (file.isDir) {
-        return gitStatusClassLookup.directories.get(rel) || "";
-      }
-      return "";
-    },
-    [gitStatusClassLookup, rootFolderPath],
+  const getGitStatusDecoration = useCallback(
+    (file: FileEntry): FileTreeGitStatusDecoration | null =>
+      getFileTreeEntryGitStatusDecoration(file, rootFolderPath, gitStatusDecorationLookup),
+    [gitStatusDecorationLookup, rootFolderPath],
   );
 
   const filteredFiles = useMemo(() => {
@@ -979,7 +938,7 @@ function FileExplorerTreeComponent({
                       onEditingValueChange={setEditingValue}
                       onKeyDown={handleKeyDown}
                       onBlur={handleBlur}
-                      getGitStatusClass={getGitStatusClass}
+                      getGitStatusDecoration={getGitStatusDecoration}
                     />
                   );
                 })}

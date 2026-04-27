@@ -4,6 +4,7 @@ import {
   FILE_TREE_DENSITY_CONFIG,
   type FileTreeDensity,
 } from "@/features/file-explorer/lib/file-tree-density";
+import type { FileTreeGitStatusDecoration } from "@/features/file-explorer/lib/file-tree-git-status";
 import { useFileClipboardStore } from "@/features/file-explorer/stores/file-explorer-clipboard-store";
 import type { FileEntry } from "@/features/file-system/types/app";
 import Input from "@/ui/input";
@@ -54,7 +55,7 @@ interface FileExplorerTreeItemProps {
   onEditingValueChange: (value: string) => void;
   onKeyDown: (e: React.KeyboardEvent, file: FileEntry) => void;
   onBlur: (file: FileEntry) => void;
-  getGitStatusClass: (file: FileEntry) => string;
+  getGitStatusDecoration: (file: FileEntry) => FileTreeGitStatusDecoration | null;
 }
 
 function FileExplorerTreeItemComponent({
@@ -74,7 +75,7 @@ function FileExplorerTreeItemComponent({
   onEditingValueChange,
   onKeyDown,
   onBlur,
-  getGitStatusClass,
+  getGitStatusDecoration,
 }: FileExplorerTreeItemProps) {
   const isCut = useFileClipboardStore(
     (s) =>
@@ -82,6 +83,7 @@ function FileExplorerTreeItemComponent({
   );
   const paddingLeft = 14 + depth * indentSize;
   const densityConfig = FILE_TREE_DENSITY_CONFIG[density];
+  const gitStatusDecoration = getGitStatusDecoration(file);
   const guideLevels = Array.from({ length: depth }, (_, level) => level);
   const renderTreeGuides = () => (
     <div className="file-tree-guides">
@@ -199,9 +201,21 @@ function FileExplorerTreeItemComponent({
           isSymlink={file.isSymlink}
           className="relative z-1 shrink-0 text-text-lighter"
         />
-        <span className={cn("relative z-1 select-none whitespace-nowrap", getGitStatusClass(file))}>
+        <span
+          className={cn(
+            "relative z-1 select-none whitespace-nowrap",
+            gitStatusDecoration?.colorClassName,
+          )}
+        >
           {displayName ?? file.name}
         </span>
+        {gitStatusDecoration ? (
+          <span
+            aria-label={`Git status: ${gitStatusDecoration.label}`}
+            className={cn("file-tree-git-indicator ml-auto", gitStatusDecoration.colorClassName)}
+            title={gitStatusDecoration.label}
+          />
+        ) : null}
       </button>
     </div>
   );
@@ -226,5 +240,5 @@ export const FileExplorerTreeItem = memo(
     prev.onEditingValueChange === next.onEditingValueChange &&
     prev.onKeyDown === next.onKeyDown &&
     prev.onBlur === next.onBlur &&
-    prev.getGitStatusClass === next.getGitStatusClass,
+    prev.getGitStatusDecoration === next.getGitStatusDecoration,
 );
