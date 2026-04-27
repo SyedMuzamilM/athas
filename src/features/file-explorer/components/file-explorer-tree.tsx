@@ -1,5 +1,6 @@
 import ignore from "ignore";
 import { Warning as AlertTriangle } from "@phosphor-icons/react";
+import { motion } from "framer-motion";
 import type React from "react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useEventListener } from "usehooks-ts";
@@ -75,6 +76,8 @@ interface FileExplorerTreeProps {
   onUploadFile?: (directoryPath: string) => void;
   onFileMove?: (oldPath: string, newPath: string) => void;
 }
+
+const FILE_TREE_CONTAINER_INSET = 4;
 
 function FileExplorerTreeComponent({
   files,
@@ -891,6 +894,7 @@ function FileExplorerTreeComponent({
               : [];
             const densityConfig = FILE_TREE_DENSITY_CONFIG[fileTreeDensity];
             const stickyAncestorsStyle = {
+              "--file-tree-container-inset": `${FILE_TREE_CONTAINER_INSET}px`,
               "--file-tree-sticky-row-height": `${densityConfig.rowHeight}px`,
               "--file-tree-sticky-stack-height": `${
                 stickyAncestors.length * densityConfig.rowHeight
@@ -900,13 +904,21 @@ function FileExplorerTreeComponent({
               <>
                 {stickyAncestors.length > 0 ? (
                   <div className="file-tree-sticky-ancestors" style={stickyAncestorsStyle}>
-                    <div className="file-tree-sticky-ancestor-stack">
+                    <motion.div
+                      key={stickyAncestors.map((ancestor) => ancestor.file.path).join("\n")}
+                      className="file-tree-sticky-ancestor-stack"
+                      initial={{ opacity: 0.96, y: -2 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.12, ease: "easeOut" }}
+                    >
                       {stickyAncestors.map((stickyAncestor) => {
                         const stickyAncestorLabel =
                           stickyAncestor.displayName ?? stickyAncestor.file.name;
                         const stickyAncestorGitStatus = getGitStatusDecoration(stickyAncestor.file);
                         const stickyAncestorPaddingLeft =
-                          14 + stickyAncestor.depth * settings.fileTreeIndentSize;
+                          14 +
+                          FILE_TREE_CONTAINER_INSET +
+                          stickyAncestor.depth * settings.fileTreeIndentSize;
 
                         return (
                           <button
@@ -938,20 +950,10 @@ function FileExplorerTreeComponent({
                             >
                               {stickyAncestorLabel}
                             </span>
-                            {stickyAncestorGitStatus ? (
-                              <span
-                                aria-label={`Git status: ${stickyAncestorGitStatus.label}`}
-                                className={cn(
-                                  "file-tree-git-indicator ml-1.5",
-                                  stickyAncestorGitStatus.colorClassName,
-                                )}
-                                title={stickyAncestorGitStatus.label}
-                              />
-                            ) : null}
                           </button>
                         );
                       })}
-                    </div>
+                    </motion.div>
                   </div>
                 ) : null}
                 <div style={{ height: paddingTop }} />

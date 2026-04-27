@@ -209,13 +209,6 @@ function FileExplorerTreeItemComponent({
         >
           {displayName ?? file.name}
         </span>
-        {gitStatusDecoration ? (
-          <span
-            aria-label={`Git status: ${gitStatusDecoration.label}`}
-            className={cn("file-tree-git-indicator ml-1.5", gitStatusDecoration.colorClassName)}
-            title={gitStatusDecoration.label}
-          />
-        ) : null}
       </button>
     </div>
   );

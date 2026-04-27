@@ -73,17 +73,6 @@
   isolation: isolate;
 }
 
-.file-tree-git-indicator {
-  position: relative;
-  z-index: 1;
-  width: 6px;
-  height: 6px;
-  flex: 0 0 auto;
-  border-radius: 9999px;
-  background-color: currentColor;
-  opacity: 0.9;
-}
-
 .file-tree-guides {
   pointer-events: none;
   position: absolute;
@@ -121,7 +110,7 @@
 
 .file-tree-sticky-ancestors {
   position: sticky;
-  top: 0;
+  top: calc(0px - var(--file-tree-container-inset, 4px));
   z-index: 12;
   height: 0;
   overflow: visible;
@@ -130,9 +119,12 @@
 
 .file-tree-sticky-ancestor-stack {
   position: relative;
-  width: 100%;
-  min-width: 100%;
+  width: calc(100% + var(--file-tree-container-inset, 4px) + var(--file-tree-container-inset, 4px));
+  min-width: calc(
+    100% + var(--file-tree-container-inset, 4px) + var(--file-tree-container-inset, 4px)
+  );
   height: var(--file-tree-sticky-stack-height, 24px);
+  margin-left: calc(0px - var(--file-tree-container-inset, 4px));
   overflow: hidden;
   background-color: var(--color-primary-bg);
   pointer-events: auto;
