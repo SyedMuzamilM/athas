@@ -82,4 +82,26 @@ describe("buildVisibleFileTreeRows", () => {
     expect(rows.map((row) => row.file.path)).toEqual(["/root", "/root/src", "/root/src/features"]);
     expect(rows.map((row) => row.depth)).toEqual([0, 1, 2]);
   });
+
+  test("compacts expanded single-child folder chains", () => {
+    const rows = buildVisibleFileTreeRows(
+      tree,
+      new Set(["/root", "/root/src", "/root/src/features"]),
+      { compactFolders: true },
+    );
+
+    expect(rows.map((row) => row.file.path)).toEqual(["/root/src/features/file-explorer"]);
+    expect(rows.map((row) => row.displayName)).toEqual(["root/src/features/file-explorer"]);
+    expect(rows.map((row) => row.depth)).toEqual([0]);
+  });
+
+  test("stops compacting at the collapsed folder", () => {
+    const rows = buildVisibleFileTreeRows(tree, new Set(["/root", "/root/src"]), {
+      compactFolders: true,
+    });
+
+    expect(rows.map((row) => row.file.path)).toEqual(["/root/src/features"]);
+    expect(rows.map((row) => row.displayName)).toEqual(["root/src/features"]);
+    expect(rows.map((row) => row.isExpanded)).toEqual([false]);
+  });
 });

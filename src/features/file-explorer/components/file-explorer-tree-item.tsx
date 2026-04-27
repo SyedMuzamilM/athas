@@ -9,6 +9,7 @@ import { FileExplorerIcon } from "./file-explorer-icon";
 interface FileExplorerTreeItemProps {
   file: FileEntry;
   depth: number;
+  displayName?: string;
   previousDepth: number;
   nextDepth: number;
   indentSize: number;
@@ -26,6 +27,7 @@ interface FileExplorerTreeItemProps {
 function FileExplorerTreeItemComponent({
   file,
   depth,
+  displayName,
   previousDepth,
   nextDepth,
   indentSize,
@@ -152,7 +154,7 @@ function FileExplorerTreeItemComponent({
           className="relative z-1 shrink-0 text-text-lighter"
         />
         <span className={cn("relative z-1 select-none whitespace-nowrap", getGitStatusClass(file))}>
-          {file.name}
+          {displayName ?? file.name}
         </span>
       </button>
     </div>
@@ -164,6 +166,7 @@ export const FileExplorerTreeItem = memo(
   (prev, next) =>
     prev.file === next.file &&
     prev.depth === next.depth &&
+    prev.displayName === next.displayName &&
     prev.previousDepth === next.previousDepth &&
     prev.nextDepth === next.nextDepth &&
     prev.indentSize === next.indentSize &&

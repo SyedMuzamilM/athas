@@ -4,21 +4,63 @@ export interface VisibleFileTreeRow {
   file: FileEntry;
   depth: number;
   isExpanded: boolean;
+  displayName?: string;
+}
+
+export interface BuildVisibleFileTreeRowsOptions {
+  compactFolders?: boolean;
+}
+
+function getCompactFolderChild(item: FileEntry): FileEntry | null {
+  if (!item.isDir || item.isEditing || item.isRenaming || item.isNewItem || !item.children) {
+    return null;
+  }
+
+  if (item.children.length !== 1) {
+    return null;
+  }
+
+  const child = item.children[0];
+  if (!child.isDir || child.isEditing || child.isRenaming || child.isNewItem) {
+    return null;
+  }
+
+  return child;
 }
 
 export function buildVisibleFileTreeRows(
   files: FileEntry[],
   expandedPaths: ReadonlySet<string>,
+  options: BuildVisibleFileTreeRowsOptions = {},
 ): VisibleFileTreeRow[] {
   const rows: VisibleFileTreeRow[] = [];
+  const compactFolders = options.compactFolders === true;
 
   const walk = (items: FileEntry[], depth: number) => {
     for (const item of items) {
-      const isExpanded = item.isDir && expandedPaths.has(item.path);
-      rows.push({ file: item, depth, isExpanded });
+      let rowFile = item;
+      const displayNameParts = [item.name];
 
-      if (item.isDir && isExpanded && item.children) {
-        walk(item.children, depth + 1);
+      if (compactFolders) {
+        while (expandedPaths.has(rowFile.path)) {
+          const child = getCompactFolderChild(rowFile);
+          if (!child) break;
+
+          rowFile = child;
+          displayNameParts.push(child.name);
+        }
+      }
+
+      const isExpanded = rowFile.isDir && expandedPaths.has(rowFile.path);
+      rows.push({
+        file: rowFile,
+        depth,
+        isExpanded,
+        displayName: displayNameParts.length > 1 ? displayNameParts.join("/") : undefined,
+      });
+
+      if (rowFile.isDir && isExpanded && rowFile.children) {
+        walk(rowFile.children, depth + 1);
       }
     }
   };

@@ -913,6 +913,7 @@ function FileExplorerTreeComponent({
                       key={row.file.path}
                       file={row.file}
                       depth={row.depth}
+                      displayName={row.displayName}
                       previousDepth={previousRow?.depth ?? 0}
                       nextDepth={nextRow?.depth ?? 0}
                       indentSize={settings.fileTreeIndentSize}

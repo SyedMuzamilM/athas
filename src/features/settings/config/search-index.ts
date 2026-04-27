@@ -160,6 +160,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["hidden", "dotfiles", "dotfile", "files", "folders", "directories", "visibility"],
   },
   {
+    id: "file-tree-compact-folders",
+    tab: "file-explorer",
+    section: "Display",
+    label: "Compact Folders",
+    description: "Collapse single-child folder chains in the file tree",
+    keywords: ["compact", "folders", "directories", "single child", "collapse", "nested"],
+  },
+  {
     id: "file-tree-show-gitignored-files",
     tab: "file-explorer",
     section: "Display",

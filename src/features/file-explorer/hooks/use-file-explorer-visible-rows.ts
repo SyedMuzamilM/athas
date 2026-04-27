@@ -7,6 +7,7 @@ import {
 } from "@/features/file-explorer/lib/visible-file-tree-rows";
 import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree-store";
 import type { FileEntry } from "@/features/file-system/types/app";
+import { useSettingsStore } from "@/features/settings/store";
 
 interface UseFileExplorerVisibleRowsOptions {
   files: FileEntry[];
@@ -20,10 +21,11 @@ export function useFileExplorerVisibleRows({
   containerRef,
 }: UseFileExplorerVisibleRowsOptions) {
   const expandedPaths = useFileTreeStore((state) => state.expandedPaths);
+  const compactFolders = useSettingsStore((state) => state.settings.compactFoldersInFileTree);
 
   const visibleRows = useMemo(() => {
-    return buildVisibleFileTreeRows(files, expandedPaths);
-  }, [expandedPaths, files]);
+    return buildVisibleFileTreeRows(files, expandedPaths, { compactFolders });
+  }, [compactFolders, expandedPaths, files]);
 
   const rowVirtualizer = useVirtualizer({
     count: visibleRows.length,

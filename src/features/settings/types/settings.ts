@@ -110,6 +110,7 @@ export interface Settings {
   horizontalTabScroll: boolean;
   //// File tree
   fileTreeIndentSize: number;
+  compactFoldersInFileTree: boolean;
   showHiddenFilesInFileTree: boolean;
   showGitignoredFilesInFileTree: boolean;
   hiddenFilePatterns: string[];

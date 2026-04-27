@@ -60,6 +60,23 @@ export const FileTreeSettings = () => {
         </SettingRow>
 
         <SettingRow
+          label="Compact Folders"
+          description="Collapse single-child folder chains"
+          onReset={() =>
+            updateSetting("compactFoldersInFileTree", getDefaultSetting("compactFoldersInFileTree"))
+          }
+          canReset={
+            settings.compactFoldersInFileTree !== getDefaultSetting("compactFoldersInFileTree")
+          }
+        >
+          <Switch
+            checked={settings.compactFoldersInFileTree}
+            onChange={(checked) => updateSetting("compactFoldersInFileTree", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
           label="Show Hidden Files"
           description="Show dotfiles and hidden directories"
           onReset={() =>
