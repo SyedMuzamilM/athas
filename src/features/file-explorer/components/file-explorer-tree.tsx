@@ -114,7 +114,19 @@ function FileExplorerTreeComponent({
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
   const revealPathInTree = useFileSystemStore((state) => state.revealPathInTree);
 
-  const { dragState, startDrag } = useFileExplorerDragDrop(rootFolderPath, onFileMove);
+  const handleAutoExpandDirectory = useCallback(
+    (path: string) => {
+      if (useFileTreeStore.getState().isExpanded(path)) return;
+      void Promise.resolve(onFileSelect(path, true));
+    },
+    [onFileSelect],
+  );
+
+  const { dragState, startDrag } = useFileExplorerDragDrop(
+    rootFolderPath,
+    onFileMove,
+    handleAutoExpandDirectory,
+  );
 
   const [mouseDownInfo, setMouseDownInfo] = useState<{
     x: number;

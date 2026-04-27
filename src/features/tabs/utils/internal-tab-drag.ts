@@ -82,17 +82,17 @@ export function resolveDropTarget(point: { x: number; y: number }) {
   const paneContainer = element.closest<HTMLElement>("[data-pane-id]");
   const bottomPaneTarget = element.closest<HTMLElement>("[data-bottom-pane-drop-target]");
 
-  if (paneContainer?.dataset.paneId) {
-    return {
-      paneId: paneContainer.dataset.paneId,
-      zone: getDropZone(point, paneContainer.getBoundingClientRect()),
-    };
-  }
-
   if (tabBar?.dataset.tabBarPaneId) {
     return {
       paneId: tabBar.dataset.tabBarPaneId,
       zone: "center" as InternalDropZone,
+    };
+  }
+
+  if (paneContainer?.dataset.paneId) {
+    return {
+      paneId: paneContainer.dataset.paneId,
+      zone: getDropZone(point, paneContainer.getBoundingClientRect()),
     };
   }
 
