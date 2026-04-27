@@ -73,20 +73,34 @@ export function getStickyAncestorRow(
   rows: readonly VisibleFileTreeRow[],
   firstVisibleIndex: number,
 ): VisibleFileTreeRow | null {
+  const ancestors = getStickyAncestorRows(rows, firstVisibleIndex);
+  return ancestors[ancestors.length - 1] ?? null;
+}
+
+export function getStickyAncestorRows(
+  rows: readonly VisibleFileTreeRow[],
+  firstVisibleIndex: number,
+): VisibleFileTreeRow[] {
   const firstVisibleRow = rows[firstVisibleIndex];
   if (!firstVisibleRow || firstVisibleRow.depth === 0) {
-    return null;
+    return [];
   }
 
-  const targetDepth = firstVisibleRow.depth - 1;
-  for (let index = firstVisibleIndex - 1; index >= 0; index--) {
-    const row = rows[index];
-    if (row.depth === targetDepth) {
-      return row;
+  const ancestors: Array<VisibleFileTreeRow | null> = Array.from(
+    { length: firstVisibleRow.depth },
+    () => null,
+  );
+  let remaining = firstVisibleRow.depth;
+
+  for (let index = firstVisibleIndex - 1; index >= 0 && remaining > 0; index--) {
+    const candidate = rows[index];
+    if (candidate.depth < firstVisibleRow.depth && ancestors[candidate.depth] === null) {
+      ancestors[candidate.depth] = candidate;
+      remaining--;
     }
   }
 
-  return null;
+  return ancestors.filter((row): row is VisibleFileTreeRow => row !== null);
 }
 
 export function getGuideAncestorRows(

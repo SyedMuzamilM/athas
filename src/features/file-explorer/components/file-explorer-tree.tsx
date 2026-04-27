@@ -7,7 +7,7 @@ import { useFileClipboardStore } from "@/features/file-explorer/stores/file-expl
 import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree-store";
 import {
   getGuideAncestorRows,
-  getStickyAncestorRow,
+  getStickyAncestorRows,
 } from "@/features/file-explorer/lib/visible-file-tree-rows";
 import {
   createFileTreeGitStatusLookup,
@@ -886,63 +886,72 @@ function FileExplorerTreeComponent({
             const paddingBottom = items.length
               ? rowVirtualizer.getTotalSize() - items[items.length - 1].end
               : 0;
-            const stickyAncestor = items.length
-              ? getStickyAncestorRow(visibleRows, items[0].index)
-              : null;
-            const stickyAncestorLabel = stickyAncestor?.displayName ?? stickyAncestor?.file.name;
-            const stickyAncestorGitStatus = stickyAncestor
-              ? getGitStatusDecoration(stickyAncestor.file)
-              : null;
-            const stickyAncestorPaddingLeft = stickyAncestor
-              ? 14 + stickyAncestor.depth * settings.fileTreeIndentSize
-              : 14;
+            const stickyAncestors = items.length
+              ? getStickyAncestorRows(visibleRows, items[0].index)
+              : [];
             const densityConfig = FILE_TREE_DENSITY_CONFIG[fileTreeDensity];
-            const stickyAncestorStyle = {
+            const stickyAncestorsStyle = {
               "--file-tree-sticky-row-height": `${densityConfig.rowHeight}px`,
+              "--file-tree-sticky-stack-height": `${
+                stickyAncestors.length * densityConfig.rowHeight
+              }px`,
             } as React.CSSProperties;
             return (
               <>
-                {stickyAncestor ? (
-                  <div className="file-tree-sticky-ancestor" style={stickyAncestorStyle}>
-                    <button
-                      type="button"
-                      data-file-path={stickyAncestor.file.path}
-                      data-is-dir={stickyAncestor.file.isDir}
-                      data-path={stickyAncestor.file.path}
-                      data-depth={stickyAncestor.depth}
-                      title={stickyAncestor.file.path}
-                      className={cn(
-                        "file-tree-row ui-font flex w-full min-w-max cursor-pointer select-none items-center whitespace-nowrap rounded-md border-none bg-transparent text-left text-text text-xs outline-none transition-colors duration-150 hover:bg-hover focus:outline-none",
-                        densityConfig.rowClassName,
-                      )}
-                      style={{ paddingLeft: `${stickyAncestorPaddingLeft}px` }}
-                    >
-                      <FileExplorerIcon
-                        fileName={stickyAncestor.file.name}
-                        isDir={stickyAncestor.file.isDir}
-                        isExpanded={stickyAncestor.isExpanded}
-                        isSymlink={stickyAncestor.file.isSymlink}
-                        className="relative z-1 shrink-0 text-text-lighter"
-                      />
-                      <span
-                        className={cn(
-                          "relative z-1 select-none whitespace-nowrap",
-                          stickyAncestorGitStatus?.colorClassName,
-                        )}
-                      >
-                        {stickyAncestorLabel}
-                      </span>
-                      {stickyAncestorGitStatus ? (
-                        <span
-                          aria-label={`Git status: ${stickyAncestorGitStatus.label}`}
-                          className={cn(
-                            "file-tree-git-indicator ml-1.5",
-                            stickyAncestorGitStatus.colorClassName,
-                          )}
-                          title={stickyAncestorGitStatus.label}
-                        />
-                      ) : null}
-                    </button>
+                {stickyAncestors.length > 0 ? (
+                  <div className="file-tree-sticky-ancestors" style={stickyAncestorsStyle}>
+                    <div className="file-tree-sticky-ancestor-stack">
+                      {stickyAncestors.map((stickyAncestor) => {
+                        const stickyAncestorLabel =
+                          stickyAncestor.displayName ?? stickyAncestor.file.name;
+                        const stickyAncestorGitStatus = getGitStatusDecoration(stickyAncestor.file);
+                        const stickyAncestorPaddingLeft =
+                          14 + stickyAncestor.depth * settings.fileTreeIndentSize;
+
+                        return (
+                          <button
+                            key={stickyAncestor.file.path}
+                            type="button"
+                            data-file-path={stickyAncestor.file.path}
+                            data-is-dir={stickyAncestor.file.isDir}
+                            data-path={stickyAncestor.file.path}
+                            data-depth={stickyAncestor.depth}
+                            title={stickyAncestor.file.path}
+                            className={cn(
+                              "file-tree-row ui-font flex w-full min-w-max cursor-pointer select-none items-center whitespace-nowrap rounded-none border-none bg-transparent text-left text-text text-xs outline-none transition-colors duration-150 hover:bg-hover focus:outline-none",
+                              densityConfig.rowClassName,
+                            )}
+                            style={{ paddingLeft: `${stickyAncestorPaddingLeft}px` }}
+                          >
+                            <FileExplorerIcon
+                              fileName={stickyAncestor.file.name}
+                              isDir={stickyAncestor.file.isDir}
+                              isExpanded={stickyAncestor.isExpanded}
+                              isSymlink={stickyAncestor.file.isSymlink}
+                              className="relative z-1 shrink-0 text-text-lighter"
+                            />
+                            <span
+                              className={cn(
+                                "relative z-1 select-none whitespace-nowrap",
+                                stickyAncestorGitStatus?.colorClassName,
+                              )}
+                            >
+                              {stickyAncestorLabel}
+                            </span>
+                            {stickyAncestorGitStatus ? (
+                              <span
+                                aria-label={`Git status: ${stickyAncestorGitStatus.label}`}
+                                className={cn(
+                                  "file-tree-git-indicator ml-1.5",
+                                  stickyAncestorGitStatus.colorClassName,
+                                )}
+                                title={stickyAncestorGitStatus.label}
+                              />
+                            ) : null}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 ) : null}
                 <div style={{ height: paddingTop }} />

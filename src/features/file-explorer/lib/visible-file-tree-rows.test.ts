@@ -3,6 +3,7 @@ import {
   buildVisibleFileTreeRows,
   getGuideAncestorRows,
   getStickyAncestorRow,
+  getStickyAncestorRows,
 } from "./visible-file-tree-rows";
 
 const tree = [
@@ -118,6 +119,21 @@ describe("buildVisibleFileTreeRows", () => {
     expect(getStickyAncestorRow(rows, 4)?.file.path).toBe("/root/src/features/file-explorer");
     expect(getStickyAncestorRow(rows, 2)?.file.path).toBe("/root/src");
     expect(getStickyAncestorRow(rows, 0)).toBeNull();
+  });
+
+  test("finds the full sticky ancestor stack for a visible descendant", () => {
+    const rows = buildVisibleFileTreeRows(
+      tree,
+      new Set(["/root", "/root/src", "/root/src/features", "/root/src/features/file-explorer"]),
+    );
+
+    expect(getStickyAncestorRows(rows, 4).map((row) => row.file.path)).toEqual([
+      "/root",
+      "/root/src",
+      "/root/src/features",
+      "/root/src/features/file-explorer",
+    ]);
+    expect(getStickyAncestorRows(rows, 0)).toEqual([]);
   });
 
   test("finds guide ancestors for each visible depth level", () => {
