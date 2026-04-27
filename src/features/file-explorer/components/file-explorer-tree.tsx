@@ -407,48 +407,51 @@ function FileExplorerTreeComponent({
 
   // No sticky overlays or global guides
 
-  const startInlineEditing = (parentPath: string, isFolder: boolean) => {
-    if (!onUpdateFiles) return;
+  const startInlineEditing = useCallback(
+    (parentPath: string, isFolder: boolean) => {
+      if (!onUpdateFiles) return;
 
-    const newItem: FileEntry = {
-      name: "",
-      path: `${parentPath}/`,
-      isDir: isFolder,
-      isEditing: true,
-      isNewItem: true,
-    };
+      const newItem: FileEntry = {
+        name: "",
+        path: `${parentPath}/`,
+        isDir: isFolder,
+        isEditing: true,
+        isNewItem: true,
+      };
 
-    const addNewItemToTree = (items: FileEntry[], targetPath: string): FileEntry[] => {
-      return items.map((item) => {
-        if (item.path === targetPath && item.isDir) {
-          return { ...item, children: [...(item.children || []), newItem] };
-        }
-        if (item.children) {
-          return {
-            ...item,
-            children: addNewItemToTree(item.children, targetPath),
-          };
-        }
-        return item;
-      });
-    };
+      const addNewItemToTree = (items: FileEntry[], targetPath: string): FileEntry[] => {
+        return items.map((item) => {
+          if (item.path === targetPath && item.isDir) {
+            return { ...item, children: [...(item.children || []), newItem] };
+          }
+          if (item.children) {
+            return {
+              ...item,
+              children: addNewItemToTree(item.children, targetPath),
+            };
+          }
+          return item;
+        });
+      };
 
-    if (parentPath === getDirName(files[0]?.path ?? "") || !parentPath) {
-      onUpdateFiles([...files, newItem]);
-    } else {
-      onUpdateFiles(addNewItemToTree(files, parentPath));
-    }
+      if (parentPath === getDirName(files[0]?.path ?? "") || !parentPath) {
+        onUpdateFiles([...files, newItem]);
+      } else {
+        onUpdateFiles(addNewItemToTree(files, parentPath));
+      }
 
-    // Ensure the target folder is expanded in UI
-    try {
-      const current = useFileTreeStore.getState().getExpandedPaths();
-      const next = new Set(current);
-      next.add(parentPath);
-      useFileTreeStore.getState().setExpandedPaths(next);
-    } catch {}
+      // Ensure the target folder is expanded in UI
+      try {
+        const current = useFileTreeStore.getState().getExpandedPaths();
+        const next = new Set(current);
+        next.add(parentPath);
+        useFileTreeStore.getState().setExpandedPaths(next);
+      } catch {}
 
-    setEditingValue("");
-  };
+      setEditingValue("");
+    },
+    [files, onUpdateFiles],
+  );
 
   const handleCreateRootFile = useCallback(() => {
     if (!rootFolderPath) return;
@@ -467,6 +470,20 @@ function FileExplorerTreeComponent({
 
   const handleCollapseAll = useCallback(() => {
     useFileTreeStore.getState().collapseAll();
+  }, []);
+
+  const handleCreateFileInDirectory = useCallback(
+    (directoryPath: string) => startInlineEditing(directoryPath, false),
+    [startInlineEditing],
+  );
+
+  const handleCreateFolderInDirectory = useCallback(
+    (directoryPath: string) => startInlineEditing(directoryPath, true),
+    [startInlineEditing],
+  );
+
+  const handleRequestDeletePath = useCallback((path: string, isDir: boolean) => {
+    setDeleteCandidate({ path, isDir });
   }, []);
 
   const finishInlineEditing = (item: FileEntry, newName: string) => {
@@ -1194,6 +1211,13 @@ function FileExplorerTreeComponent({
                         onEditingValueChange={setEditingValue}
                         onKeyDown={handleKeyDown}
                         onBlur={handleBlur}
+                        onCreateFileInDirectory={handleCreateFileInDirectory}
+                        onCreateFolderInDirectory={
+                          onCreateNewFolderInDirectory ? handleCreateFolderInDirectory : undefined
+                        }
+                        onRefreshDirectory={onRefreshDirectory}
+                        onRenamePath={onRenamePath}
+                        onDeletePath={onDeletePath ? handleRequestDeletePath : undefined}
                         getGitStatusDecoration={getGitStatusDecoration}
                       />
                     );

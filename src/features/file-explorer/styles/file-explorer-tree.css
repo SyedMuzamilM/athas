@@ -107,19 +107,16 @@
 }
 
 /* All file tree items have same background behavior - ensure full width coverage */
-.file-tree-container .file-tree-item button {
-  background-color: transparent !important;
+.file-tree-container .file-tree-item > .file-tree-row {
   width: 100% !important;
   min-width: 100% !important;
-  display: flex !important;
-  justify-content: flex-start !important;
 }
 
-.file-tree-container .file-tree-item button:hover {
+.file-tree-container .file-tree-item > .file-tree-row:hover {
   background-color: var(--color-hover) !important;
 }
 
-.file-tree-container .file-tree-item button.bg-selected {
+.file-tree-container .file-tree-item > .file-tree-row.bg-selected {
   background-color: var(--color-selected) !important;
 }
 
@@ -131,6 +128,42 @@
 .file-tree-row {
   position: relative;
   isolation: isolate;
+}
+
+.file-tree-row-main {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: inherit;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  outline: none;
+}
+
+.file-tree-row-actions {
+  position: sticky;
+  right: 0;
+  z-index: 2;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 1px;
+  margin-left: 6px;
+  border-radius: 6px;
+  background-color: color-mix(in srgb, var(--color-primary-bg) 78%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.file-tree-row:hover .file-tree-row-actions,
+.file-tree-row:focus-within .file-tree-row-actions,
+.file-tree-row.bg-selected .file-tree-row-actions {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .file-tree-git-indicator {

@@ -1,5 +1,6 @@
 import type React from "react";
 import { memo } from "react";
+import { ArrowClockwise, FilePlus, FolderPlus, PencilSimple, Trash } from "@phosphor-icons/react";
 import {
   FILE_TREE_DENSITY_CONFIG,
   type FileTreeDensity,
@@ -8,6 +9,7 @@ import { getHighlightedFileTreeNameParts } from "@/features/file-explorer/lib/fi
 import type { FileTreeGitStatusDecoration } from "@/features/file-explorer/lib/file-tree-git-status";
 import { useFileClipboardStore } from "@/features/file-explorer/stores/file-explorer-clipboard-store";
 import type { FileEntry } from "@/features/file-system/types/app";
+import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import { FileExplorerIcon } from "./file-explorer-icon";
@@ -57,6 +59,11 @@ interface FileExplorerTreeItemProps {
   onEditingValueChange: (value: string) => void;
   onKeyDown: (e: React.KeyboardEvent, file: FileEntry) => void;
   onBlur: (file: FileEntry) => void;
+  onCreateFileInDirectory: (directoryPath: string) => void;
+  onCreateFolderInDirectory?: (directoryPath: string) => void;
+  onRefreshDirectory?: (directoryPath: string) => void;
+  onRenamePath?: (path: string) => void;
+  onDeletePath?: (path: string, isDir: boolean) => void;
   getGitStatusDecoration: (file: FileEntry) => FileTreeGitStatusDecoration | null;
 }
 
@@ -78,6 +85,11 @@ function FileExplorerTreeItemComponent({
   onEditingValueChange,
   onKeyDown,
   onBlur,
+  onCreateFileInDirectory,
+  onCreateFolderInDirectory,
+  onRefreshDirectory,
+  onRenamePath,
+  onDeletePath,
   getGitStatusDecoration,
 }: FileExplorerTreeItemProps) {
   const isCut = useFileClipboardStore(
@@ -89,6 +101,14 @@ function FileExplorerTreeItemComponent({
   const gitStatusDecoration = getGitStatusDecoration(file);
   const nameParts = getHighlightedFileTreeNameParts(displayName ?? file.name, searchQuery);
   const guideLevels = Array.from({ length: depth }, (_, level) => level);
+  const stopActionEvent = (event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+  const handleActionClick = (event: React.MouseEvent, action: () => void) => {
+    stopActionEvent(event);
+    action();
+  };
   const renderTreeGuides = () => (
     <div className="file-tree-guides">
       {guideLevels.map((level) => {
@@ -173,8 +193,7 @@ function FileExplorerTreeItemComponent({
   return (
     <div className="file-tree-item w-full" data-depth={depth}>
       {renderTreeGuides()}
-      <button
-        type="button"
+      <div
         data-file-path={file.path}
         data-is-dir={file.isDir}
         data-path={file.path}
@@ -183,7 +202,7 @@ function FileExplorerTreeItemComponent({
           file.isSymlink && file.symlinkTarget ? `Symlink to: ${file.symlinkTarget}` : undefined
         }
         className={cn(
-          "file-tree-row ui-font flex w-full min-w-max cursor-pointer select-none items-center whitespace-nowrap rounded-md border-none bg-transparent text-left text-text text-xs outline-none transition-colors duration-150 hover:bg-hover focus:outline-none",
+          "file-tree-row group ui-font flex w-full min-w-max cursor-pointer select-none items-center whitespace-nowrap rounded-md border-none bg-transparent text-left text-text text-xs outline-none transition-colors duration-150 hover:bg-hover focus:outline-none",
           densityConfig.rowClassName,
           isActive && "bg-selected",
           dragOverPath === file.path &&
@@ -198,37 +217,124 @@ function FileExplorerTreeItemComponent({
           } as React.CSSProperties
         }
       >
-        <FileExplorerIcon
-          fileName={file.name}
-          isDir={file.isDir}
-          isExpanded={isExpanded}
-          isSymlink={file.isSymlink}
-          className="relative z-1 shrink-0 text-text-lighter"
-        />
-        <span
-          className={cn(
-            "relative z-1 select-none whitespace-nowrap",
-            gitStatusDecoration?.colorClassName,
-          )}
+        <button
+          type="button"
+          className="file-tree-row-main"
+          tabIndex={-1}
+          title={
+            file.isSymlink && file.symlinkTarget ? `Symlink to: ${file.symlinkTarget}` : undefined
+          }
         >
-          {nameParts.map((part, index) =>
-            part.isMatch ? (
-              <mark key={`${part.text}-${index}`} className="file-tree-search-match">
-                {part.text}
-              </mark>
-            ) : (
-              <span key={`${part.text}-${index}`}>{part.text}</span>
-            ),
-          )}
-        </span>
-        {gitStatusDecoration ? (
-          <span
-            aria-label={`Git status: ${gitStatusDecoration.label}`}
-            className={cn("file-tree-git-indicator ml-auto", gitStatusDecoration.colorClassName)}
-            title={gitStatusDecoration.label}
+          <FileExplorerIcon
+            fileName={file.name}
+            isDir={file.isDir}
+            isExpanded={isExpanded}
+            isSymlink={file.isSymlink}
+            className="relative z-1 shrink-0 text-text-lighter"
           />
-        ) : null}
-      </button>
+          <span
+            className={cn(
+              "relative z-1 select-none whitespace-nowrap",
+              gitStatusDecoration?.colorClassName,
+            )}
+          >
+            {nameParts.map((part, index) =>
+              part.isMatch ? (
+                <mark key={`${part.text}-${index}`} className="file-tree-search-match">
+                  {part.text}
+                </mark>
+              ) : (
+                <span key={`${part.text}-${index}`}>{part.text}</span>
+              ),
+            )}
+          </span>
+          {gitStatusDecoration ? (
+            <span
+              aria-label={`Git status: ${gitStatusDecoration.label}`}
+              className={cn("file-tree-git-indicator ml-auto", gitStatusDecoration.colorClassName)}
+              title={gitStatusDecoration.label}
+            />
+          ) : null}
+        </button>
+        <div className="file-tree-row-actions">
+          {file.isDir ? (
+            <>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                tooltip="New File"
+                tabIndex={-1}
+                onMouseDown={stopActionEvent}
+                onClick={(event) =>
+                  handleActionClick(event, () => onCreateFileInDirectory(file.path))
+                }
+              >
+                <FilePlus />
+              </Button>
+              {onCreateFolderInDirectory ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  tooltip="New Folder"
+                  tabIndex={-1}
+                  onMouseDown={stopActionEvent}
+                  onClick={(event) =>
+                    handleActionClick(event, () => onCreateFolderInDirectory(file.path))
+                  }
+                >
+                  <FolderPlus />
+                </Button>
+              ) : null}
+              {onRefreshDirectory ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  tooltip="Refresh"
+                  tabIndex={-1}
+                  onMouseDown={stopActionEvent}
+                  onClick={(event) => handleActionClick(event, () => onRefreshDirectory(file.path))}
+                >
+                  <ArrowClockwise />
+                </Button>
+              ) : null}
+            </>
+          ) : (
+            <>
+              {onRenamePath ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  tooltip="Rename"
+                  tabIndex={-1}
+                  onMouseDown={stopActionEvent}
+                  onClick={(event) => handleActionClick(event, () => onRenamePath(file.path))}
+                >
+                  <PencilSimple />
+                </Button>
+              ) : null}
+              {onDeletePath ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  tooltip="Delete"
+                  tabIndex={-1}
+                  onMouseDown={stopActionEvent}
+                  onClick={(event) =>
+                    handleActionClick(event, () => onDeletePath(file.path, false))
+                  }
+                >
+                  <Trash />
+                </Button>
+              ) : null}
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -253,5 +359,10 @@ export const FileExplorerTreeItem = memo(
     prev.onEditingValueChange === next.onEditingValueChange &&
     prev.onKeyDown === next.onKeyDown &&
     prev.onBlur === next.onBlur &&
+    prev.onCreateFileInDirectory === next.onCreateFileInDirectory &&
+    prev.onCreateFolderInDirectory === next.onCreateFolderInDirectory &&
+    prev.onRefreshDirectory === next.onRefreshDirectory &&
+    prev.onRenamePath === next.onRenamePath &&
+    prev.onDeletePath === next.onDeletePath &&
     prev.getGitStatusDecoration === next.getGitStatusDecoration,
 );
