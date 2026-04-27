@@ -127,6 +127,7 @@
   margin-left: calc(0px - var(--file-tree-container-inset, 4px));
   overflow: hidden;
   background-color: var(--color-primary-bg);
+  box-shadow: 0 -1px 0 0 var(--color-primary-bg);
   pointer-events: auto;
 }
 
