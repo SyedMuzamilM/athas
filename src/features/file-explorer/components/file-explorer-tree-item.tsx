@@ -9,6 +9,9 @@ import { FileExplorerIcon } from "./file-explorer-icon";
 interface FileExplorerTreeItemProps {
   file: FileEntry;
   depth: number;
+  previousDepth: number;
+  nextDepth: number;
+  indentSize: number;
   isExpanded: boolean;
   isActive: boolean;
   dragOverPath: string | null;
@@ -23,6 +26,9 @@ interface FileExplorerTreeItemProps {
 function FileExplorerTreeItemComponent({
   file,
   depth,
+  previousDepth,
+  nextDepth,
+  indentSize,
   isExpanded,
   isActive,
   dragOverPath,
@@ -37,14 +43,34 @@ function FileExplorerTreeItemComponent({
     (s) =>
       s.clipboard?.operation === "cut" && s.clipboard.entries.some((e) => e.path === file.path),
   );
-  const paddingLeft = 14 + depth * 20;
-  const treeGuideStyle = {
-    "--tree-depth": depth,
-  } as React.CSSProperties;
+  const paddingLeft = 14 + depth * indentSize;
+  const guideLevels = Array.from({ length: depth }, (_, level) => level);
+  const renderTreeGuides = () => (
+    <div aria-hidden="true" className="file-tree-guides">
+      {guideLevels.map((level) => {
+        const startsHere = previousDepth <= level;
+        const endsHere = nextDepth <= level;
+        return (
+          <span
+            key={level}
+            className="file-tree-guide"
+            style={
+              {
+                left: `${14 + level * indentSize}px`,
+                top: startsHere ? "4px" : "0",
+                bottom: endsHere ? "4px" : "0",
+              } as React.CSSProperties
+            }
+          />
+        );
+      })}
+    </div>
+  );
 
   if (file.isEditing || file.isRenaming) {
     return (
-      <div className="file-tree-item w-full" data-depth={depth} style={treeGuideStyle}>
+      <div className="file-tree-item w-full" data-depth={depth}>
+        {renderTreeGuides()}
         <div
           className="file-tree-row flex h-6 w-full items-center gap-1.5 rounded-md px-1.5 py-1"
           style={{
@@ -92,7 +118,8 @@ function FileExplorerTreeItemComponent({
   }
 
   return (
-    <div className="file-tree-item w-full" data-depth={depth} style={treeGuideStyle}>
+    <div className="file-tree-item w-full" data-depth={depth}>
+      {renderTreeGuides()}
       <button
         type="button"
         data-file-path={file.path}
@@ -137,6 +164,9 @@ export const FileExplorerTreeItem = memo(
   (prev, next) =>
     prev.file === next.file &&
     prev.depth === next.depth &&
+    prev.previousDepth === next.previousDepth &&
+    prev.nextDepth === next.nextDepth &&
+    prev.indentSize === next.indentSize &&
     prev.isExpanded === next.isExpanded &&
     prev.isActive === next.isActive &&
     prev.dragOverPath === next.dragOverPath &&

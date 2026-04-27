@@ -104,10 +104,12 @@ export interface Settings {
     | "icon-theme"
     | "snippet"
     | "database"
+    | "skill"
     | "ui";
   maxOpenTabs: number;
   horizontalTabScroll: boolean;
   //// File tree
+  fileTreeIndentSize: number;
   hiddenFilePatterns: string[];
   hiddenDirectoryPatterns: string[];
   gitChangesFolderView: boolean;

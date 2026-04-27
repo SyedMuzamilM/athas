@@ -144,6 +144,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
 
   // File Tree Settings
   {
+    id: "file-tree-indent-size",
+    tab: "file-explorer",
+    section: "Display",
+    label: "Indent Size",
+    description: "Pixels per nesting level in the file tree",
+    keywords: ["indent", "indentation", "nesting", "depth", "tree", "file explorer", "spacing"],
+  },
+  {
     id: "file-tree-hidden-file-patterns",
     tab: "file-explorer",
     section: "Filters",

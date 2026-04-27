@@ -111,6 +111,7 @@ export const defaultSettings: Settings = {
   maxOpenTabs: 100,
   horizontalTabScroll: false,
   //// File tree
+  fileTreeIndentSize: 20,
   hiddenFilePatterns: [],
   hiddenDirectoryPatterns: [],
   gitChangesFolderView: true,

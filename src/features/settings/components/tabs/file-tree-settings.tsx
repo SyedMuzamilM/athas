@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
-import Section, { SettingRow } from "../settings-section";
+import NumberInput from "@/ui/number-input";
+import Section, { SETTINGS_CONTROL_WIDTHS, SettingRow } from "../settings-section";
 import { controlFieldSurfaceVariants } from "@/ui/control-field";
 import { cn } from "@/utils/cn";
 
@@ -38,6 +39,26 @@ export const FileTreeSettings = () => {
 
   return (
     <div className="space-y-4">
+      <Section title="Display">
+        <SettingRow
+          label="Indent Size"
+          description="Pixels per nesting level"
+          onReset={() =>
+            updateSetting("fileTreeIndentSize", getDefaultSetting("fileTreeIndentSize"))
+          }
+          canReset={settings.fileTreeIndentSize !== getDefaultSetting("fileTreeIndentSize")}
+        >
+          <NumberInput
+            min="8"
+            max="32"
+            value={settings.fileTreeIndentSize}
+            onChange={(val) => updateSetting("fileTreeIndentSize", val)}
+            className={SETTINGS_CONTROL_WIDTHS.numberCompact}
+            size="xs"
+          />
+        </SettingRow>
+      </Section>
+
       <Section title="Filters">
         <SettingRow
           label="Hidden Files"

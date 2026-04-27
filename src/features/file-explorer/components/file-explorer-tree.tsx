@@ -871,11 +871,16 @@ function FileExplorerTreeComponent({
                 <div style={{ height: paddingTop }} />
                 {items.map((vi) => {
                   const row = visibleRows[vi.index];
+                  const previousRow = visibleRows[vi.index - 1];
+                  const nextRow = visibleRows[vi.index + 1];
                   return (
                     <FileExplorerTreeItem
                       key={row.file.path}
                       file={row.file}
                       depth={row.depth}
+                      previousDepth={previousRow?.depth ?? 0}
+                      nextDepth={nextRow?.depth ?? 0}
+                      indentSize={settings.fileTreeIndentSize}
                       isExpanded={row.isExpanded}
                       isActive={activePath === row.file.path}
                       dragOverPath={dragState.dragOverPath}

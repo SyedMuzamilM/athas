@@ -66,8 +66,6 @@
 .file-tree-item {
   position: relative;
   --tree-guide-color: color-mix(in srgb, var(--color-text-lighter) 18%, transparent);
-  --tree-guide-start: 24px;
-  --tree-guide-step: 20px;
 }
 
 .file-tree-row {
@@ -75,23 +73,16 @@
   isolation: isolate;
 }
 
-.file-tree-item::before {
-  content: "";
+.file-tree-guides {
   pointer-events: none;
   position: absolute;
   z-index: 0;
-  top: 0;
-  bottom: 0;
-  left: var(--tree-guide-start);
-  width: calc(var(--tree-depth) * var(--tree-guide-step));
-  background-image: repeating-linear-gradient(
-    to right,
-    var(--tree-guide-color) 0 1px,
-    transparent 1px var(--tree-guide-step)
-  );
-  opacity: 0.9;
+  inset: 0;
 }
 
-.file-tree-item[data-depth="0"]::before {
-  display: none;
+.file-tree-guide {
+  position: absolute;
+  width: 1px;
+  background-color: var(--tree-guide-color);
+  opacity: 0.9;
 }

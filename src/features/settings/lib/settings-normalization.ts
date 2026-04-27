@@ -50,6 +50,8 @@ const LEGACY_TERMINAL_LINE_HEIGHT_DEFAULT = 1.2;
 const TERMINAL_LINE_HEIGHT_DEFAULT = 1;
 const EDITOR_LINE_HEIGHT_MIN = 1;
 const EDITOR_LINE_HEIGHT_MAX = 2;
+const FILE_TREE_INDENT_SIZE_MIN = 8;
+const FILE_TREE_INDENT_SIZE_MAX = 32;
 
 function normalizeEditorLineHeight(value: number): number {
   if (!Number.isFinite(value)) {
@@ -59,6 +61,16 @@ function normalizeEditorLineHeight(value: number): number {
   const snapped = Math.round(value * 10) / 10;
   return Math.min(EDITOR_LINE_HEIGHT_MAX, Math.max(EDITOR_LINE_HEIGHT_MIN, snapped));
 }
+
+function normalizeFileTreeIndentSize(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 20;
+  }
+
+  const snapped = Math.round(value);
+  return Math.min(FILE_TREE_INDENT_SIZE_MAX, Math.max(FILE_TREE_INDENT_SIZE_MIN, snapped));
+}
+
 const MAX_SYNCED_AI_SKILLS = 200;
 
 function normalizeAISkills(skills: Settings["aiSkills"]): Settings["aiSkills"] {
@@ -91,7 +103,26 @@ function normalizeAISkills(skills: Settings["aiSkills"]): Settings["aiSkills"] {
     .map((skill) => ({
       id: skill.id.trim(),
       title: skill.title.trim().slice(0, 120),
+      ...(typeof skill.description === "string"
+        ? { description: skill.description.trim().slice(0, 240) }
+        : {}),
       content: skill.content.slice(0, 100_000),
+      ...(typeof skill.author === "string" ? { author: skill.author.trim().slice(0, 120) } : {}),
+      ...(skill.source === "marketplace" || skill.source === "local"
+        ? { source: skill.source }
+        : {}),
+      ...(typeof skill.sourceId === "string"
+        ? { sourceId: skill.sourceId.trim().slice(0, 160) }
+        : {}),
+      ...(typeof skill.version === "string" ? { version: skill.version.trim().slice(0, 40) } : {}),
+      ...(Array.isArray(skill.tags)
+        ? {
+            tags: skill.tags
+              .filter((tag): tag is string => typeof tag === "string" && tag.trim().length > 0)
+              .map((tag) => tag.trim().slice(0, 40))
+              .slice(0, 12),
+          }
+        : {}),
       createdAt: skill.createdAt,
       updatedAt: skill.updatedAt,
     }));
@@ -166,6 +197,9 @@ export function normalizeSettings(settings: Settings): Settings {
   normalizedSettings.editorLineHeight = normalizeEditorLineHeight(
     normalizedSettings.editorLineHeight,
   );
+  normalizedSettings.fileTreeIndentSize = normalizeFileTreeIndentSize(
+    normalizedSettings.fileTreeIndentSize,
+  );
 
   if (!isKeybindingPreset(normalizedSettings.keybindingPreset)) {
     normalizedSettings.keybindingPreset = "none";
@@ -224,6 +258,10 @@ export function normalizeSettingValue<K extends keyof Settings>(
 
   if (key === "editorLineHeight") {
     return normalizeEditorLineHeight(value as number) as Settings[K];
+  }
+
+  if (key === "fileTreeIndentSize") {
+    return normalizeFileTreeIndentSize(value as number) as Settings[K];
   }
 
   if (key === "iconTheme" && (value === "colorful-material" || value === "seti")) {
