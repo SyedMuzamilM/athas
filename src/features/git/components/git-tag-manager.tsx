@@ -101,17 +101,18 @@ const GitTagManager = ({ isOpen, onClose, repoPath, onRefresh }: GitTagManagerPr
       placeholder="Search tags..."
       meta={`${tags.length} tag${tags.length === 1 ? "" : "s"}`}
     >
-      <div className="border-border/70 border-b px-3 py-3">
-        <div className="mb-2 flex items-center gap-2 text-text">
+      <div className="border-border/70 border-b px-3 py-2">
+        <div className="mb-1.5 flex items-center gap-2 text-text">
           <Plus className="size-4 text-text-lighter" />
-          <span className="ui-text-sm font-medium">Create Tag</span>
+          <span className="ui-text-sm font-medium">Create tag</span>
         </div>
-        <div className="space-y-2">
+        <div className="grid gap-1.5">
           <Input
             type="text"
             placeholder="Tag name"
             value={newTagName}
             onChange={(e) => setNewTagName(e.target.value)}
+            size="xs"
             className="w-full"
           />
           <Input
@@ -119,6 +120,7 @@ const GitTagManager = ({ isOpen, onClose, repoPath, onRefresh }: GitTagManagerPr
             placeholder="Tag message (optional)"
             value={newTagMessage}
             onChange={(e) => setNewTagMessage(e.target.value)}
+            size="xs"
             className="w-full"
           />
           <Input
@@ -126,6 +128,7 @@ const GitTagManager = ({ isOpen, onClose, repoPath, onRefresh }: GitTagManagerPr
             placeholder="Commit SHA (optional)"
             value={newTagCommit}
             onChange={(e) => setNewTagCommit(e.target.value)}
+            size="xs"
             className="w-full"
             onKeyDown={(e) => {
               if (e.key === "Enter") {
@@ -137,7 +140,7 @@ const GitTagManager = ({ isOpen, onClose, repoPath, onRefresh }: GitTagManagerPr
             <Button
               onClick={() => void handleCreateTag()}
               disabled={isLoading || !newTagName.trim()}
-              size="sm"
+              size="xs"
               variant="secondary"
             >
               {isLoading ? "Creating..." : "Create Tag"}
@@ -156,12 +159,17 @@ const GitTagManager = ({ isOpen, onClose, repoPath, onRefresh }: GitTagManagerPr
             const isActionLoading = actionLoading.has(tag.name);
 
             return (
-              <CommandItem key={tag.name} className="ui-font items-start">
+              <CommandItem
+                key={tag.name}
+                className="ui-font h-auto min-h-8 items-start whitespace-normal px-2 py-1.5 leading-normal"
+              >
                 <Tag className="mt-0.5 size-4 shrink-0 text-text-lighter" />
                 <div className="min-w-0 flex-1">
-                  <div className="ui-text-sm text-text">{tag.name}</div>
+                  <div className="ui-text-sm break-words text-text">{tag.name}</div>
                   {tag.message ? (
-                    <div className="ui-text-sm mt-0.5 text-text-lighter">{tag.message}</div>
+                    <div className="ui-text-xs mt-0.5 break-words text-text-lighter">
+                      {tag.message}
+                    </div>
                   ) : null}
                   <div className="ui-text-xs mt-1 flex flex-wrap items-center gap-3 text-text-lighter">
                     <span className="inline-flex items-center gap-1">

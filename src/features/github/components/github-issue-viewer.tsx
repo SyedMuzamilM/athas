@@ -16,6 +16,7 @@ import { GITHUB_ISSUE_DETAILS_TTL_MS, githubIssueDetailsCache } from "../utils/g
 import { copyToClipboard } from "../utils/pr-viewer-utils";
 import { CommentItem } from "./comment-item";
 import GitHubMarkdown from "./github-markdown";
+import { AssigneesList, LabelBadges } from "./pr-status";
 
 interface GitHubIssueViewerProps {
   issueNumber: number;
@@ -203,7 +204,19 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                   <span className="capitalize">{details.state.toLowerCase()}</span>
                 </>
               ) : null}
+              {details?.comments.length ? (
+                <>
+                  <span>&middot;</span>
+                  <span>{`${details.comments.length} comments`}</span>
+                </>
+              ) : null}
             </div>
+            {details ? (
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
+                <AssigneesList assignees={details.assignees ?? []} />
+                <LabelBadges labels={details.labels ?? []} />
+              </div>
+            ) : null}
           </div>
 
           <div className="flex items-center gap-1">

@@ -1,3 +1,4 @@
+import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import {
   AIProvider,
   type ProviderHeaders,
@@ -7,7 +8,9 @@ import {
 
 // Models that require max_completion_tokens instead of max_tokens
 const MODELS_REQUIRING_MAX_COMPLETION_TOKENS = [
+  "gpt-5.5",
   "gpt-5.4",
+  "gpt-5.4-pro",
   "gpt-5.4-mini",
   "gpt-5.4-nano",
   "gpt-5.2",
@@ -30,7 +33,9 @@ const MODELS_REQUIRING_MAX_COMPLETION_TOKENS = [
 
 // Models that don't support custom temperature (only default 1)
 const MODELS_WITHOUT_TEMPERATURE_SUPPORT = [
+  "gpt-5.5",
   "gpt-5.4",
+  "gpt-5.4-pro",
   "gpt-5.4-mini",
   "gpt-5.4-nano",
   "gpt-5.2",
@@ -55,7 +60,7 @@ export class OpenAIProvider extends AIProvider {
     }
 
     try {
-      const response = await fetch("https://api.openai.com/v1/models", {
+      const response = await tauriFetch("https://api.openai.com/v1/models", {
         method: "GET",
         headers: this.buildHeaders(apiKey),
       });
@@ -121,7 +126,7 @@ export class OpenAIProvider extends AIProvider {
 
   async validateApiKey(apiKey: string): Promise<boolean> {
     try {
-      const response = await fetch("https://api.openai.com/v1/models", {
+      const response = await tauriFetch("https://api.openai.com/v1/models", {
         method: "GET",
         headers: {
           Authorization: `Bearer ${apiKey}`,
@@ -157,7 +162,9 @@ function comparePreferredOpenAIModels(a: string, b: string): number {
 
 function getOpenAIModelRank(modelId: string): number {
   const preferredOrder = [
+    "gpt-5.5",
     "gpt-5.4",
+    "gpt-5.4-pro",
     "gpt-5.4-mini",
     "gpt-5.4-nano",
     "gpt-5.2",

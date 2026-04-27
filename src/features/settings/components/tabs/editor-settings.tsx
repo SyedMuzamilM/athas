@@ -55,6 +55,23 @@ export const EditorSettings = () => {
         </SettingRow>
 
         <SettingRow
+          label="Line Height"
+          description="Editor line height multiplier"
+          onReset={() => updateSetting("editorLineHeight", getDefaultSetting("editorLineHeight"))}
+          canReset={settings.editorLineHeight !== getDefaultSetting("editorLineHeight")}
+        >
+          <NumberInput
+            min="1"
+            max="2"
+            step={0.1}
+            value={settings.editorLineHeight}
+            onChange={(val) => updateSetting("editorLineHeight", val)}
+            className={SETTINGS_CONTROL_WIDTHS.numberCompact}
+            size="xs"
+          />
+        </SettingRow>
+
+        <SettingRow
           label="Tab Size"
           description="Number of spaces per tab"
           onReset={() => updateSetting("tabSize", getDefaultSetting("tabSize"))}

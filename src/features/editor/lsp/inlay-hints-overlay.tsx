@@ -5,6 +5,7 @@ import type { InlayHint } from "./use-inlay-hints";
 interface InlayHintsOverlayProps {
   hints: InlayHint[];
   fontSize: number;
+  lineHeight: number;
   charWidth: number;
   scrollTop: number;
   viewportHeight: number;
@@ -12,11 +13,9 @@ interface InlayHintsOverlayProps {
 
 const InlayHintsOverlay = forwardRef(
   (
-    { hints, fontSize, charWidth, scrollTop, viewportHeight }: InlayHintsOverlayProps,
+    { hints, fontSize, lineHeight, charWidth, scrollTop, viewportHeight }: InlayHintsOverlayProps,
     ref: ForwardedRef<HTMLDivElement>,
   ) => {
-    const lineHeight = Math.ceil(fontSize * EDITOR_CONSTANTS.LINE_HEIGHT_MULTIPLIER);
-
     // Only render hints visible in the viewport (with buffer)
     const visibleHints = useMemo(() => {
       const buffer = viewportHeight * 0.5;

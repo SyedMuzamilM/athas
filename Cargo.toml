@@ -13,6 +13,7 @@ members = [
   "crates/ai",
   "crates/github",
   "crates/fff-search",
+  "crates/debugger",
 ]
 resolver = "2"
 

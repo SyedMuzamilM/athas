@@ -112,6 +112,7 @@ fn main() {
          github_get_pr_comments,
          github_get_issue_details,
          github_get_workflow_run_details,
+         github_get_workflow_job_logs,
          // AI Provider token commands
          store_ai_provider_token,
          get_ai_provider_token,
@@ -281,6 +282,12 @@ fn main() {
          lsp_document_change,
          lsp_document_close,
          lsp_is_language_supported,
+         // Debugger commands
+         debug_start_session,
+         debug_send_request,
+         debug_send_raw_message,
+         debug_stop_session,
+         debug_list_sessions,
          // Extension commands
          download_extension,
          install_extension,

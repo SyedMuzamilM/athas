@@ -347,7 +347,7 @@ const GlobalSearchBuffer = () => {
         ) : null}
 
         {error ? (
-          <div className="ui-text-sm flex min-h-[240px] items-center justify-center text-center text-red-500">
+          <div className="ui-text-sm flex min-h-[240px] items-center justify-center text-center text-error">
             {error}
           </div>
         ) : null}

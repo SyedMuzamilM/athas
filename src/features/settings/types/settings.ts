@@ -1,4 +1,5 @@
 import type { CoreFeaturesState } from "./feature";
+import type { AIChatSkill } from "@/features/ai/types/skills";
 import type {
   FooterLeadingItemId,
   FooterTrailingItemId,
@@ -16,6 +17,7 @@ export interface Settings {
   // Editor
   fontFamily: string;
   fontSize: number;
+  editorLineHeight: number;
   tabSize: number;
   wordWrap: boolean;
   lineNumbers: boolean;
@@ -57,6 +59,7 @@ export interface Settings {
   aiCompletion: boolean;
   aiAutocompleteModelId: string;
   aiDefaultSessionMode: string;
+  aiSkills: AIChatSkill[];
   ollamaBaseUrl: string;
   // Layout
   sidebarWidth: number;
@@ -101,10 +104,16 @@ export interface Settings {
     | "icon-theme"
     | "snippet"
     | "database"
+    | "skill"
     | "ui";
   maxOpenTabs: number;
   horizontalTabScroll: boolean;
   //// File tree
+  fileTreeIndentSize: number;
+  compactFoldersInFileTree: boolean;
+  fileTreeDensity: "compact" | "default" | "comfortable";
+  showHiddenFilesInFileTree: boolean;
+  showGitignoredFilesInFileTree: boolean;
   hiddenFilePatterns: string[];
   hiddenDirectoryPatterns: string[];
   gitChangesFolderView: boolean;

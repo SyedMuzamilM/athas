@@ -1,5 +1,6 @@
 import { getProviderById } from "@/features/ai/types/providers";
 import { isKeybindingPreset } from "@/features/keymaps/defaults/keybinding-presets";
+import { normalizeFileTreeDensity } from "@/features/file-explorer/lib/file-tree-density";
 import {
   DEFAULT_AI_AUTOCOMPLETE_MODEL_ID,
   DEFAULT_AI_MODEL_ID,
@@ -48,6 +49,98 @@ const AI_AUTOCOMPLETE_MODEL_MIGRATIONS: Record<string, string> = {
 
 const LEGACY_TERMINAL_LINE_HEIGHT_DEFAULT = 1.2;
 const TERMINAL_LINE_HEIGHT_DEFAULT = 1;
+const EDITOR_LINE_HEIGHT_MIN = 1;
+const EDITOR_LINE_HEIGHT_MAX = 2;
+const FILE_TREE_INDENT_SIZE_MIN = 8;
+const FILE_TREE_INDENT_SIZE_MAX = 32;
+
+function normalizeEditorLineHeight(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 1.4;
+  }
+
+  const snapped = Math.round(value * 10) / 10;
+  return Math.min(EDITOR_LINE_HEIGHT_MAX, Math.max(EDITOR_LINE_HEIGHT_MIN, snapped));
+}
+
+function normalizeFileTreeIndentSize(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 20;
+  }
+
+  const snapped = Math.round(value);
+  return Math.min(FILE_TREE_INDENT_SIZE_MAX, Math.max(FILE_TREE_INDENT_SIZE_MIN, snapped));
+}
+
+const MAX_SYNCED_AI_SKILLS = 200;
+
+function normalizeAISkills(skills: Settings["aiSkills"]): Settings["aiSkills"] {
+  if (!Array.isArray(skills)) {
+    return [];
+  }
+
+  const seenIds = new Set<string>();
+
+  return skills
+    .filter((skill): skill is Settings["aiSkills"][number] => {
+      if (!skill || typeof skill !== "object") return false;
+      if (typeof skill.id !== "string" || skill.id.trim().length === 0) return false;
+      if (typeof skill.title !== "string" || skill.title.trim().length === 0) return false;
+      if (typeof skill.content !== "string") return false;
+      if (typeof skill.createdAt !== "string" || Number.isNaN(Date.parse(skill.createdAt))) {
+        return false;
+      }
+      if (typeof skill.updatedAt !== "string" || Number.isNaN(Date.parse(skill.updatedAt))) {
+        return false;
+      }
+      return true;
+    })
+    .filter((skill) => {
+      if (seenIds.has(skill.id)) return false;
+      seenIds.add(skill.id);
+      return true;
+    })
+    .slice(0, MAX_SYNCED_AI_SKILLS)
+    .map((skill) => ({
+      id: skill.id.trim(),
+      title: skill.title.trim().slice(0, 120),
+      ...(typeof skill.description === "string"
+        ? { description: skill.description.trim().slice(0, 240) }
+        : {}),
+      content: skill.content.slice(0, 100_000),
+      ...(typeof skill.author === "string" ? { author: skill.author.trim().slice(0, 120) } : {}),
+      ...(skill.source === "marketplace" || skill.source === "local"
+        ? { source: skill.source }
+        : {}),
+      ...(typeof skill.sourceId === "string"
+        ? { sourceId: skill.sourceId.trim().slice(0, 160) }
+        : {}),
+      ...(typeof skill.version === "string" ? { version: skill.version.trim().slice(0, 40) } : {}),
+      ...(Array.isArray(skill.tags)
+        ? {
+            tags: skill.tags
+              .filter((tag): tag is string => typeof tag === "string" && tag.trim().length > 0)
+              .map((tag) => tag.trim().slice(0, 40))
+              .slice(0, 12),
+          }
+        : {}),
+      ...(typeof skill.localOverride === "boolean" ? { localOverride: skill.localOverride } : {}),
+      ...(typeof skill.upstreamTitle === "string"
+        ? { upstreamTitle: skill.upstreamTitle.trim().slice(0, 120) }
+        : {}),
+      ...(typeof skill.upstreamDescription === "string"
+        ? { upstreamDescription: skill.upstreamDescription.trim().slice(0, 240) }
+        : {}),
+      ...(typeof skill.upstreamContent === "string"
+        ? { upstreamContent: skill.upstreamContent.slice(0, 100_000) }
+        : {}),
+      ...(typeof skill.upstreamUpdatedAt === "string"
+        ? { upstreamUpdatedAt: skill.upstreamUpdatedAt.trim().slice(0, 80) }
+        : {}),
+      createdAt: skill.createdAt,
+      updatedAt: skill.updatedAt,
+    }));
+}
 
 function normalizeAISettings(settings: Settings): Settings {
   const normalizedSettings = { ...settings };
@@ -82,6 +175,7 @@ function normalizeAISettings(settings: Settings): Settings {
     AI_AUTOCOMPLETE_MODEL_MIGRATIONS[normalizedSettings.aiAutocompleteModelId] ||
     normalizedSettings.aiAutocompleteModelId ||
     DEFAULT_AI_AUTOCOMPLETE_MODEL_ID;
+  normalizedSettings.aiSkills = normalizeAISkills(normalizedSettings.aiSkills);
 
   return normalizedSettings;
 }
@@ -114,6 +208,13 @@ export function normalizeSettings(settings: Settings): Settings {
   if (normalizedSettings.terminalLineHeight === LEGACY_TERMINAL_LINE_HEIGHT_DEFAULT) {
     normalizedSettings.terminalLineHeight = TERMINAL_LINE_HEIGHT_DEFAULT;
   }
+  normalizedSettings.editorLineHeight = normalizeEditorLineHeight(
+    normalizedSettings.editorLineHeight,
+  );
+  normalizedSettings.fileTreeIndentSize = normalizeFileTreeIndentSize(
+    normalizedSettings.fileTreeIndentSize,
+  );
+  normalizedSettings.fileTreeDensity = normalizeFileTreeDensity(normalizedSettings.fileTreeDensity);
 
   if (!isKeybindingPreset(normalizedSettings.keybindingPreset)) {
     normalizedSettings.keybindingPreset = "none";
@@ -170,12 +271,28 @@ export function normalizeSettingValue<K extends keyof Settings>(
     return TERMINAL_LINE_HEIGHT_DEFAULT as Settings[K];
   }
 
+  if (key === "editorLineHeight") {
+    return normalizeEditorLineHeight(value as number) as Settings[K];
+  }
+
+  if (key === "fileTreeIndentSize") {
+    return normalizeFileTreeIndentSize(value as number) as Settings[K];
+  }
+
+  if (key === "fileTreeDensity") {
+    return normalizeFileTreeDensity(value as string) as Settings[K];
+  }
+
   if (key === "iconTheme" && (value === "colorful-material" || value === "seti")) {
     return "material" as Settings[K];
   }
 
   if (key === "keybindingPreset" && !isKeybindingPreset(value as string)) {
     return "none" as Settings[K];
+  }
+
+  if (key === "aiSkills") {
+    return normalizeAISkills(value as Settings["aiSkills"]) as Settings[K];
   }
 
   return value;

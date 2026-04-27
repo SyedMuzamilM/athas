@@ -20,6 +20,7 @@ type SyncableSettingsKey =
   | "quickOpenPreview"
   | "fontFamily"
   | "fontSize"
+  | "editorLineHeight"
   | "tabSize"
   | "wordWrap"
   | "lineNumbers"
@@ -54,6 +55,7 @@ type SyncableSettingsKey =
   | "aiCompletion"
   | "aiAutocompleteModelId"
   | "aiDefaultSessionMode"
+  | "aiSkills"
   | "ollamaBaseUrl"
   | "sidebarWidth"
   | "showGitHubPullRequests"
@@ -100,6 +102,7 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "quickOpenPreview",
   "fontFamily",
   "fontSize",
+  "editorLineHeight",
   "tabSize",
   "wordWrap",
   "lineNumbers",
@@ -134,6 +137,7 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "aiCompletion",
   "aiAutocompleteModelId",
   "aiDefaultSessionMode",
+  "aiSkills",
   "ollamaBaseUrl",
   "sidebarWidth",
   "showGitHubPullRequests",

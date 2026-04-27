@@ -1,6 +1,7 @@
 import { memo } from "react";
 import { FileExplorerTree } from "@/features/file-explorer/components/file-explorer-tree";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import DebuggerView from "@/features/debugger/components/debugger-view";
 import GitView from "@/features/git/components/git-view";
 import GitHubPRsView from "@/features/github/components/github-prs-view";
 import { SidebarPaneSelector } from "@/features/layout/components/sidebar/sidebar-pane-selector";
@@ -52,6 +53,8 @@ export const MainSidebar = memo(() => {
   const { settings } = useSettingsStore();
   const isFilesViewActive =
     !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "files";
+  const isDebuggerViewActive =
+    !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "debugger";
   const showLeftSidebarTabs = settings.sidebarTabsPosition === "left";
   const handleSidebarViewChange = (view: typeof activeSidebarView) => {
     const { nextIsSidebarVisible, nextView } = resolveSidebarPaneClick(
@@ -134,6 +137,12 @@ export const MainSidebar = memo(() => {
             </div>
           )}
         </div>
+
+        {settings.coreFeatures.debugger && (
+          <div className={cn("h-full", !isDebuggerViewActive && "hidden")}>
+            <DebuggerView />
+          </div>
+        )}
 
         {Array.from(extensionViews).map(([viewId, view]) => (
           <div key={viewId} className={cn("h-full", activeSidebarView !== viewId && "hidden")}>

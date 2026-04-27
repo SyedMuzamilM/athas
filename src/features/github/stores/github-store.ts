@@ -164,11 +164,23 @@ function normalizePullRequest(pr: PullRequest): PullRequest {
 
 function normalizePullRequestDetails(details: PullRequestDetails): PullRequestDetails {
   const record = details as PullRequestDetails & Record<string, unknown>;
+  const statusChecks =
+    details.statusChecks ??
+    (Array.isArray(record.statusCheckRollup)
+      ? (record.statusCheckRollup as PullRequestDetails["statusChecks"])
+      : []);
+  const linkedIssues =
+    details.linkedIssues ??
+    (Array.isArray(record.closingIssuesReferences)
+      ? (record.closingIssuesReferences as PullRequestDetails["linkedIssues"])
+      : []);
 
   return {
     ...details,
     headRef: getStringValue(record, ["headRef", "headRefName", "head_ref"]),
     baseRef: getStringValue(record, ["baseRef", "baseRefName", "base_ref"]),
+    statusChecks,
+    linkedIssues,
   };
 }
 
@@ -351,53 +363,6 @@ export const useGitHubStore = create(
           console.error("Failed to checkout PR:", err);
           throw err;
         }
-      },
-
-      prefetchPR: async (repoPath: string, prNumber: number) => {
-        const cacheKey = getPRDetailsCacheKey(repoPath, prNumber);
-        const cached = get().prDetailsCache[cacheKey];
-        const hasFreshDetails =
-          cached?.details && isFresh(cached.fetchedAt, PR_DETAILS_CACHE_TTL_MS);
-
-        if (hasFreshDetails) {
-          return;
-        }
-
-        if (prDetailsInFlightByKey[cacheKey]) {
-          await prDetailsInFlightByKey[cacheKey];
-          return;
-        }
-
-        const requestId = (prDetailsRequestSeqByKey[cacheKey] ?? 0) + 1;
-        prDetailsRequestSeqByKey[cacheKey] = requestId;
-
-        const run = (async () => {
-          try {
-            const detailsResponse = await invoke<PullRequestDetails>("github_get_pr_details", {
-              repoPath,
-              prNumber,
-            });
-            const details = normalizePullRequestDetails(detailsResponse);
-
-            if (requestId !== prDetailsRequestSeqByKey[cacheKey]) return;
-
-            set((state) => ({
-              prDetailsCache: {
-                ...state.prDetailsCache,
-                [cacheKey]: {
-                  ...state.prDetailsCache[cacheKey],
-                  fetchedAt: Date.now(),
-                  details,
-                },
-              },
-            }));
-          } finally {
-            delete prDetailsInFlightByKey[cacheKey];
-          }
-        })();
-
-        prDetailsInFlightByKey[cacheKey] = run;
-        await run;
       },
 
       selectPR: async (repoPath: string, prNumber: number, options?: { force?: boolean }) => {

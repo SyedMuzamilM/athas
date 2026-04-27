@@ -1,4 +1,4 @@
-use crate::{ToolConfig, ToolError, ToolRuntime};
+use crate::{ToolConfig, ToolError, ToolRuntime, platform};
 use athas_runtime::{RuntimeManager, RuntimeType, process::configure_background_command};
 use flate2::read::GzDecoder;
 use futures_util::StreamExt;
@@ -119,6 +119,15 @@ impl ToolInstaller {
       }
       Self::ensure_executable(path)?;
       Ok(path.to_path_buf())
+   }
+
+   fn validate_existing_binary(path: &Path, config: &ToolConfig) -> Result<(), ToolError> {
+      if path.exists() && matches!(config.runtime, ToolRuntime::Binary) {
+         platform::validate_downloaded_binary(path, &config.name)
+            .map_err(ToolError::InstallationFailed)?;
+      }
+
+      Ok(())
    }
 
    fn extract_archive(bytes: &[u8], url: &str, target_dir: &Path) -> Result<(), ToolError> {
@@ -619,6 +628,8 @@ impl ToolInstaller {
       Self::extract_archive(&bytes, url, staging_dir.path())?;
 
       let source_binary = Self::pick_binary(staging_dir.path(), name)?;
+      platform::validate_downloaded_binary(&source_binary, name)
+         .map_err(ToolError::InstallationFailed)?;
       fs::copy(&source_binary, &bin_path).map_err(|e| {
          ToolError::InstallationFailed(format!(
             "Failed to copy binary from {:?} to {:?}: {}",
@@ -636,7 +647,12 @@ impl ToolInstaller {
       config: &ToolConfig,
    ) -> Result<bool, ToolError> {
       let path = Self::get_tool_path(app_handle, config)?;
-      Ok(path.exists())
+      if !path.exists() {
+         return Ok(false);
+      }
+
+      Self::validate_existing_binary(&path, config)?;
+      Ok(true)
    }
 
    /// Get the path where a tool would be/is installed
@@ -699,9 +715,12 @@ impl ToolInstaller {
             if config.download_url.is_none()
                && let Ok(system_path) = which::which(&config.name)
             {
+               Self::validate_existing_binary(&system_path, config)?;
                return Ok(system_path);
             }
-            Ok(tools_dir.join("bin").join(bin_name))
+            let path = tools_dir.join("bin").join(bin_name);
+            Self::validate_existing_binary(&path, config)?;
+            Ok(path)
          }
       }
    }

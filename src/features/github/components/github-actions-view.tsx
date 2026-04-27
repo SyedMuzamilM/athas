@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { Pulse as Activity, WarningCircle as AlertCircle } from "@phosphor-icons/react";
 import { GitHubAuthStatusMessage } from "./github-auth-status";
+import { GitHubSidebarState } from "./github-sidebar-state";
 import {
   memo,
   startTransition,
@@ -16,26 +17,18 @@ import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
 import GitHubSidebarLoadingBar from "./github-sidebar-loading-bar";
 import { useGitHubStore } from "../stores/github-store";
 import type { WorkflowRunListItem } from "../types/github";
-import {
-  GITHUB_ACTION_DETAILS_TTL_MS,
-  GITHUB_ACTION_LIST_TTL_MS,
-  githubActionDetailsCache,
-  githubActionListCache,
-} from "../utils/github-data-cache";
+import { GITHUB_ACTION_LIST_TTL_MS, githubActionListCache } from "../utils/github-data-cache";
 import { Button } from "@/ui/button";
 
 interface WorkflowRunRowProps {
   run: WorkflowRunListItem;
   isActive: boolean;
   onSelect: () => void;
-  onPrefetch: () => void;
 }
 
-const WorkflowRunRow = memo(({ run, isActive, onSelect, onPrefetch }: WorkflowRunRowProps) => (
+const WorkflowRunRow = memo(({ run, isActive, onSelect }: WorkflowRunRowProps) => (
   <Button
     onClick={onSelect}
-    onMouseEnter={onPrefetch}
-    onFocus={onPrefetch}
     variant="ghost"
     size="sm"
     active={isActive}
@@ -117,15 +110,6 @@ const GitHubActionsView = memo(({ refreshNonce = 0 }: GitHubActionsViewProps) =>
           { force, ttlMs: GITHUB_ACTION_LIST_TTL_MS },
         );
         startTransition(() => setRuns(nextRuns));
-
-        for (const run of nextRuns.slice(0, 3)) {
-          const cacheKey = `${repoPath}::${run.databaseId}`;
-          void githubActionDetailsCache.load(
-            cacheKey,
-            () => invoke("github_get_workflow_run_details", { repoPath, runId: run.databaseId }),
-            { ttlMs: GITHUB_ACTION_DETAILS_TTL_MS },
-          );
-        }
       } catch (nextError) {
         setError(nextError instanceof Error ? nextError.message : String(nextError));
       } finally {
@@ -176,19 +160,17 @@ const GitHubActionsView = memo(({ refreshNonce = 0 }: GitHubActionsViewProps) =>
   }
 
   return (
-    <div className="min-h-0 flex-1 overflow-hidden">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <GitHubSidebarLoadingBar isVisible={isLoading} className="mx-2 mb-1 mt-1" />
       <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
         {error ? (
-          <div className="flex items-center gap-2 px-2 py-3 text-error">
-            <AlertCircle className="size-4" />
-            <p className="ui-text-sm">{error}</p>
-          </div>
+          <GitHubSidebarState
+            icon={<AlertCircle className="size-4" />}
+            title={error}
+            tone="error"
+          />
         ) : deferredRuns.length === 0 && !isLoading ? (
-          <div className="flex items-center gap-2 px-2 py-3 text-text-lighter">
-            <Activity className="size-4" />
-            <p className="ui-text-sm">No workflow runs</p>
-          </div>
+          <GitHubSidebarState icon={<Activity className="size-4" />} title="No workflow runs" />
         ) : (
           <div className="space-y-1 overflow-x-hidden">
             {deferredRuns.map((run) => (
@@ -196,19 +178,6 @@ const GitHubActionsView = memo(({ refreshNonce = 0 }: GitHubActionsViewProps) =>
                 key={run.databaseId}
                 run={run}
                 isActive={activeRunId === run.databaseId}
-                onPrefetch={() => {
-                  if (!repoPath) return;
-                  const cacheKey = `${repoPath}::${run.databaseId}`;
-                  void githubActionDetailsCache.load(
-                    cacheKey,
-                    () =>
-                      invoke("github_get_workflow_run_details", {
-                        repoPath,
-                        runId: run.databaseId,
-                      }),
-                    { ttlMs: GITHUB_ACTION_DETAILS_TTL_MS },
-                  );
-                }}
                 onSelect={() =>
                   startTransition(() => {
                     openGitHubActionBuffer({

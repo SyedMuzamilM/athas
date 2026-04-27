@@ -1,0 +1,170 @@
+name: "Release Preflight"
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: "macos-latest"
+            os: "macos"
+            args: "--target aarch64-apple-darwin"
+            target: "aarch64-apple-darwin"
+            timeout_minutes: 60
+            rustflags: ""
+          - platform: "macos-latest"
+            os: "macos"
+            args: "--target x86_64-apple-darwin"
+            target: "x86_64-apple-darwin"
+            timeout_minutes: 60
+            rustflags: ""
+          - platform: "ubuntu-22.04"
+            os: "linux"
+            args: "--bundles deb,rpm"
+            target: ""
+            timeout_minutes: 60
+            rustflags: ""
+          - platform: "ubuntu-22.04-arm"
+            os: "linux"
+            args: "--bundles deb,rpm"
+            target: ""
+            timeout_minutes: 60
+            rustflags: ""
+          - platform: "windows-latest"
+            os: "windows"
+            args: ""
+            target: ""
+            timeout_minutes: 90
+            rustflags: ""
+          - platform: "windows-latest"
+            os: "windows"
+            args: "--target aarch64-pc-windows-msvc"
+            target: "aarch64-pc-windows-msvc"
+            timeout_minutes: 90
+            rustflags: ""
+
+    runs-on: ${{ matrix.platform }}
+    timeout-minutes: ${{ matrix.timeout_minutes }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free disk space (Linux only)
+        if: matrix.os == 'linux'
+        run: |
+          echo "Disk usage before cleanup:"
+          df -h
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /opt/hostedtoolcache/CodeQL || true
+          sudo docker system prune -af || true
+          sudo apt-get clean
+          echo "Disk usage after cleanup:"
+          df -h
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Ensure Rust target is installed
+        if: matrix.target != ''
+        run: rustup target add ${{ matrix.target }}
+
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+
+      - name: Cache Bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install dependencies (Linux only)
+        if: matrix.os == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.0-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libfuse2 xdg-utils desktop-file-utils libglib2.0-bin squashfs-tools zsync file
+
+      - name: Configure AppImage runtime (Linux only)
+        if: matrix.os == 'linux'
+        run: echo "APPIMAGE_EXTRACT_AND_RUN=1" >> "$GITHUB_ENV"
+
+      - name: Verify Linux packaging tools (Linux only)
+        if: matrix.os == 'linux'
+        run: |
+          command -v xdg-mime
+          command -v desktop-file-validate
+          command -v mksquashfs
+          command -v zsyncmake
+
+      - name: Install frontend dependencies
+        run: bun install --ignore-scripts && bun scripts/postinstall.ts
+
+      - name: Import Apple Certificate (macOS only)
+        if: matrix.os == 'macos'
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
+        run: |
+          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+
+          echo -n "$APPLE_CERTIFICATE" | base64 --decode -o $CERTIFICATE_PATH
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security import $CERTIFICATE_PATH -P "$APPLE_CERT_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+          security find-identity -v -p codesigning
+
+      - name: Sign bundled macOS binaries (macOS only)
+        if: matrix.os == 'macos'
+        env:
+          APPLE_SIGNING_IDENTITY: "${{ secrets.APPLE_SIGNING_IDENTITY || 'Developer ID Application: Mehmet Ozgul (N43BXFX4H4)' }}"
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ ! -d src/extensions/bundled ]]; then
+            exit 0
+          fi
+
+          while IFS= read -r -d '' file_path; do
+            file_type="$(file -b "$file_path" || true)"
+            if [[ "$file_type" == *"Mach-O"* ]]; then
+              echo "Signing bundled binary: $file_path"
+              codesign --force --options runtime --sign "$APPLE_SIGNING_IDENTITY" "$file_path"
+            fi
+          done < <(find src/extensions/bundled -type f -perm -111 -print0)
+
+      - name: Run package build
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          NO_STRIP: ${{ matrix.os == 'linux' && 'true' || '' }}
+          RUSTFLAGS: ${{ matrix.rustflags }}
+        run: bun tauri build ${{ matrix.args }}

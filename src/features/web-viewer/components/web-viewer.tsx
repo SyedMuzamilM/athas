@@ -58,6 +58,10 @@ function getWebViewerErrorMessage(error: unknown) {
   return "Couldn't open this page.";
 }
 
+function isWebviewNotFoundError(error: unknown) {
+  return typeof error === "string" && error.includes("Webview not found:");
+}
+
 export function WebViewer({
   url: initialUrl,
   bufferId,
@@ -87,7 +91,11 @@ export function WebViewer({
   const webViewerBuffer = buffers.find(
     (buffer) => buffer.id === bufferId && buffer.type === "webViewer",
   );
-  const { error: webviewError, webviewLabel } = useEmbeddedWebview({
+  const {
+    error: webviewError,
+    resetWebview,
+    webviewLabel,
+  } = useEmbeddedWebview({
     bufferId,
     initialUrl: currentUrl,
     containerRef,
@@ -387,14 +395,19 @@ export function WebViewer({
           url: normalizedUrl,
         });
       } catch (error) {
-        console.error("Failed to navigate:", error);
         pendingNavigationActionRef.current = null;
         setIsLoading(false);
+        if (isWebviewNotFoundError(error)) {
+          resetWebview(webviewLabel);
+          setIsLoading(true);
+          return;
+        }
+        console.error("Failed to navigate:", error);
         setPageError(getWebViewerErrorMessage(error));
         return;
       }
     },
-    [webviewLabel],
+    [resetWebview, webviewLabel],
   );
 
   const handleGoBack = useCallback(() => {
@@ -733,7 +746,7 @@ export function WebViewer({
       />
 
       {(urlError || pageError) && (
-        <div className="flex h-8 shrink-0 items-center gap-2 border-border border-b bg-error/6 px-3 text-[11px] text-text-light">
+        <div className="ui-text-xs flex h-8 shrink-0 items-center gap-2 border-border border-b bg-error/6 px-3 text-text-light">
           <AlertCircle className="size-3.5 shrink-0 text-error" />
           <span className="truncate">{urlError ?? pageError}</span>
         </div>
@@ -743,7 +756,7 @@ export function WebViewer({
         {!currentUrl && !isLoading && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-primary-bg px-6 text-center">
             <div className="ui-font text-sm text-text">Open a page</div>
-            <div className="max-w-[320px] text-[12px] text-text-lighter">
+            <div className="ui-text-xs max-w-[320px] text-text-lighter">
               Enter a URL to load a website, local development server, or app-bound page.
             </div>
           </div>

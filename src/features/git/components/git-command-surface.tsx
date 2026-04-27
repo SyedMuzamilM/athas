@@ -38,7 +38,7 @@ const GitCommandSurface = ({
     <Command
       isVisible={isOpen}
       onClose={onClose}
-      className="max-h-[70vh] w-[min(560px,calc(100vw-32px))]"
+      className="max-h-[70vh] w-[min(560px,calc(100vw_-_32px))]"
     >
       <CommandHeader onClose={onClose}>
         <CommandInput

@@ -5,17 +5,16 @@ import type { CodeLensItem } from "./use-code-lens";
 interface CodeLensOverlayProps {
   lenses: CodeLensItem[];
   fontSize: number;
+  lineHeight: number;
   scrollTop: number;
   viewportHeight: number;
 }
 
 const CodeLensOverlay = forwardRef(
   (
-    { lenses, fontSize, scrollTop, viewportHeight }: CodeLensOverlayProps,
+    { lenses, fontSize, lineHeight, scrollTop, viewportHeight }: CodeLensOverlayProps,
     ref: ForwardedRef<HTMLDivElement>,
   ) => {
-    const lineHeight = Math.ceil(fontSize * EDITOR_CONSTANTS.LINE_HEIGHT_MULTIPLIER);
-
     // Group lenses by line and only render visible ones
     const visibleGroups = useMemo(() => {
       const buffer = viewportHeight * 0.5;

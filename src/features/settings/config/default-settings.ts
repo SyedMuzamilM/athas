@@ -25,6 +25,7 @@ export const defaultSettings: Settings = {
   // Editor
   fontFamily: DEFAULT_MONO_FONT_FAMILY,
   fontSize: DEFAULT_CODE_FONT_SIZE,
+  editorLineHeight: 1.4,
   tabSize: 2,
   wordWrap: false,
   lineNumbers: true,
@@ -66,6 +67,7 @@ export const defaultSettings: Settings = {
   aiCompletion: true,
   aiAutocompleteModelId: DEFAULT_AI_AUTOCOMPLETE_MODEL_ID,
   aiDefaultSessionMode: "",
+  aiSkills: [],
   ollamaBaseUrl: "http://localhost:11434",
   // Layout
   sidebarWidth: 220,
@@ -95,6 +97,7 @@ export const defaultSettings: Settings = {
     terminal: true,
     search: true,
     diagnostics: true,
+    debugger: false,
     aiChat: true,
     breadcrumbs: true,
     persistentCommands: true,
@@ -108,6 +111,11 @@ export const defaultSettings: Settings = {
   maxOpenTabs: 100,
   horizontalTabScroll: false,
   //// File tree
+  fileTreeIndentSize: 20,
+  compactFoldersInFileTree: false,
+  fileTreeDensity: "default",
+  showHiddenFilesInFileTree: true,
+  showGitignoredFilesInFileTree: true,
   hiddenFilePatterns: [],
   hiddenDirectoryPatterns: [],
   gitChangesFolderView: true,
@@ -144,6 +152,7 @@ export function getDefaultSettingsSnapshot(): Settings {
     sidebarActivityItemsOrder: [...defaultSettings.sidebarActivityItemsOrder],
     footerLeadingItemsOrder: [...defaultSettings.footerLeadingItemsOrder],
     footerTrailingItemsOrder: [...defaultSettings.footerTrailingItemsOrder],
+    aiSkills: defaultSettings.aiSkills.map((skill) => ({ ...skill })),
     uiFontSize: normalizeUiFontSize(defaultSettings.uiFontSize),
   };
 }

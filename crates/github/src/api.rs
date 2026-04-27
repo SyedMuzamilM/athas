@@ -1,7 +1,7 @@
 use crate::models::{
    IssueComment, IssueDetails, IssueListItem, Label, PullRequest, PullRequestAuthor,
-   PullRequestComment, PullRequestDetails, PullRequestFile, ReviewRequest, WorkflowRunDetails,
-   WorkflowRunJob, WorkflowRunListItem, WorkflowRunStep,
+   PullRequestComment, PullRequestDetails, PullRequestFile, ReviewRequest, StatusCheck,
+   WorkflowRunDetails, WorkflowRunJob, WorkflowRunListItem, WorkflowRunStep,
 };
 use git2::Repository;
 use reqwest::{
@@ -9,11 +9,20 @@ use reqwest::{
    header::{ACCEPT, AUTHORIZATION, HeaderMap, HeaderValue, USER_AGENT},
 };
 use serde::{Deserialize, Serialize};
-use std::{path::Path, process::Command, time::Duration};
+use std::{
+   path::Path,
+   process::Command,
+   sync::{LazyLock, Mutex},
+   thread,
+   time::{Duration, Instant},
+};
 
 const GITHUB_API_BASE: &str = "https://api.github.com";
 const GITHUB_API_VERSION: &str = "2022-11-28";
 const USER_AGENT_VALUE: &str = "Athas";
+const GITHUB_REQUEST_INTERVAL: Duration = Duration::from_millis(200);
+
+static GITHUB_REQUEST_GATE: LazyLock<Mutex<Instant>> = LazyLock::new(|| Mutex::new(Instant::now()));
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -26,6 +35,11 @@ pub enum GitHubAuthStatus {
 struct RepoSlug {
    owner: String,
    name: String,
+}
+
+struct RepoRemote {
+   slug: RepoSlug,
+   remote_name: String,
 }
 
 struct GitHubApi {
@@ -49,6 +63,7 @@ struct RestLabel {
 struct RestBranchRef {
    #[serde(rename = "ref")]
    ref_name: Option<String>,
+   sha: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -129,6 +144,30 @@ struct WorkflowJobsResponse {
 }
 
 #[derive(Deserialize)]
+struct CheckRunsResponse {
+   check_runs: Vec<RestCheckRun>,
+}
+
+#[derive(Deserialize)]
+struct RestCheckRun {
+   id: Option<i64>,
+   name: Option<String>,
+   status: Option<String>,
+   conclusion: Option<String>,
+   check_suite: Option<RestCheckSuite>,
+}
+
+#[derive(Deserialize)]
+struct RestCheckSuite {
+   app: Option<RestCheckApp>,
+}
+
+#[derive(Deserialize)]
+struct RestCheckApp {
+   name: Option<String>,
+}
+
+#[derive(Deserialize)]
 struct RestWorkflowRun {
    id: i64,
    name: Option<String>,
@@ -145,12 +184,15 @@ struct RestWorkflowRun {
 
 #[derive(Deserialize)]
 struct RestWorkflowJob {
+   id: Option<i64>,
    name: Option<String>,
    status: Option<String>,
    conclusion: Option<String>,
    started_at: Option<String>,
    completed_at: Option<String>,
    html_url: Option<String>,
+   runner_name: Option<String>,
+   labels: Option<Vec<String>>,
    steps: Option<Vec<RestWorkflowStep>>,
 }
 
@@ -174,6 +216,17 @@ impl GitHubApi {
          client,
          github_token: github_token.filter(|token| !token.trim().is_empty()),
       })
+   }
+
+   fn new_authenticated(github_token: Option<String>) -> Result<Self, String> {
+      if github_token
+         .as_deref()
+         .is_none_or(|token| token.trim().is_empty())
+      {
+         return Err("GitHub account required. Connect GitHub in Athas and try again.".to_string());
+      }
+
+      Self::new(github_token)
    }
 
    fn get(&self, path: &str, accept: &str) -> RequestBuilder {
@@ -231,9 +284,20 @@ impl GitHubApi {
 }
 
 fn send_github_request(request: RequestBuilder) -> Result<Response, String> {
+   let mut next_allowed_request_at = GITHUB_REQUEST_GATE
+      .lock()
+      .map_err(|_| "GitHub API request queue failed.".to_string())?;
+
+   let now = Instant::now();
+   if *next_allowed_request_at > now {
+      thread::sleep(*next_allowed_request_at - now);
+   }
+
    let response = request
       .send()
       .map_err(|e| format!("Failed to call GitHub API: {e}"))?;
+   *next_allowed_request_at = Instant::now() + GITHUB_REQUEST_INTERVAL;
+   drop(next_allowed_request_at);
 
    if response.status().is_success() {
       return Ok(response);
@@ -250,7 +314,14 @@ fn send_github_request(request: RequestBuilder) -> Result<Response, String> {
       .get("retry-after")
       .and_then(|value| value.to_str().ok())
       .map(ToOwned::to_owned);
+   let rate_reset = response
+      .headers()
+      .get("x-ratelimit-reset")
+      .and_then(|value| value.to_str().ok())
+      .map(ToOwned::to_owned);
    let body = response.text().unwrap_or_default();
+   let parsed_message = parse_github_error_message(&body).unwrap_or_else(|| body.clone());
+   let normalized_message = parsed_message.to_lowercase();
 
    if status.as_u16() == 401 {
       return Err(
@@ -259,17 +330,34 @@ fn send_github_request(request: RequestBuilder) -> Result<Response, String> {
    }
 
    if status.as_u16() == 403 && rate_remaining.as_deref() == Some("0") {
-      return Err("GitHub API rate limit reached. Try again after the limit resets.".to_string());
+      let reset_suffix = rate_reset
+         .as_deref()
+         .map(|reset| format!(" Reset epoch: {reset}."))
+         .unwrap_or_default();
+      return Err(format!(
+         "GitHub API rate limit reached. Try again after the limit resets.{reset_suffix}"
+      ));
    }
 
-   if status.as_u16() == 429 || retry_after.is_some() {
-      return Err(
-         "GitHub API temporarily rate limited the request. Try again shortly.".to_string(),
-      );
+   if status.as_u16() == 429
+      || retry_after.is_some()
+      || (status.as_u16() == 403
+         && (normalized_message.contains("secondary rate limit")
+            || normalized_message.contains("abuse detection")
+            || normalized_message.contains("rate limit")))
+   {
+      let retry_suffix = retry_after
+         .as_deref()
+         .map(|seconds| format!(" Retry after {seconds} seconds."))
+         .unwrap_or_default();
+      return Err(format!(
+         "GitHub API temporarily rate limited the request. Try again shortly.{retry_suffix}"
+      ));
    }
 
-   let message = parse_github_error_message(&body).unwrap_or(body);
-   Err(format!("GitHub API request failed ({status}): {message}"))
+   Err(format!(
+      "GitHub API request failed ({status}): {parsed_message}"
+   ))
 }
 
 fn parse_github_error_message(body: &str) -> Option<String> {
@@ -284,25 +372,72 @@ fn parse_github_error_message(body: &str) -> Option<String> {
 }
 
 fn resolve_repo_slug(repo_path: &str) -> Result<RepoSlug, String> {
+   resolve_repo_remote(repo_path).map(|remote| remote.slug)
+}
+
+fn resolve_repo_remote(repo_path: &str) -> Result<RepoRemote, String> {
    let repository = Repository::discover(repo_path)
       .map_err(|_| "Repository is not a Git repository".to_string())?;
 
-   let remote_urls = repository
+   let remote_names = repository
       .remotes()
       .map_err(|e| format!("Failed to read repository remotes: {e}"))?
       .iter()
       .flatten()
-      .filter_map(|remote_name| repository.find_remote(remote_name).ok())
-      .filter_map(|remote| remote.url().map(ToOwned::to_owned))
+      .map(ToOwned::to_owned)
       .collect::<Vec<_>>();
 
-   for url in remote_urls {
-      if let Some(slug) = parse_github_remote_url(&url) {
-         return Ok(slug);
+   for remote_name in
+      order_remote_names(remote_names, current_branch_remote(&repository).as_deref())
+   {
+      if let Ok(remote) = repository.find_remote(&remote_name)
+         && let Some(url) = remote.url()
+         && let Some(slug) = parse_github_remote_url(url)
+      {
+         return Ok(RepoRemote { slug, remote_name });
       }
    }
 
    Err("No github.com remote found for this repository".to_string())
+}
+
+fn current_branch_remote(repository: &Repository) -> Option<String> {
+   let head = repository.head().ok()?;
+   if !head.is_branch() {
+      return None;
+   }
+
+   let branch_name = head.shorthand()?;
+   repository
+      .config()
+      .ok()?
+      .get_string(&format!("branch.{branch_name}.remote"))
+      .ok()
+      .filter(|remote| !remote.trim().is_empty())
+}
+
+fn order_remote_names(remote_names: Vec<String>, upstream_remote: Option<&str>) -> Vec<String> {
+   let mut ordered = Vec::with_capacity(remote_names.len());
+
+   if let Some(upstream_remote) = upstream_remote
+      && remote_names.iter().any(|name| name == upstream_remote)
+   {
+      ordered.push(upstream_remote.to_string());
+   }
+
+   if remote_names.iter().any(|name| name == "origin")
+      && !ordered.iter().any(|name| name == "origin")
+   {
+      ordered.push("origin".to_string());
+   }
+
+   for remote_name in remote_names {
+      if !ordered.iter().any(|name| name == &remote_name) {
+         ordered.push(remote_name);
+      }
+   }
+
+   ordered
 }
 
 fn parse_github_remote_url(url: &str) -> Option<RepoSlug> {
@@ -395,6 +530,7 @@ fn pr_details_from_rest(
    commits: Vec<serde_json::Value>,
    files: Vec<PullRequestFile>,
    review_requests: Vec<ReviewRequest>,
+   status_checks: Vec<StatusCheck>,
 ) -> PullRequestDetails {
    PullRequestDetails {
       number: pr.number,
@@ -415,7 +551,7 @@ fn pr_details_from_rest(
          .changed_files
          .unwrap_or_else(|| i64::try_from(files.len()).unwrap_or_default()),
       commits,
-      status_checks: Vec::new(),
+      status_checks,
       linked_issues: Vec::new(),
       review_requests,
       merge_state_status: pr.mergeable_state,
@@ -516,12 +652,15 @@ fn workflow_details_from_rest(
 
 fn workflow_job_from_rest(job: RestWorkflowJob) -> WorkflowRunJob {
    WorkflowRunJob {
+      id: job.id,
       name: job.name.unwrap_or_default(),
       status: job.status,
       conclusion: job.conclusion,
       started_at: job.started_at,
       completed_at: job.completed_at,
       url: job.html_url,
+      runner_name: job.runner_name,
+      labels: job.labels.unwrap_or_default(),
       steps: job
          .steps
          .unwrap_or_default()
@@ -549,7 +688,7 @@ pub fn github_check_auth(github_token: Option<String>) -> Result<GitHubAuthStatu
       return Ok(GitHubAuthStatus::NotAuthenticated);
    }
 
-   let api = GitHubApi::new(github_token)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
    match get_current_user(&api) {
       Ok(_) => Ok(GitHubAuthStatus::Authenticated),
       Err(_) => Ok(GitHubAuthStatus::NotAuthenticated),
@@ -562,7 +701,7 @@ pub fn github_list_prs(
    github_token: Option<String>,
 ) -> Result<Vec<PullRequest>, String> {
    let slug = resolve_repo_slug(&repo_path_value)?;
-   let api = GitHubApi::new(github_token)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
 
    if filter == "review-requests" {
       let username = get_current_user(&api)?;
@@ -651,7 +790,7 @@ fn commit_value_from_rest(value: serde_json::Value) -> serde_json::Value {
 }
 
 pub fn github_get_current_user(github_token: Option<String>) -> Result<String, String> {
-   let api = GitHubApi::new(github_token)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
    get_current_user(&api)
 }
 
@@ -660,7 +799,7 @@ pub fn github_list_issues(
    github_token: Option<String>,
 ) -> Result<Vec<IssueListItem>, String> {
    let slug = resolve_repo_slug(&repo_path_value)?;
-   let api = GitHubApi::new(github_token)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
    let issues: Vec<RestIssue> = api.get_json_with_query(
       &repo_path(&slug, "issues"),
       &[
@@ -683,7 +822,7 @@ pub fn github_list_workflow_runs(
    github_token: Option<String>,
 ) -> Result<Vec<WorkflowRunListItem>, String> {
    let slug = resolve_repo_slug(&repo_path_value)?;
-   let api = GitHubApi::new(github_token)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
    let response: WorkflowRunsResponse = api.get_json_with_query(
       &repo_path(&slug, "actions/runs"),
       &[("per_page", "50".to_string())],
@@ -701,8 +840,9 @@ pub fn github_checkout_pr(
    pr_number: i64,
    github_token: Option<String>,
 ) -> Result<(), String> {
-   let slug = resolve_repo_slug(&repo_path_value)?;
-   let api = GitHubApi::new(github_token)?;
+   let resolved_remote = resolve_repo_remote(&repo_path_value)?;
+   let slug = resolved_remote.slug;
+   let api = GitHubApi::new_authenticated(github_token)?;
    let _: RestPullRequest = api.get_json(&repo_path(&slug, &format!("pulls/{pr_number}")))?;
 
    let branch = format!("pr-{pr_number}");
@@ -711,7 +851,10 @@ pub fn github_checkout_pr(
    }
 
    let refspec = format!("refs/pull/{pr_number}/head:refs/heads/{branch}");
-   run_git(Path::new(&repo_path_value), &["fetch", "origin", &refspec])?;
+   run_git(
+      Path::new(&repo_path_value),
+      &["fetch", &resolved_remote.remote_name, &refspec],
+   )?;
    run_git(Path::new(&repo_path_value), &["switch", &branch])
 }
 
@@ -744,15 +887,26 @@ pub fn github_get_pr_details(
    github_token: Option<String>,
 ) -> Result<PullRequestDetails, String> {
    let slug = resolve_repo_slug(&repo_path_value)?;
-   let api = GitHubApi::new(github_token)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
    let pr: RestPullRequest = api.get_json(&repo_path(&slug, &format!("pulls/{pr_number}")))?;
+   let head_sha = pr.head.as_ref().and_then(|head| head.sha.clone());
    let commits: Vec<serde_json::Value> =
       api.get_json(&repo_path(&slug, &format!("pulls/{pr_number}/commits")))?;
    let commits = commits.into_iter().map(commit_value_from_rest).collect();
    let files = github_get_pr_files(repo_path_value.clone(), pr_number, api.github_token.clone())?;
    let review_requests = get_review_requests(&api, &slug, pr_number).unwrap_or_default();
+   let status_checks = head_sha
+      .as_deref()
+      .map(|sha| get_status_checks(&api, &slug, sha).unwrap_or_default())
+      .unwrap_or_default();
 
-   Ok(pr_details_from_rest(pr, commits, files, review_requests))
+   Ok(pr_details_from_rest(
+      pr,
+      commits,
+      files,
+      review_requests,
+      status_checks,
+   ))
 }
 
 fn get_review_requests(
@@ -790,13 +944,39 @@ fn get_review_requests(
    Ok(requests)
 }
 
+fn get_status_checks(
+   api: &GitHubApi,
+   slug: &RepoSlug,
+   head_sha: &str,
+) -> Result<Vec<StatusCheck>, String> {
+   let response: CheckRunsResponse = api.get_json_with_query(
+      &repo_path(slug, &format!("commits/{head_sha}/check-runs")),
+      &[("per_page", "100".to_string())],
+   )?;
+
+   Ok(response
+      .check_runs
+      .into_iter()
+      .map(|check| StatusCheck {
+         id: check.id,
+         name: check.name,
+         status: check.status.map(|status| status.to_uppercase()),
+         conclusion: check.conclusion.map(|conclusion| conclusion.to_uppercase()),
+         workflow_name: check
+            .check_suite
+            .and_then(|suite| suite.app)
+            .and_then(|app| app.name),
+      })
+      .collect())
+}
+
 pub fn github_get_pr_diff(
    repo_path_value: String,
    pr_number: i64,
    github_token: Option<String>,
 ) -> Result<String, String> {
    let slug = resolve_repo_slug(&repo_path_value)?;
-   let api = GitHubApi::new(github_token)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
    api.get_text(
       &repo_path(&slug, &format!("pulls/{pr_number}")),
       "application/vnd.github.v3.diff",
@@ -809,7 +989,7 @@ pub fn github_get_pr_files(
    github_token: Option<String>,
 ) -> Result<Vec<PullRequestFile>, String> {
    let slug = resolve_repo_slug(&repo_path_value)?;
-   let api = GitHubApi::new(github_token)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
    let files: Vec<RestPullRequestFile> = api.get_json_with_query(
       &repo_path(&slug, &format!("pulls/{pr_number}/files")),
       &[("per_page", "100".to_string())],
@@ -824,7 +1004,7 @@ pub fn github_get_pr_comments(
    github_token: Option<String>,
 ) -> Result<Vec<PullRequestComment>, String> {
    let slug = resolve_repo_slug(&repo_path_value)?;
-   let api = GitHubApi::new(github_token)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
    let comments: Vec<RestComment> = api.get_json_with_query(
       &repo_path(&slug, &format!("issues/{pr_number}/comments")),
       &[("per_page", "100".to_string())],
@@ -839,7 +1019,7 @@ pub fn github_get_issue_details(
    github_token: Option<String>,
 ) -> Result<IssueDetails, String> {
    let slug = resolve_repo_slug(&repo_path_value)?;
-   let api = GitHubApi::new(github_token)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
    let issue: RestIssue = api.get_json(&repo_path(&slug, &format!("issues/{issue_number}")))?;
    let comments: Vec<RestComment> = api.get_json_with_query(
       &repo_path(&slug, &format!("issues/{issue_number}/comments")),
@@ -858,7 +1038,7 @@ pub fn github_get_workflow_run_details(
    github_token: Option<String>,
 ) -> Result<WorkflowRunDetails, String> {
    let slug = resolve_repo_slug(&repo_path_value)?;
-   let api = GitHubApi::new(github_token)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
    let run: RestWorkflowRun = api.get_json(&repo_path(&slug, &format!("actions/runs/{run_id}")))?;
    let response: WorkflowJobsResponse = api.get_json_with_query(
       &repo_path(&slug, &format!("actions/runs/{run_id}/jobs")),
@@ -875,9 +1055,22 @@ pub fn github_get_workflow_run_details(
    ))
 }
 
+pub fn github_get_workflow_job_logs(
+   repo_path_value: String,
+   job_id: i64,
+   github_token: Option<String>,
+) -> Result<String, String> {
+   let slug = resolve_repo_slug(&repo_path_value)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
+   api.get_text(
+      &repo_path(&slug, &format!("actions/jobs/{job_id}/logs")),
+      "text/plain",
+   )
+}
+
 #[cfg(test)]
 mod api_tests {
-   use super::parse_github_remote_url;
+   use super::{GitHubApi, order_remote_names, parse_github_remote_url};
 
    #[test]
    fn parses_https_github_remote() {
@@ -904,5 +1097,39 @@ mod api_tests {
    fn rejects_nested_or_invalid_remote_paths() {
       assert!(parse_github_remote_url("https://github.com/athasdev/athas/extra.git").is_none());
       assert!(parse_github_remote_url("https://github.com/athasdev/../athas.git").is_none());
+   }
+
+   #[test]
+   fn rejects_missing_authenticated_token() {
+      assert!(GitHubApi::new_authenticated(None).is_err());
+      assert!(GitHubApi::new_authenticated(Some("   ".to_string())).is_err());
+   }
+
+   #[test]
+   fn orders_upstream_remote_before_origin_and_other_remotes() {
+      let ordered = order_remote_names(
+         vec![
+            "origin".to_string(),
+            "fork".to_string(),
+            "upstream".to_string(),
+         ],
+         Some("upstream"),
+      );
+
+      assert_eq!(ordered, vec!["upstream", "origin", "fork"]);
+   }
+
+   #[test]
+   fn orders_origin_before_other_remotes_without_upstream() {
+      let ordered = order_remote_names(
+         vec![
+            "fork".to_string(),
+            "origin".to_string(),
+            "upstream".to_string(),
+         ],
+         None,
+      );
+
+      assert_eq!(ordered, vec!["origin", "fork", "upstream"]);
    }
 }

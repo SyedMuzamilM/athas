@@ -383,8 +383,10 @@ const TerminalContainer = ({
       const customEvent = event as CustomEvent<{
         command: string;
         name?: string;
+        workingDirectory?: string;
       }>;
-      const { command, name } = customEvent.detail;
+      const { command, name, workingDirectory } = customEvent.detail;
+      const terminalDirectory = workingDirectory || currentDirectory;
 
       // Show bottom pane and switch to terminal tab
       setBottomPaneActiveTab("terminal");
@@ -392,10 +394,10 @@ const TerminalContainer = ({
 
       // Create a new terminal
       const commandLabel = command.trim().split(/\s+/)[0]?.split(/[\\/]/).pop();
-      const terminalName = name || commandLabel || getDisplayNameFromDirectory(currentDirectory);
+      const terminalName = name || commandLabel || getDisplayNameFromDirectory(terminalDirectory);
       const newTerminalId = createTerminal({
         name: terminalName,
-        currentDirectory,
+        currentDirectory: terminalDirectory,
       });
 
       if (newTerminalId) {

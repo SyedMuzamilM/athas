@@ -6,6 +6,7 @@ use crate::{
 };
 use athas_ai::AcpAgentBridge;
 use athas_database::ConnectionManager;
+use athas_debugger::DebugManager;
 use athas_lsp::LspManager;
 use athas_project::FileWatcher;
 use log::{debug, info};
@@ -77,6 +78,7 @@ fn register_managed_state(app: &mut tauri::App<Wry>) {
    app.manage(acp_bridge);
 
    app.manage(LspManager::new(app.handle().clone()));
+   app.manage(DebugManager::new(app.handle().clone()));
    app.manage(ThemeCache::new(std::collections::HashMap::new()));
    app.manage(FileClipboard::new(None));
    app.manage(Arc::new(ConnectionManager::new()));
@@ -168,6 +170,9 @@ fn handle_menu_event(app_handle: &tauri::AppHandle<Wry>, event: tauri::menu::Men
                }
                "find_replace" => {
                   let _ = window.emit("menu_find_replace", ());
+               }
+               "toggle_comment" => {
+                  let _ = window.emit("menu_toggle_comment", ());
                }
                "command_palette" => {
                   let _ = window.emit("menu_command_palette", ());

@@ -27,6 +27,7 @@ interface InputLayerProps {
   showText?: boolean;
   readOnly?: boolean;
   scrollable?: boolean;
+  customCaret?: boolean;
   textareaRef?: React.RefObject<HTMLTextAreaElement | null>;
 }
 
@@ -48,6 +49,7 @@ const InputLayerComponent = ({
   showText = false,
   readOnly = false,
   scrollable = true,
+  customCaret = false,
   textareaRef,
 }: InputLayerProps) => {
   const localRef = useRef<HTMLTextAreaElement>(null);
@@ -85,6 +87,7 @@ const InputLayerComponent = ({
         fontSize: `${fontSize}px`,
         fontFamily,
         lineHeight: `${lineHeight}px`,
+        caretColor: customCaret ? "transparent" : undefined,
         tabSize,
         whiteSpace: wordWrap ? "pre-wrap" : "pre",
         overflowWrap: wordWrap ? "anywhere" : "normal",
@@ -116,6 +119,7 @@ export const InputLayer = memo(InputLayerComponent, (prev, next) => {
     prev.wordWrap === next.wordWrap &&
     prev.showText === next.showText &&
     prev.scrollable === next.scrollable &&
+    prev.customCaret === next.customCaret &&
     prev.textareaRef === next.textareaRef &&
     prev.onInput === next.onInput &&
     prev.onKeyDown === next.onKeyDown &&

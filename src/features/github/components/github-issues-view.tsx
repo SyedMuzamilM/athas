@@ -4,6 +4,7 @@ import {
   ChatCircleText as MessageSquare,
 } from "@phosphor-icons/react";
 import { GitHubAuthStatusMessage } from "./github-auth-status";
+import { GitHubSidebarState } from "./github-sidebar-state";
 import {
   memo,
   startTransition,
@@ -19,12 +20,7 @@ import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
 import GitHubSidebarLoadingBar from "./github-sidebar-loading-bar";
 import { useGitHubStore } from "../stores/github-store";
 import type { IssueListItem } from "../types/github";
-import {
-  GITHUB_ISSUE_DETAILS_TTL_MS,
-  GITHUB_ISSUE_LIST_TTL_MS,
-  githubIssueDetailsCache,
-  githubIssueListCache,
-} from "../utils/github-data-cache";
+import { GITHUB_ISSUE_LIST_TTL_MS, githubIssueListCache } from "../utils/github-data-cache";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 
@@ -32,14 +28,11 @@ interface IssueListItemProps {
   issue: IssueListItem;
   isActive: boolean;
   onSelect: () => void;
-  onPrefetch: () => void;
 }
 
-const IssueRow = memo(({ issue, isActive, onSelect, onPrefetch }: IssueListItemProps) => (
+const IssueRow = memo(({ issue, isActive, onSelect }: IssueListItemProps) => (
   <Button
     onClick={onSelect}
-    onMouseEnter={onPrefetch}
-    onFocus={onPrefetch}
     variant="ghost"
     size="sm"
     active={isActive}
@@ -119,16 +112,6 @@ const GitHubIssuesView = memo(({ refreshNonce = 0 }: GitHubIssuesViewProps) => {
           { force, ttlMs: GITHUB_ISSUE_LIST_TTL_MS },
         );
         startTransition(() => setIssues(nextIssues));
-
-        // Warm a few likely-next issue details so opening is near-instant.
-        for (const issue of nextIssues.slice(0, 3)) {
-          const cacheKey = `${repoPath}::${issue.number}`;
-          void githubIssueDetailsCache.load(
-            cacheKey,
-            () => invoke("github_get_issue_details", { repoPath, issueNumber: issue.number }),
-            { ttlMs: GITHUB_ISSUE_DETAILS_TTL_MS },
-          );
-        }
       } catch (nextError) {
         setError(nextError instanceof Error ? nextError.message : String(nextError));
       } finally {
@@ -179,19 +162,17 @@ const GitHubIssuesView = memo(({ refreshNonce = 0 }: GitHubIssuesViewProps) => {
   }
 
   return (
-    <div className="min-h-0 flex-1 overflow-hidden">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <GitHubSidebarLoadingBar isVisible={isLoading} className="mx-2 mb-1 mt-1" />
       <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
         {error ? (
-          <div className="flex items-center gap-2 px-2 py-3 text-error">
-            <AlertCircle className="size-4" />
-            <p className="ui-text-sm">{error}</p>
-          </div>
+          <GitHubSidebarState
+            icon={<AlertCircle className="size-4" />}
+            title={error}
+            tone="error"
+          />
         ) : deferredIssues.length === 0 && !isLoading ? (
-          <div className="flex items-center gap-2 px-2 py-3 text-text-lighter">
-            <MessageSquare className="size-4" />
-            <p className="ui-text-sm">No open issues</p>
-          </div>
+          <GitHubSidebarState icon={<MessageSquare className="size-4" />} title="No open issues" />
         ) : (
           <div className="space-y-1 overflow-x-hidden">
             {deferredIssues.map((issue) => (
@@ -199,16 +180,6 @@ const GitHubIssuesView = memo(({ refreshNonce = 0 }: GitHubIssuesViewProps) => {
                 key={issue.number}
                 issue={issue}
                 isActive={activeIssueNumber === issue.number}
-                onPrefetch={() => {
-                  if (!repoPath) return;
-                  const cacheKey = `${repoPath}::${issue.number}`;
-                  void githubIssueDetailsCache.load(
-                    cacheKey,
-                    () =>
-                      invoke("github_get_issue_details", { repoPath, issueNumber: issue.number }),
-                    { ttlMs: GITHUB_ISSUE_DETAILS_TTL_MS },
-                  );
-                }}
                 onSelect={() =>
                   startTransition(() => {
                     openGitHubIssueBuffer({

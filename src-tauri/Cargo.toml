@@ -1,6 +1,6 @@
 [package]
 name = "athas"
-version = "0.4.5"
+version = "0.4.6-alpha.2"
 description = "Athas code editor"
 authors = ["you"]
 edition = "2024"
@@ -10,7 +10,7 @@ workspace = true
 
 [lib]
 name = "athas_text_lib"
-crate-type = ["staticlib", "cdylib", "rlib"]
+crate-type = ["rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
@@ -38,6 +38,7 @@ athas-terminal = { path = "../crates/terminal" }
 athas-ai = { path = "../crates/ai" }
 athas-github = { path = "../crates/github" }
 athas-fff-search = { path = "../crates/fff-search" }
+athas-debugger = { path = "../crates/debugger" }
 mimalloc = { version = "0.1", default-features = false }
 log = "0.4.27"
 percent-encoding = "2"
