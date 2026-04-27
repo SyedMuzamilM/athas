@@ -204,7 +204,7 @@ export function ProviderApiKeyCommand({
                 />
                 <div className="min-w-0">
                   <div className="truncate text-sm text-text">{selectedProvider.name}</div>
-                  <div className="text-[11px] text-text-lighter">
+                  <div className="ui-text-xs text-text-lighter">
                     {hasExistingKey ? "API key saved" : "API key required"}
                   </div>
                 </div>

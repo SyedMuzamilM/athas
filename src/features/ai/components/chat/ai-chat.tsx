@@ -852,7 +852,7 @@ details: ${errorDetails || mainError}
                         Permission
                       </Badge>
                       {permissionQueue.length > 1 ? (
-                        <span className="text-[11px] text-text-lighter">
+                        <span className="ui-text-xs text-text-lighter">
                           {permissionQueue.length - 1} more queued
                         </span>
                       ) : null}
@@ -863,7 +863,7 @@ details: ${errorDetails || mainError}
                     >
                       {currentPermission.description}
                     </div>
-                    <div className="mt-1 text-[11px] text-text-lighter">
+                    <div className="ui-text-xs mt-1 text-text-lighter">
                       Review this request before the agent can continue.
                     </div>
                   </div>

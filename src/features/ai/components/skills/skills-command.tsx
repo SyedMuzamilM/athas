@@ -292,7 +292,7 @@ export function SkillsCommand({
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-xs text-text">{skill.title}</div>
                       {preview && (
-                        <div className="mt-0.5 truncate text-[11px] text-text-lighter">
+                        <div className="ui-text-xs mt-0.5 truncate text-text-lighter">
                           {preview}
                         </div>
                       )}
@@ -320,7 +320,7 @@ export function SkillsCommand({
                         event.stopPropagation();
                         void handleDelete(skill.id);
                       }}
-                      className="opacity-0 hover:bg-red-500/10 hover:text-red-400 focus:opacity-100 group-hover:opacity-100"
+                      className="opacity-0 hover:bg-error/10 hover:text-error focus:opacity-100 group-hover:opacity-100"
                       tooltip="Delete skill"
                       aria-label={`Delete ${skill.title}`}
                     >
@@ -332,7 +332,7 @@ export function SkillsCommand({
             )}
           </CommandList>
 
-          <div className="border-border border-t px-4 py-2 text-[11px] text-text-lighter">
+          <div className="ui-text-xs border-border border-t px-4 py-2 text-text-lighter">
             {getSyncLabel(syncEnabled, syncStatus)}
           </div>
         </>

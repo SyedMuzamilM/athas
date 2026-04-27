@@ -279,7 +279,7 @@ export const ChatMessage = memo(function ChatMessage({
               tooltipSide="top"
               aria-label="Copy message"
             >
-              {copiedMessageId === message.id ? <Check className="text-green-400" /> : <Copy />}
+              {copiedMessageId === message.id ? <Check className="text-success" /> : <Copy />}
             </Button>
           </div>
         </>

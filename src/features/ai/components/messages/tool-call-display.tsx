@@ -33,7 +33,7 @@ export default function ToolCallDisplay({
   const status = error ? "failed" : isStreaming ? "running" : "completed";
   const statusClass =
     status === "failed"
-      ? "text-red-400/70"
+      ? "text-error/70"
       : status === "running"
         ? "text-text-lighter/55"
         : "text-text-lighter/65";
@@ -161,11 +161,11 @@ export default function ToolCallDisplay({
               <span className="truncate font-medium text-text">{toolName}</span>
               <span
                 className={cn(
-                  "rounded-full border px-1.5 py-0.5 text-[10px]",
-                  status === "failed" && "border-red-500/25 bg-red-500/10 text-red-300",
+                  "ui-text-xs rounded-full border px-1.5 py-0.5",
+                  status === "failed" && "border-error/25 bg-error/10 text-error/90",
                   status === "running" &&
                     "border-border/60 bg-secondary-bg/70 text-text-lighter/80",
-                  status === "completed" && "border-green-500/20 bg-green-500/10 text-green-300",
+                  status === "completed" && "border-success/20 bg-success/10 text-success/90",
                 )}
               >
                 {statusLabel}
@@ -201,11 +201,11 @@ export default function ToolCallDisplay({
       </div>
 
       {isExpanded && (
-        <div className="mt-2 space-y-2 border-border/40 border-t pt-2 text-[11px] text-text-lighter/60">
+        <div className="ui-text-xs mt-2 space-y-2 border-border/40 border-t pt-2 text-text-lighter/60">
           {/* Input section */}
           <div>
             <div className="mb-1 font-medium opacity-55">Input</div>
-            <pre className="editor-font max-h-48 overflow-x-auto rounded-lg bg-secondary-bg/55 p-2 whitespace-pre-wrap text-[11px]">
+            <pre className="ui-text-xs editor-font max-h-48 overflow-x-auto rounded-lg bg-secondary-bg/55 p-2 whitespace-pre-wrap">
               {hasInput ? JSON.stringify(input, null, 2) : "No parameters"}
             </pre>
           </div>
@@ -214,7 +214,7 @@ export default function ToolCallDisplay({
           {output && (
             <div>
               <div className="mb-1 font-medium opacity-55">Output</div>
-              <pre className="editor-font max-h-48 overflow-x-auto rounded-lg bg-secondary-bg/55 p-2 whitespace-pre-wrap text-[11px]">
+              <pre className="ui-text-xs editor-font max-h-48 overflow-x-auto rounded-lg bg-secondary-bg/55 p-2 whitespace-pre-wrap">
                 {formatOutput(output)}
               </pre>
             </div>
@@ -223,8 +223,8 @@ export default function ToolCallDisplay({
           {/* Error section */}
           {error && (
             <div>
-              <div className="mb-1 font-medium text-red-400 opacity-80">Error</div>
-              <pre className="editor-font max-h-48 overflow-x-auto rounded-lg border border-red-500/20 bg-red-500/5 p-2 whitespace-pre-wrap text-[11px] text-red-300">
+              <div className="mb-1 font-medium text-error opacity-80">Error</div>
+              <pre className="ui-text-xs editor-font max-h-48 overflow-x-auto rounded-lg border border-error/20 bg-error/5 p-2 whitespace-pre-wrap text-error/90">
                 {error}
               </pre>
             </div>

@@ -778,7 +778,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
         const mentionSpan = document.createElement("span");
         mentionSpan.setAttribute("data-mention", "true");
         mentionSpan.className =
-          "ui-font inline-flex items-center gap-1 rounded border border-accent/30 bg-accent/10 px-1.5 py-0.5 text-[11px] text-accent select-none";
+          "ui-font ui-text-xs inline-flex items-center gap-1 rounded border border-accent/30 bg-accent/10 px-1.5 py-0.5 text-accent select-none";
         mentionSpan.textContent = file.name;
         inputRef.current.appendChild(mentionSpan);
 
