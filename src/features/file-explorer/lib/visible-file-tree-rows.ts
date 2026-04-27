@@ -88,3 +88,26 @@ export function getStickyAncestorRow(
 
   return null;
 }
+
+export function getGuideAncestorRows(
+  rows: readonly VisibleFileTreeRow[],
+  rowIndex: number,
+): Array<VisibleFileTreeRow | null> {
+  const row = rows[rowIndex];
+  if (!row || row.depth === 0) {
+    return [];
+  }
+
+  const ancestors: Array<VisibleFileTreeRow | null> = Array.from({ length: row.depth }, () => null);
+  let remaining = row.depth;
+
+  for (let index = rowIndex - 1; index >= 0 && remaining > 0; index--) {
+    const candidate = rows[index];
+    if (candidate.depth < row.depth && ancestors[candidate.depth] === null) {
+      ancestors[candidate.depth] = candidate;
+      remaining--;
+    }
+  }
+
+  return ancestors;
+}

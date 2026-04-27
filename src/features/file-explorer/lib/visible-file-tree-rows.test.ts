@@ -1,5 +1,9 @@
 import { describe, expect, test } from "vite-plus/test";
-import { buildVisibleFileTreeRows, getStickyAncestorRow } from "./visible-file-tree-rows";
+import {
+  buildVisibleFileTreeRows,
+  getGuideAncestorRows,
+  getStickyAncestorRow,
+} from "./visible-file-tree-rows";
 
 const tree = [
   {
@@ -114,5 +118,19 @@ describe("buildVisibleFileTreeRows", () => {
     expect(getStickyAncestorRow(rows, 4)?.file.path).toBe("/root/src/features/file-explorer");
     expect(getStickyAncestorRow(rows, 2)?.file.path).toBe("/root/src");
     expect(getStickyAncestorRow(rows, 0)).toBeNull();
+  });
+
+  test("finds guide ancestors for each visible depth level", () => {
+    const rows = buildVisibleFileTreeRows(
+      tree,
+      new Set(["/root", "/root/src", "/root/src/features", "/root/src/features/file-explorer"]),
+    );
+
+    expect(getGuideAncestorRows(rows, 4).map((row) => row?.file.path)).toEqual([
+      "/root",
+      "/root/src",
+      "/root/src/features",
+      "/root/src/features/file-explorer",
+    ]);
   });
 });

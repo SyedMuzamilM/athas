@@ -82,9 +82,30 @@
 
 .file-tree-guide {
   position: absolute;
+  width: 7px;
+  cursor: pointer;
+  opacity: 0.9;
+  pointer-events: auto;
+  transform: translateX(-3px);
+}
+
+.file-tree-guide::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 3px;
   width: 1px;
   background-color: var(--tree-guide-color);
-  opacity: 0.9;
+  content: "";
+}
+
+.file-tree-guide:hover::before {
+  background-color: color-mix(in srgb, var(--tree-guide-color) 55%, var(--color-text));
+}
+
+.file-tree-guide[data-active="true"]::before {
+  background-color: color-mix(in srgb, var(--color-accent) 45%, var(--tree-guide-color));
+  opacity: 1;
 }
 
 .file-tree-sticky-ancestor {

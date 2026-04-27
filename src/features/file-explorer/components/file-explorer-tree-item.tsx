@@ -6,10 +6,38 @@ import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import { FileExplorerIcon } from "./file-explorer-icon";
 
+export interface FileTreeGuideTarget {
+  path: string;
+  name: string;
+  isDir: boolean;
+  isActive: boolean;
+}
+
+function areGuideTargetsEqual(
+  previous: Array<FileTreeGuideTarget | null>,
+  next: Array<FileTreeGuideTarget | null>,
+): boolean {
+  if (previous.length !== next.length) return false;
+
+  return previous.every((previousTarget, index) => {
+    const nextTarget = next[index];
+    if (previousTarget === nextTarget) return true;
+    if (!previousTarget || !nextTarget) return false;
+
+    return (
+      previousTarget.path === nextTarget.path &&
+      previousTarget.name === nextTarget.name &&
+      previousTarget.isDir === nextTarget.isDir &&
+      previousTarget.isActive === nextTarget.isActive
+    );
+  });
+}
+
 interface FileExplorerTreeItemProps {
   file: FileEntry;
   depth: number;
   displayName?: string;
+  guideTargets: Array<FileTreeGuideTarget | null>;
   previousDepth: number;
   nextDepth: number;
   indentSize: number;
@@ -28,6 +56,7 @@ function FileExplorerTreeItemComponent({
   file,
   depth,
   displayName,
+  guideTargets,
   previousDepth,
   nextDepth,
   indentSize,
@@ -48,14 +77,20 @@ function FileExplorerTreeItemComponent({
   const paddingLeft = 14 + depth * indentSize;
   const guideLevels = Array.from({ length: depth }, (_, level) => level);
   const renderTreeGuides = () => (
-    <div aria-hidden="true" className="file-tree-guides">
+    <div className="file-tree-guides">
       {guideLevels.map((level) => {
+        const target = guideTargets[level];
         const startsHere = previousDepth <= level;
         const endsHere = nextDepth <= level;
         return (
           <span
             key={level}
             className="file-tree-guide"
+            data-file-path={target?.path}
+            data-is-dir={target?.isDir}
+            data-path={target?.path}
+            data-active={target?.isActive ? "true" : undefined}
+            title={target?.name}
             style={
               {
                 left: `${14 + level * indentSize}px`,
@@ -167,6 +202,7 @@ export const FileExplorerTreeItem = memo(
     prev.file === next.file &&
     prev.depth === next.depth &&
     prev.displayName === next.displayName &&
+    areGuideTargetsEqual(prev.guideTargets, next.guideTargets) &&
     prev.previousDepth === next.previousDepth &&
     prev.nextDepth === next.nextDepth &&
     prev.indentSize === next.indentSize &&

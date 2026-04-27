@@ -5,7 +5,10 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useEventListener } from "usehooks-ts";
 import { useFileClipboardStore } from "@/features/file-explorer/stores/file-explorer-clipboard-store";
 import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree-store";
-import { getStickyAncestorRow } from "@/features/file-explorer/lib/visible-file-tree-rows";
+import {
+  getGuideAncestorRows,
+  getStickyAncestorRow,
+} from "@/features/file-explorer/lib/visible-file-tree-rows";
 import { fileOpenBenchmark } from "@/features/editor/utils/file-open-benchmark";
 import { findFileInTree } from "@/features/file-system/controllers/file-tree-utils";
 import { readDirectory, readFile } from "@/features/file-system/controllers/platform";
@@ -29,6 +32,7 @@ import { useFileExplorerDragDrop } from "../hooks/use-file-explorer-drag-drop";
 import { useFileExplorerSync } from "../hooks/use-file-explorer-sync";
 import { useFileExplorerVisibleRows } from "../hooks/use-file-explorer-visible-rows";
 import { FileExplorerTreeItem } from "./file-explorer-tree-item";
+import type { FileTreeGuideTarget } from "./file-explorer-tree-item";
 import { FileExplorerIcon } from "./file-explorer-icon";
 import "../styles/file-explorer-tree.css";
 
@@ -938,12 +942,30 @@ function FileExplorerTreeComponent({
                   const row = visibleRows[vi.index];
                   const previousRow = visibleRows[vi.index - 1];
                   const nextRow = visibleRows[vi.index + 1];
+                  const guideTargets: Array<FileTreeGuideTarget | null> = getGuideAncestorRows(
+                    visibleRows,
+                    vi.index,
+                  ).map((ancestor) =>
+                    ancestor
+                      ? {
+                          path: ancestor.file.path,
+                          name: ancestor.displayName ?? ancestor.file.name,
+                          isDir: ancestor.file.isDir,
+                          isActive: activePath
+                            ? activePath === ancestor.file.path ||
+                              activePath.startsWith(`${ancestor.file.path}/`) ||
+                              activePath.startsWith(`${ancestor.file.path}\\`)
+                            : false,
+                        }
+                      : null,
+                  );
                   return (
                     <FileExplorerTreeItem
                       key={row.file.path}
                       file={row.file}
                       depth={row.depth}
                       displayName={row.displayName}
+                      guideTargets={guideTargets}
                       previousDepth={previousRow?.depth ?? 0}
                       nextDepth={nextRow?.depth ?? 0}
                       indentSize={settings.fileTreeIndentSize}
