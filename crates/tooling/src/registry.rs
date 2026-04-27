@@ -1,4 +1,7 @@
-use super::types::{LanguageToolConfigSet, ToolConfig, ToolType};
+use super::{
+   platform,
+   types::{LanguageToolConfigSet, ToolConfig, ToolType},
+};
 use std::collections::HashMap;
 
 /// Tool configurations resolved from extension manifests.
@@ -51,7 +54,8 @@ impl ToolRegistry {
    /// - `${os}` (`darwin` | `linux` | `win32`)
    /// - `${arch}` (`arm64` | `x64`)
    /// - `${platformArch}` (e.g. `darwin-arm64`)
-   /// - `${targetOs}` (`apple-darwin` | `unknown-linux-gnu` | `pc-windows-msvc`)
+   /// - `${targetOs}` (`apple-darwin` | `unknown-linux-gnu` | `unknown-linux-musl` |
+   ///   `pc-windows-msvc`)
    /// - `${targetArch}` (`aarch64` | `x86_64`)
    /// - `${archiveExt}` (`zip` on Windows, `gz` otherwise)
    /// - `${version}` (fallback: `latest`)
@@ -67,11 +71,7 @@ impl ToolRegistry {
          _ => "x64",
       };
 
-      let target_os = match std::env::consts::OS {
-         "macos" => "apple-darwin",
-         "windows" => "pc-windows-msvc",
-         _ => "unknown-linux-gnu",
-      };
+      let target_os = platform::target_os_token();
 
       let target_arch = match std::env::consts::ARCH {
          "aarch64" => "aarch64",
