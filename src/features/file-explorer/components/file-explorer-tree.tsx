@@ -596,10 +596,16 @@ function FileExplorerTreeComponent({
   const handleContainerContextMenu = useCallback(
     (e: React.MouseEvent) => {
       const t = getTargetItem(e.target);
-      if (!t) return;
-      handleContextMenu(e, t.path, t.isDir);
+      if (t) {
+        handleContextMenu(e, t.path, t.isDir);
+        return;
+      }
+
+      if (rootFolderPath) {
+        handleContextMenu(e, rootFolderPath, true);
+      }
     },
-    [handleContextMenu, pathToFile],
+    [handleContextMenu, pathToFile, rootFolderPath],
   );
 
   const handleKeyDown = useCallback(
