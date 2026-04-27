@@ -68,3 +68,23 @@ export function buildVisibleFileTreeRows(
   walk(files, 0);
   return rows;
 }
+
+export function getStickyAncestorRow(
+  rows: readonly VisibleFileTreeRow[],
+  firstVisibleIndex: number,
+): VisibleFileTreeRow | null {
+  const firstVisibleRow = rows[firstVisibleIndex];
+  if (!firstVisibleRow || firstVisibleRow.depth === 0) {
+    return null;
+  }
+
+  const targetDepth = firstVisibleRow.depth - 1;
+  for (let index = firstVisibleIndex - 1; index >= 0; index--) {
+    const row = rows[index];
+    if (row.depth === targetDepth) {
+      return row;
+    }
+  }
+
+  return null;
+}

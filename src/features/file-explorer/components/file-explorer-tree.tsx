@@ -5,6 +5,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useEventListener } from "usehooks-ts";
 import { useFileClipboardStore } from "@/features/file-explorer/stores/file-explorer-clipboard-store";
 import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree-store";
+import { getStickyAncestorRow } from "@/features/file-explorer/lib/visible-file-tree-rows";
 import { fileOpenBenchmark } from "@/features/editor/utils/file-open-benchmark";
 import { findFileInTree } from "@/features/file-system/controllers/file-tree-utils";
 import { readDirectory, readFile } from "@/features/file-system/controllers/platform";
@@ -28,6 +29,7 @@ import { useFileExplorerDragDrop } from "../hooks/use-file-explorer-drag-drop";
 import { useFileExplorerSync } from "../hooks/use-file-explorer-sync";
 import { useFileExplorerVisibleRows } from "../hooks/use-file-explorer-visible-rows";
 import { FileExplorerTreeItem } from "./file-explorer-tree-item";
+import { FileExplorerIcon } from "./file-explorer-icon";
 import "../styles/file-explorer-tree.css";
 
 const ALWAYS_HIDDEN_FILE_NAMES = new Set([".ds_store"]);
@@ -901,8 +903,36 @@ function FileExplorerTreeComponent({
             const paddingBottom = items.length
               ? rowVirtualizer.getTotalSize() - items[items.length - 1].end
               : 0;
+            const stickyAncestor = items.length
+              ? getStickyAncestorRow(visibleRows, items[0].index)
+              : null;
+            const stickyAncestorLabel = stickyAncestor?.displayName ?? stickyAncestor?.file.name;
             return (
               <>
+                {stickyAncestor ? (
+                  <div className="file-tree-sticky-ancestor">
+                    <button
+                      type="button"
+                      data-file-path={stickyAncestor.file.path}
+                      data-is-dir={stickyAncestor.file.isDir}
+                      data-path={stickyAncestor.file.path}
+                      data-depth={stickyAncestor.depth}
+                      title={stickyAncestor.file.path}
+                      className="file-tree-row ui-font flex h-6 w-full min-w-max cursor-pointer select-none items-center gap-1.5 whitespace-nowrap rounded-md border-none bg-secondary-bg/95 px-1.5 py-1 text-left text-text text-xs shadow-sm outline-none backdrop-blur transition-colors duration-150 hover:bg-hover focus:outline-none"
+                    >
+                      <FileExplorerIcon
+                        fileName={stickyAncestor.file.name}
+                        isDir={stickyAncestor.file.isDir}
+                        isExpanded={stickyAncestor.isExpanded}
+                        isSymlink={stickyAncestor.file.isSymlink}
+                        className="relative z-1 shrink-0 text-text-lighter"
+                      />
+                      <span className="relative z-1 select-none whitespace-nowrap">
+                        {stickyAncestorLabel}
+                      </span>
+                    </button>
+                  </div>
+                ) : null}
                 <div style={{ height: paddingTop }} />
                 {items.map((vi) => {
                   const row = visibleRows[vi.index];

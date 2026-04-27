@@ -86,3 +86,11 @@
   background-color: var(--tree-guide-color);
   opacity: 0.9;
 }
+
+.file-tree-sticky-ancestor {
+  position: sticky;
+  top: 4px;
+  z-index: 20;
+  height: 0;
+  overflow: visible;
+}
