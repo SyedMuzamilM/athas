@@ -1,5 +1,6 @@
 import { getProviderById } from "@/features/ai/types/providers";
 import { isKeybindingPreset } from "@/features/keymaps/defaults/keybinding-presets";
+import { normalizeFileTreeDensity } from "@/features/file-explorer/lib/file-tree-density";
 import {
   DEFAULT_AI_AUTOCOMPLETE_MODEL_ID,
   DEFAULT_AI_MODEL_ID,
@@ -123,6 +124,19 @@ function normalizeAISkills(skills: Settings["aiSkills"]): Settings["aiSkills"] {
               .slice(0, 12),
           }
         : {}),
+      ...(typeof skill.localOverride === "boolean" ? { localOverride: skill.localOverride } : {}),
+      ...(typeof skill.upstreamTitle === "string"
+        ? { upstreamTitle: skill.upstreamTitle.trim().slice(0, 120) }
+        : {}),
+      ...(typeof skill.upstreamDescription === "string"
+        ? { upstreamDescription: skill.upstreamDescription.trim().slice(0, 240) }
+        : {}),
+      ...(typeof skill.upstreamContent === "string"
+        ? { upstreamContent: skill.upstreamContent.slice(0, 100_000) }
+        : {}),
+      ...(typeof skill.upstreamUpdatedAt === "string"
+        ? { upstreamUpdatedAt: skill.upstreamUpdatedAt.trim().slice(0, 80) }
+        : {}),
       createdAt: skill.createdAt,
       updatedAt: skill.updatedAt,
     }));
@@ -200,6 +214,7 @@ export function normalizeSettings(settings: Settings): Settings {
   normalizedSettings.fileTreeIndentSize = normalizeFileTreeIndentSize(
     normalizedSettings.fileTreeIndentSize,
   );
+  normalizedSettings.fileTreeDensity = normalizeFileTreeDensity(normalizedSettings.fileTreeDensity);
 
   if (!isKeybindingPreset(normalizedSettings.keybindingPreset)) {
     normalizedSettings.keybindingPreset = "none";
@@ -262,6 +277,10 @@ export function normalizeSettingValue<K extends keyof Settings>(
 
   if (key === "fileTreeIndentSize") {
     return normalizeFileTreeIndentSize(value as number) as Settings[K];
+  }
+
+  if (key === "fileTreeDensity") {
+    return normalizeFileTreeDensity(value as string) as Settings[K];
   }
 
   if (key === "iconTheme" && (value === "colorful-material" || value === "seti")) {

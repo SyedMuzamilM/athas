@@ -50,6 +50,11 @@ describe("settings normalization", () => {
     expect(normalizeSettingValue("fileTreeIndentSize", 13.6)).toBe(14);
   });
 
+  it("normalizes unsupported file tree density values", () => {
+    expect(normalizeSettingValue("fileTreeDensity", "compact")).toBe("compact");
+    expect(normalizeSettingValue("fileTreeDensity", "dense" as "default")).toBe("default");
+  });
+
   it("preserves supported marketplace skill metadata", () => {
     const now = new Date().toISOString();
     const normalized = normalizeSettingValue("aiSkills", [
@@ -63,6 +68,11 @@ describe("settings normalization", () => {
         sourceId: "athas.review",
         version: "1.0.0",
         tags: ["review", " code "],
+        localOverride: true,
+        upstreamTitle: " Review ",
+        upstreamDescription: " Marketplace description ",
+        upstreamContent: "Marketplace content",
+        upstreamUpdatedAt: "2026-04-01T00:00:00.000Z",
         createdAt: now,
         updatedAt: now,
       },
@@ -77,6 +87,11 @@ describe("settings normalization", () => {
       sourceId: "athas.review",
       version: "1.0.0",
       tags: ["review", "code"],
+      localOverride: true,
+      upstreamTitle: "Review",
+      upstreamDescription: "Marketplace description",
+      upstreamContent: "Marketplace content",
+      upstreamUpdatedAt: "2026-04-01T00:00:00.000Z",
     });
   });
 });

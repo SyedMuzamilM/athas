@@ -113,6 +113,7 @@ export const defaultSettings: Settings = {
   //// File tree
   fileTreeIndentSize: 20,
   compactFoldersInFileTree: false,
+  fileTreeDensity: "default",
   showHiddenFilesInFileTree: true,
   showGitignoredFilesInFileTree: true,
   hiddenFilePatterns: [],

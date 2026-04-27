@@ -1,5 +1,9 @@
 import type React from "react";
 import { memo } from "react";
+import {
+  FILE_TREE_DENSITY_CONFIG,
+  type FileTreeDensity,
+} from "@/features/file-explorer/lib/file-tree-density";
 import { useFileClipboardStore } from "@/features/file-explorer/stores/file-explorer-clipboard-store";
 import type { FileEntry } from "@/features/file-system/types/app";
 import Input from "@/ui/input";
@@ -41,6 +45,7 @@ interface FileExplorerTreeItemProps {
   previousDepth: number;
   nextDepth: number;
   indentSize: number;
+  density: FileTreeDensity;
   isExpanded: boolean;
   isActive: boolean;
   dragOverPath: string | null;
@@ -60,6 +65,7 @@ function FileExplorerTreeItemComponent({
   previousDepth,
   nextDepth,
   indentSize,
+  density,
   isExpanded,
   isActive,
   dragOverPath,
@@ -75,6 +81,7 @@ function FileExplorerTreeItemComponent({
       s.clipboard?.operation === "cut" && s.clipboard.entries.some((e) => e.path === file.path),
   );
   const paddingLeft = 14 + depth * indentSize;
+  const densityConfig = FILE_TREE_DENSITY_CONFIG[density];
   const guideLevels = Array.from({ length: depth }, (_, level) => level);
   const renderTreeGuides = () => (
     <div className="file-tree-guides">
@@ -109,7 +116,10 @@ function FileExplorerTreeItemComponent({
       <div className="file-tree-item w-full" data-depth={depth}>
         {renderTreeGuides()}
         <div
-          className="file-tree-row flex h-6 w-full items-center gap-1.5 rounded-md px-1.5 py-1"
+          className={cn(
+            "file-tree-row flex w-full items-center rounded-md",
+            densityConfig.rowClassName,
+          )}
           style={{
             paddingLeft: `${paddingLeft}px`,
           }}
@@ -167,7 +177,8 @@ function FileExplorerTreeItemComponent({
           file.isSymlink && file.symlinkTarget ? `Symlink to: ${file.symlinkTarget}` : undefined
         }
         className={cn(
-          "file-tree-row ui-font flex h-6 w-full min-w-max cursor-pointer select-none items-center gap-1.5 whitespace-nowrap rounded-md border-none bg-transparent px-1.5 py-1 text-left text-text text-xs outline-none transition-colors duration-150 hover:bg-hover focus:outline-none",
+          "file-tree-row ui-font flex w-full min-w-max cursor-pointer select-none items-center whitespace-nowrap rounded-md border-none bg-transparent text-left text-text text-xs outline-none transition-colors duration-150 hover:bg-hover focus:outline-none",
+          densityConfig.rowClassName,
           isActive && "bg-selected",
           dragOverPath === file.path &&
             "!border-2 !border-dashed !border-accent !bg-accent !bg-opacity-20",
@@ -206,6 +217,7 @@ export const FileExplorerTreeItem = memo(
     prev.previousDepth === next.previousDepth &&
     prev.nextDepth === next.nextDepth &&
     prev.indentSize === next.indentSize &&
+    prev.density === next.density &&
     prev.isExpanded === next.isExpanded &&
     prev.isActive === next.isActive &&
     prev.dragOverPath === next.dragOverPath &&

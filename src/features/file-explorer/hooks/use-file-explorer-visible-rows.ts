@@ -1,6 +1,7 @@
 import { useEffect, useMemo, type RefObject } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { fileOpenBenchmark } from "@/features/editor/utils/file-open-benchmark";
+import { FILE_TREE_DENSITY_CONFIG } from "@/features/file-explorer/lib/file-tree-density";
 import {
   buildVisibleFileTreeRows,
   type VisibleFileTreeRow,
@@ -22,6 +23,8 @@ export function useFileExplorerVisibleRows({
 }: UseFileExplorerVisibleRowsOptions) {
   const expandedPaths = useFileTreeStore((state) => state.expandedPaths);
   const compactFolders = useSettingsStore((state) => state.settings.compactFoldersInFileTree);
+  const density = useSettingsStore((state) => state.settings.fileTreeDensity);
+  const rowHeight = FILE_TREE_DENSITY_CONFIG[density].rowHeight;
 
   const visibleRows = useMemo(() => {
     return buildVisibleFileTreeRows(files, expandedPaths, { compactFolders });
@@ -29,7 +32,7 @@ export function useFileExplorerVisibleRows({
 
   const rowVirtualizer = useVirtualizer({
     count: visibleRows.length,
-    estimateSize: () => 22,
+    estimateSize: () => rowHeight,
     getScrollElement: () => containerRef.current,
     overscan: 8,
   });

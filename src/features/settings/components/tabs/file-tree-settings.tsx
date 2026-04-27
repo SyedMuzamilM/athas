@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
+import {
+  FILE_TREE_DENSITY_OPTIONS,
+  type FileTreeDensity,
+} from "@/features/file-explorer/lib/file-tree-density";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
 import NumberInput from "@/ui/number-input";
+import Select from "@/ui/select";
 import Section, { SETTINGS_CONTROL_WIDTHS, SettingRow } from "../settings-section";
 import { controlFieldSurfaceVariants } from "@/ui/control-field";
 import Switch from "@/ui/switch";
@@ -56,6 +61,22 @@ export const FileTreeSettings = () => {
             onChange={(val) => updateSetting("fileTreeIndentSize", val)}
             className={SETTINGS_CONTROL_WIDTHS.numberCompact}
             size="xs"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Density"
+          description="Choose file tree row spacing"
+          onReset={() => updateSetting("fileTreeDensity", getDefaultSetting("fileTreeDensity"))}
+          canReset={settings.fileTreeDensity !== getDefaultSetting("fileTreeDensity")}
+        >
+          <Select
+            value={settings.fileTreeDensity}
+            options={FILE_TREE_DENSITY_OPTIONS}
+            onChange={(value) => updateSetting("fileTreeDensity", value as FileTreeDensity)}
+            className={SETTINGS_CONTROL_WIDTHS.default}
+            size="xs"
+            variant="secondary"
           />
         </SettingRow>
 

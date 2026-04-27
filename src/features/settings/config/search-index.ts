@@ -168,6 +168,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["compact", "folders", "directories", "single child", "collapse", "nested"],
   },
   {
+    id: "file-tree-density",
+    tab: "file-explorer",
+    section: "Display",
+    label: "Density",
+    description: "Choose file tree row spacing",
+    keywords: ["density", "spacing", "compact", "comfortable", "rows", "height"],
+  },
+  {
     id: "file-tree-show-gitignored-files",
     tab: "file-explorer",
     section: "Display",

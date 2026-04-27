@@ -104,6 +104,7 @@ function FileExplorerTreeComponent({
   // sticky handled purely by CSS; no JS scanning
 
   const { settings } = useSettingsStore();
+  const fileTreeDensity = settings.fileTreeDensity;
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
   const revealPathInTree = useFileSystemStore((state) => state.revealPathInTree);
 
@@ -969,6 +970,7 @@ function FileExplorerTreeComponent({
                       previousDepth={previousRow?.depth ?? 0}
                       nextDepth={nextRow?.depth ?? 0}
                       indentSize={settings.fileTreeIndentSize}
+                      density={fileTreeDensity}
                       isExpanded={row.isExpanded}
                       isActive={activePath === row.file.path}
                       dragOverPath={dragState.dragOverPath}
