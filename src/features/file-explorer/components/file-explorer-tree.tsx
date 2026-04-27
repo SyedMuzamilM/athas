@@ -1,6 +1,5 @@
 import ignore from "ignore";
 import { Warning as AlertTriangle } from "@phosphor-icons/react";
-import { motion } from "framer-motion";
 import type React from "react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useEventListener } from "usehooks-ts";
@@ -889,10 +888,19 @@ function FileExplorerTreeComponent({
             const paddingBottom = items.length
               ? rowVirtualizer.getTotalSize() - items[items.length - 1].end
               : 0;
-            const stickyAncestors = items.length
-              ? getStickyAncestorRows(visibleRows, items[0].index)
-              : [];
             const densityConfig = FILE_TREE_DENSITY_CONFIG[fileTreeDensity];
+            const stickyMarkerIndex =
+              items.length && visibleRows.length
+                ? Math.min(
+                    visibleRows.length - 1,
+                    Math.max(
+                      0,
+                      Math.floor((rowVirtualizer.scrollOffset ?? 0) / densityConfig.rowHeight),
+                    ),
+                  )
+                : -1;
+            const stickyAncestors =
+              stickyMarkerIndex >= 0 ? getStickyAncestorRows(visibleRows, stickyMarkerIndex) : [];
             const stickyAncestorsStyle = {
               "--file-tree-container-inset": `${FILE_TREE_CONTAINER_INSET}px`,
               "--file-tree-sticky-row-height": `${densityConfig.rowHeight}px`,
@@ -904,13 +912,7 @@ function FileExplorerTreeComponent({
               <>
                 {stickyAncestors.length > 0 ? (
                   <div className="file-tree-sticky-ancestors" style={stickyAncestorsStyle}>
-                    <motion.div
-                      key={stickyAncestors.map((ancestor) => ancestor.file.path).join("\n")}
-                      className="file-tree-sticky-ancestor-stack"
-                      initial={{ opacity: 0.96, y: -2 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.12, ease: "easeOut" }}
-                    >
+                    <div className="file-tree-sticky-ancestor-stack">
                       {stickyAncestors.map((stickyAncestor) => {
                         const stickyAncestorLabel =
                           stickyAncestor.displayName ?? stickyAncestor.file.name;
@@ -953,7 +955,7 @@ function FileExplorerTreeComponent({
                           </button>
                         );
                       })}
-                    </motion.div>
+                    </div>
                   </div>
                 ) : null}
                 <div style={{ height: paddingTop }} />
