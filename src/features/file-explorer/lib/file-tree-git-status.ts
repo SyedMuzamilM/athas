@@ -12,6 +12,19 @@ export interface FileTreeGitStatusLookup {
   directories: Map<string, FileTreeGitStatusDecoration>;
 }
 
+const gitStatusPriority: Record<GitFile["status"], number> = {
+  deleted: 50,
+  modified: 40,
+  renamed: 30,
+  added: 20,
+  untracked: 10,
+};
+
+function getGitStatusPriority(gitFile: GitFile): number {
+  const priority = gitStatusPriority[gitFile.status] ?? 0;
+  return gitFile.status === "modified" && gitFile.staged ? priority + 1 : priority;
+}
+
 export function getFileTreeGitStatusDecoration(
   gitFile: GitFile,
 ): FileTreeGitStatusDecoration | null {
@@ -37,6 +50,7 @@ export function getFileTreeGitStatusDecoration(
 export function createFileTreeGitStatusLookup(gitStatus: GitStatus): FileTreeGitStatusLookup {
   const files = new Map<string, FileTreeGitStatusDecoration>();
   const directories = new Map<string, FileTreeGitStatusDecoration>();
+  const directoryPriorities = new Map<string, number>();
 
   for (const gitFile of gitStatus.files) {
     const statusDecoration = getFileTreeGitStatusDecoration(gitFile);
@@ -48,8 +62,11 @@ export function createFileTreeGitStatusLookup(gitStatus: GitStatus): FileTreeGit
     let currentPath = "";
     for (let index = 0; index < segments.length - 1; index++) {
       currentPath = currentPath ? `${currentPath}/${segments[index]}` : segments[index];
-      if (!directories.has(currentPath)) {
+      const nextPriority = getGitStatusPriority(gitFile);
+      const currentPriority = directoryPriorities.get(currentPath) ?? -1;
+      if (nextPriority > currentPriority) {
         directories.set(currentPath, statusDecoration);
+        directoryPriorities.set(currentPath, nextPriority);
       }
     }
   }

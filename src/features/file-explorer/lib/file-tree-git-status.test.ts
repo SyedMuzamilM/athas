@@ -76,6 +76,24 @@ describe("file tree git status lookup", () => {
     ).toEqual({ colorClassName: "text-git-added", label: "Added" });
   });
 
+  test("uses the highest priority descendant status for directories", () => {
+    const lookup = createFileTreeGitStatusLookup({
+      branch: "main",
+      ahead: 0,
+      behind: 0,
+      files: [
+        gitFile("src/new.ts", "untracked"),
+        gitFile("src/renamed.ts", "renamed"),
+        gitFile("src/deleted.ts", "deleted"),
+        gitFile("src/modified.ts", "modified"),
+      ],
+    });
+
+    expect(
+      getFileTreeEntryGitStatusDecoration(fileEntry("/workspace/src", true), "/workspace", lookup),
+    ).toEqual({ colorClassName: "text-git-deleted", label: "Deleted" });
+  });
+
   test("returns null without a root path or matching status", () => {
     const lookup = createFileTreeGitStatusLookup({
       branch: "main",
