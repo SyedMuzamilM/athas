@@ -15,6 +15,7 @@ import {
   type FileTreeGitStatusDecoration,
   type FileTreeGitStatusLookup,
 } from "@/features/file-explorer/lib/file-tree-git-status";
+import { FILE_TREE_DENSITY_CONFIG } from "@/features/file-explorer/lib/file-tree-density";
 import { fileOpenBenchmark } from "@/features/editor/utils/file-open-benchmark";
 import { findFileInTree } from "@/features/file-system/controllers/file-tree-utils";
 import { readDirectory, readFile } from "@/features/file-system/controllers/platform";
@@ -871,6 +872,13 @@ function FileExplorerTreeComponent({
               ? getStickyAncestorRow(visibleRows, items[0].index)
               : null;
             const stickyAncestorLabel = stickyAncestor?.displayName ?? stickyAncestor?.file.name;
+            const stickyAncestorGitStatus = stickyAncestor
+              ? getGitStatusDecoration(stickyAncestor.file)
+              : null;
+            const stickyAncestorPaddingLeft = stickyAncestor
+              ? 14 + stickyAncestor.depth * settings.fileTreeIndentSize
+              : 14;
+            const densityConfig = FILE_TREE_DENSITY_CONFIG[fileTreeDensity];
             return (
               <>
                 {stickyAncestor ? (
@@ -882,7 +890,11 @@ function FileExplorerTreeComponent({
                       data-path={stickyAncestor.file.path}
                       data-depth={stickyAncestor.depth}
                       title={stickyAncestor.file.path}
-                      className="file-tree-row ui-font flex h-6 w-full min-w-max cursor-pointer select-none items-center gap-1.5 whitespace-nowrap rounded-md border-none bg-secondary-bg/95 px-1.5 py-1 text-left text-text text-xs shadow-sm outline-none backdrop-blur transition-colors duration-150 hover:bg-hover focus:outline-none"
+                      className={cn(
+                        "file-tree-row ui-font flex w-full min-w-max cursor-pointer select-none items-center whitespace-nowrap rounded-md border-none bg-secondary-bg/95 text-left text-text text-xs shadow-sm outline-none backdrop-blur transition-colors duration-150 hover:bg-hover focus:outline-none",
+                        densityConfig.rowClassName,
+                      )}
+                      style={{ paddingLeft: `${stickyAncestorPaddingLeft}px` }}
                     >
                       <FileExplorerIcon
                         fileName={stickyAncestor.file.name}
@@ -891,9 +903,24 @@ function FileExplorerTreeComponent({
                         isSymlink={stickyAncestor.file.isSymlink}
                         className="relative z-1 shrink-0 text-text-lighter"
                       />
-                      <span className="relative z-1 select-none whitespace-nowrap">
+                      <span
+                        className={cn(
+                          "relative z-1 select-none whitespace-nowrap",
+                          stickyAncestorGitStatus?.colorClassName,
+                        )}
+                      >
                         {stickyAncestorLabel}
                       </span>
+                      {stickyAncestorGitStatus ? (
+                        <span
+                          aria-label={`Git status: ${stickyAncestorGitStatus.label}`}
+                          className={cn(
+                            "file-tree-git-indicator ml-auto",
+                            stickyAncestorGitStatus.colorClassName,
+                          )}
+                          title={stickyAncestorGitStatus.label}
+                        />
+                      ) : null}
                     </button>
                   </div>
                 ) : null}
