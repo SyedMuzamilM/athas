@@ -897,10 +897,13 @@ function FileExplorerTreeComponent({
               ? 14 + stickyAncestor.depth * settings.fileTreeIndentSize
               : 14;
             const densityConfig = FILE_TREE_DENSITY_CONFIG[fileTreeDensity];
+            const stickyAncestorStyle = {
+              "--file-tree-sticky-row-height": `${densityConfig.rowHeight}px`,
+            } as React.CSSProperties;
             return (
               <>
                 {stickyAncestor ? (
-                  <div className="file-tree-sticky-ancestor">
+                  <div className="file-tree-sticky-ancestor" style={stickyAncestorStyle}>
                     <button
                       type="button"
                       data-file-path={stickyAncestor.file.path}
@@ -909,7 +912,7 @@ function FileExplorerTreeComponent({
                       data-depth={stickyAncestor.depth}
                       title={stickyAncestor.file.path}
                       className={cn(
-                        "file-tree-row ui-font flex w-full min-w-max cursor-pointer select-none items-center whitespace-nowrap rounded-md border-none bg-secondary-bg/95 text-left text-text text-xs shadow-sm outline-none backdrop-blur transition-colors duration-150 hover:bg-hover focus:outline-none",
+                        "file-tree-row ui-font flex w-full min-w-max cursor-pointer select-none items-center whitespace-nowrap rounded-md border-none bg-transparent text-left text-text text-xs outline-none transition-colors duration-150 hover:bg-hover focus:outline-none",
                         densityConfig.rowClassName,
                       )}
                       style={{ paddingLeft: `${stickyAncestorPaddingLeft}px` }}
