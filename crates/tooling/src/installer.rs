@@ -14,10 +14,9 @@ use url::Url;
 use walkdir::WalkDir;
 use zip::ZipArchive;
 
-/// Maximum size for a direct-binary download. Tool binaries are typically
-/// well under 100 MB; anything larger is almost certainly a misconfiguration
-/// or an attempt to exhaust disk.
-const MAX_BINARY_DOWNLOAD_BYTES: u64 = 100 * 1024 * 1024;
+/// Maximum size for a managed binary tool download. Most single-file tools are
+/// small, but SDK-backed language servers such as Dart include runtime assets.
+const MAX_BINARY_DOWNLOAD_BYTES: u64 = 512 * 1024 * 1024;
 
 /// Validate that a binary download URL uses an acceptable scheme and host.
 ///
@@ -233,6 +232,32 @@ impl ToolInstaller {
       Ok(())
    }
 
+   fn copy_dir_all(source: &Path, target: &Path) -> Result<(), ToolError> {
+      fs::create_dir_all(target)?;
+
+      for entry in fs::read_dir(source)? {
+         let entry = entry?;
+         let source_path = entry.path();
+         let target_path = target.join(entry.file_name());
+
+         if entry.file_type()?.is_dir() {
+            Self::copy_dir_all(&source_path, &target_path)?;
+         } else {
+            if let Some(parent) = target_path.parent() {
+               fs::create_dir_all(parent)?;
+            }
+            fs::copy(&source_path, &target_path).map_err(|e| {
+               ToolError::InstallationFailed(format!(
+                  "Failed to copy tool file from {:?} to {:?}: {}",
+                  source_path, target_path, e
+               ))
+            })?;
+         }
+      }
+
+      Ok(())
+   }
+
    fn extract_archive(bytes: &[u8], url: &str, target_dir: &Path) -> Result<(), ToolError> {
       if url.ends_with(".tar.gz") || url.ends_with(".tgz") {
          let decoder = GzDecoder::new(Cursor::new(bytes));
@@ -339,6 +364,49 @@ impl ToolInstaller {
       fallback_files.into_iter().next().ok_or_else(|| {
          ToolError::InstallationFailed("No binary found in downloaded archive".to_string())
       })
+   }
+
+   fn binary_install_dir(app_handle: &tauri::AppHandle, name: &str) -> Result<PathBuf, ToolError> {
+      Ok(Self::get_tools_dir(app_handle)?.join("binary").join(name))
+   }
+
+   fn install_extracted_binary(
+      staging_dir: &Path,
+      install_dir: &Path,
+      name: &str,
+   ) -> Result<PathBuf, ToolError> {
+      let source_binary = Self::pick_binary(staging_dir, name)?;
+      platform::validate_downloaded_binary(&source_binary, name)
+         .map_err(ToolError::InstallationFailed)?;
+
+      let relative_binary = source_binary.strip_prefix(staging_dir).map_err(|e| {
+         ToolError::InstallationFailed(format!(
+            "Failed to resolve downloaded binary path {:?}: {}",
+            source_binary, e
+         ))
+      })?;
+
+      if install_dir.exists() {
+         fs::remove_dir_all(install_dir)?;
+      }
+      fs::create_dir_all(install_dir)?;
+
+      let installed_binary = if relative_binary == Path::new("downloaded-binary") {
+         let bin_path = install_dir.join(Self::bin_file_name(name));
+         fs::copy(&source_binary, &bin_path).map_err(|e| {
+            ToolError::InstallationFailed(format!(
+               "Failed to copy binary from {:?} to {:?}: {}",
+               source_binary, bin_path, e
+            ))
+         })?;
+         bin_path
+      } else {
+         Self::copy_dir_all(staging_dir, install_dir)?;
+         install_dir.join(relative_binary)
+      };
+
+      Self::ensure_executable(&installed_binary)?;
+      Ok(installed_binary)
    }
 
    /// Install a tool based on its configuration
@@ -669,12 +737,7 @@ impl ToolInstaller {
    ) -> Result<PathBuf, ToolError> {
       validate_binary_download_url(url)?;
 
-      let tools_dir = Self::get_tools_dir(app_handle)?;
-      let bin_dir = tools_dir.join("bin");
-      std::fs::create_dir_all(&bin_dir)?;
-
-      let bin_name = Self::bin_file_name(name);
-      let bin_path = bin_dir.join(&bin_name);
+      let install_dir = Self::binary_install_dir(app_handle, name)?;
 
       log::info!("Downloading {} from {}", name, url);
 
@@ -715,19 +778,7 @@ impl ToolInstaller {
       let staging_dir = tempfile::tempdir()
          .map_err(|e| ToolError::InstallationFailed(format!("Failed to create temp dir: {}", e)))?;
       Self::extract_archive(&bytes, url, staging_dir.path())?;
-
-      let source_binary = Self::pick_binary(staging_dir.path(), name)?;
-      platform::validate_downloaded_binary(&source_binary, name)
-         .map_err(ToolError::InstallationFailed)?;
-      fs::copy(&source_binary, &bin_path).map_err(|e| {
-         ToolError::InstallationFailed(format!(
-            "Failed to copy binary from {:?} to {:?}: {}",
-            source_binary, bin_path, e
-         ))
-      })?;
-      Self::ensure_executable(&bin_path)?;
-
-      Ok(bin_path)
+      Self::install_extracted_binary(staging_dir.path(), &install_dir, name)
    }
 
    /// Check if a tool is installed
@@ -815,9 +866,18 @@ impl ToolInstaller {
                Self::validate_existing_binary(&system_path, config)?;
                return Ok(system_path);
             }
-            let path = tools_dir.join("bin").join(bin_name);
-            Self::validate_existing_binary(&path, config)?;
-            Ok(path)
+
+            let install_dir = tools_dir.join("binary").join(&config.name);
+            if install_dir.exists()
+               && let Ok(path) = Self::pick_binary(&install_dir, &config.name)
+            {
+               Self::validate_existing_binary(&path, config)?;
+               return Ok(path);
+            }
+
+            let legacy_path = tools_dir.join("bin").join(bin_name);
+            Self::validate_existing_binary(&legacy_path, config)?;
+            Ok(legacy_path)
          }
       }
    }
@@ -1028,5 +1088,38 @@ mod tests {
       let picked = ToolInstaller::pick_binary(temp.path(), "omnisharp").unwrap();
 
       assert_eq!(picked, binary);
+   }
+
+   #[test]
+   fn preserves_binary_archive_layout_when_installing() {
+      let staging = tempfile::tempdir().unwrap();
+      let install = tempfile::tempdir().unwrap();
+      let install_dir = install.path().join("dart");
+      let dart = staging.path().join("dart-sdk").join("bin").join("dart");
+      let snapshot = staging
+         .path()
+         .join("dart-sdk")
+         .join("bin")
+         .join("snapshots")
+         .join("analysis_server.dart.snapshot");
+      fs::create_dir_all(snapshot.parent().unwrap()).unwrap();
+      fs::write(&dart, "").unwrap();
+      fs::write(&snapshot, "").unwrap();
+
+      let installed =
+         ToolInstaller::install_extracted_binary(staging.path(), &install_dir, "dart").unwrap();
+
+      assert_eq!(
+         installed,
+         install_dir.join("dart-sdk").join("bin").join("dart")
+      );
+      assert!(
+         install_dir
+            .join("dart-sdk")
+            .join("bin")
+            .join("snapshots")
+            .join("analysis_server.dart.snapshot")
+            .exists()
+      );
    }
 }

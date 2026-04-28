@@ -55,9 +55,28 @@ impl ToolRegistry {
       }
 
       match config.name.as_str() {
+         "dart" => Some(Self::dart_sdk_download_url()),
          "omnisharp" => Some(Self::omnisharp_download_url()),
          _ => None,
       }
+   }
+
+   fn dart_sdk_download_url() -> String {
+      let platform = match std::env::consts::OS {
+         "macos" => "macos",
+         "windows" => "windows",
+         _ => "linux",
+      };
+
+      let arch = match std::env::consts::ARCH {
+         "aarch64" => "arm64",
+         _ => "x64",
+      };
+
+      format!(
+         "https://storage.googleapis.com/dart-archive/channels/stable/release/latest/sdk/dartsdk-{}-{}-release.zip",
+         platform, arch
+      )
    }
 
    fn omnisharp_download_url() -> String {
@@ -209,5 +228,33 @@ mod tests {
       } else {
          assert!(url.ends_with(".tar.gz"));
       }
+   }
+
+   #[test]
+   fn supplies_known_dart_sdk_download_url_for_binary_manifest() {
+      let config = ToolConfig {
+         name: "dart".to_string(),
+         command: None,
+         runtime: crate::ToolRuntime::Binary,
+         package: None,
+         download_url: None,
+         args: vec!["language-server".to_string(), "--protocol=lsp".to_string()],
+         env: std::collections::HashMap::new(),
+      };
+
+      let language_tools = LanguageToolConfigSet {
+         lsp: Some(config),
+         formatter: None,
+         linter: None,
+      };
+
+      let tools = ToolRegistry::get_tools("dart", Some(language_tools)).unwrap();
+      let resolved = tools.get(&ToolType::Lsp).unwrap();
+      let url = resolved.download_url.as_ref().unwrap();
+
+      assert!(url.starts_with(
+         "https://storage.googleapis.com/dart-archive/channels/stable/release/latest/sdk/dartsdk-"
+      ));
+      assert!(url.ends_with("-release.zip"));
    }
 }
