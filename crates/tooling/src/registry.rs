@@ -44,8 +44,48 @@ impl ToolRegistry {
       config.download_url = config
          .download_url
          .as_ref()
-         .map(|url| Self::resolve_url_template(url));
+         .map(|url| Self::resolve_url_template(url))
+         .or_else(|| Self::known_tool_download_url(&config));
       config
+   }
+
+   fn known_tool_download_url(config: &ToolConfig) -> Option<String> {
+      if config.runtime != crate::ToolRuntime::Binary {
+         return None;
+      }
+
+      match config.name.as_str() {
+         "omnisharp" => Some(Self::omnisharp_download_url()),
+         _ => None,
+      }
+   }
+
+   fn omnisharp_download_url() -> String {
+      let platform = match std::env::consts::OS {
+         "macos" => "osx",
+         "windows" => "win",
+         "linux" => match platform::detect_linux_libc() {
+            platform::LinuxLibc::Musl => "linux-musl",
+            platform::LinuxLibc::Gnu | platform::LinuxLibc::Unknown => "linux",
+         },
+         _ => "linux",
+      };
+
+      let arch = match std::env::consts::ARCH {
+         "aarch64" => "arm64",
+         _ => "x64",
+      };
+
+      let archive_ext = if std::env::consts::OS == "windows" {
+         "zip"
+      } else {
+         "tar.gz"
+      };
+
+      format!(
+         "https://github.com/OmniSharp/omnisharp-roslyn/releases/latest/download/omnisharp-{}-{}-net6.0.{}",
+         platform, arch, archive_ext
+      )
    }
 
    /// Resolve common download URL template variables.
@@ -136,5 +176,38 @@ mod tests {
 
       assert!(resolved.download_url.as_ref().is_some());
       assert!(!resolved.download_url.as_ref().unwrap().contains("${"));
+   }
+
+   #[test]
+   fn supplies_known_omnisharp_download_url_for_binary_manifest() {
+      let config = ToolConfig {
+         name: "omnisharp".to_string(),
+         command: None,
+         runtime: crate::ToolRuntime::Binary,
+         package: None,
+         download_url: None,
+         args: vec!["--languageserver".to_string()],
+         env: std::collections::HashMap::new(),
+      };
+
+      let language_tools = LanguageToolConfigSet {
+         lsp: Some(config),
+         formatter: None,
+         linter: None,
+      };
+
+      let tools = ToolRegistry::get_tools("csharp", Some(language_tools)).unwrap();
+      let resolved = tools.get(&ToolType::Lsp).unwrap();
+      let url = resolved.download_url.as_ref().unwrap();
+
+      assert!(url.starts_with(
+         "https://github.com/OmniSharp/omnisharp-roslyn/releases/latest/download/omnisharp-"
+      ));
+      assert!(url.contains("-net6.0."));
+      if std::env::consts::OS == "windows" {
+         assert!(url.ends_with(".zip"));
+      } else {
+         assert!(url.ends_with(".tar.gz"));
+      }
    }
 }

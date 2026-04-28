@@ -6,7 +6,7 @@ use serde_json::Value;
 use std::{
    fs,
    io::Cursor,
-   path::{Path, PathBuf},
+   path::{Component, Path, PathBuf},
    process::Command,
 };
 use tauri::Manager;
@@ -53,11 +53,24 @@ impl ToolInstaller {
       config.command.as_deref().unwrap_or(&config.name)
    }
 
-   fn node_bin_name(name: &str) -> String {
+   fn default_node_bin_name(name: &str) -> String {
       if cfg!(windows) {
          format!("{}.cmd", name)
       } else {
          name.to_string()
+      }
+   }
+
+   fn node_bin_names(name: &str) -> Vec<String> {
+      if cfg!(windows) {
+         vec![
+            format!("{}.cmd", name),
+            format!("{}.exe", name),
+            format!("{}.ps1", name),
+            name.to_string(),
+         ]
+      } else {
+         vec![name.to_string()]
       }
    }
 
@@ -69,31 +82,121 @@ impl ToolInstaller {
       }
    }
 
-   fn resolve_node_package_entrypoint(
-      package_dir: &Path,
-      package: &str,
+   fn ensure_node_package_manifest(package_dir: &Path) -> Result<(), ToolError> {
+      let package_json = package_dir.join("package.json");
+      if package_json.exists() {
+         return Ok(());
+      }
+
+      fs::write(
+         package_json,
+         "{\n  \"private\": true,\n  \"dependencies\": {}\n}\n",
+      )?;
+      Ok(())
+   }
+
+   fn resolve_node_bin_shim(package_dir: &Path, command_name: &str) -> Option<PathBuf> {
+      let bin_dir = package_dir.join("node_modules").join(".bin");
+      Self::node_bin_names(command_name)
+         .into_iter()
+         .map(|name| bin_dir.join(name))
+         .find(|path| path.exists())
+   }
+
+   fn safe_package_bin_path(package_root: &Path, bin_path: &str) -> Option<PathBuf> {
+      let relative_path = Path::new(bin_path);
+      if relative_path.is_absolute()
+         || relative_path
+            .components()
+            .any(|component| matches!(component, Component::ParentDir | Component::Prefix(_)))
+      {
+         return None;
+      }
+
+      Some(package_root.join(relative_path))
+   }
+
+   fn resolve_node_package_entrypoint_from_root(
+      package_root: &Path,
       command_name: &str,
+      allow_first_bin_fallback: bool,
    ) -> Option<PathBuf> {
-      let package_root = package_dir.join("node_modules").join(package);
       let package_json = package_root.join("package.json");
       let package_json_content = fs::read_to_string(package_json).ok()?;
       let package_json_value: Value = serde_json::from_str(&package_json_content).ok()?;
       let bin_field = package_json_value.get("bin")?;
 
       if let Some(single_bin) = bin_field.as_str() {
-         return Some(package_root.join(single_bin));
+         return Self::safe_package_bin_path(package_root, single_bin);
       }
 
       let bins = bin_field.as_object()?;
       if let Some(command_bin) = bins.get(command_name).and_then(|value| value.as_str()) {
-         return Some(package_root.join(command_bin));
+         return Self::safe_package_bin_path(package_root, command_bin);
+      }
+
+      if !allow_first_bin_fallback {
+         return None;
       }
 
       bins
          .values()
          .next()
          .and_then(|value| value.as_str())
-         .map(|first_bin| package_root.join(first_bin))
+         .and_then(|first_bin| Self::safe_package_bin_path(package_root, first_bin))
+   }
+
+   fn resolve_node_package_entrypoint(
+      package_dir: &Path,
+      package: &str,
+      command_name: &str,
+   ) -> Option<PathBuf> {
+      let package_root = package_dir.join("node_modules").join(package);
+      Self::resolve_node_package_entrypoint_from_root(&package_root, command_name, true)
+         .filter(|path| path.exists())
+   }
+
+   fn resolve_node_package_binary(
+      package_dir: &Path,
+      package: &str,
+      command_name: &str,
+   ) -> Option<PathBuf> {
+      if let Some(path) = Self::resolve_node_bin_shim(package_dir, command_name) {
+         return Some(path);
+      }
+
+      if let Some(path) = Self::resolve_node_package_entrypoint(package_dir, package, command_name)
+      {
+         return Some(path);
+      }
+
+      let node_modules_dir = package_dir.join("node_modules");
+      for entry in WalkDir::new(&node_modules_dir)
+         .max_depth(3)
+         .into_iter()
+         .filter_map(|entry| entry.ok())
+         .filter(|entry| {
+            entry.file_type().is_file()
+               && entry.file_name().to_str() == Some("package.json")
+               && !entry
+                  .path()
+                  .components()
+                  .any(|component| matches!(component, Component::Normal(name) if name == ".bin"))
+         })
+      {
+         let Some(package_root) = entry.path().parent() else {
+            continue;
+         };
+
+         if let Some(path) =
+            Self::resolve_node_package_entrypoint_from_root(package_root, command_name, false)
+            && path.exists()
+         {
+            return Some(path);
+         }
+      }
+
+      None
    }
 
    #[cfg(unix)]
@@ -213,11 +316,16 @@ impl ToolInstaller {
             .and_then(|name| name.to_str())
             .unwrap_or_default();
 
-         if file_name == expected_name || (!cfg!(windows) && file_name == command_name) {
+         if file_name.eq_ignore_ascii_case(&expected_name)
+            || (!cfg!(windows) && file_name.eq_ignore_ascii_case(command_name))
+         {
             return Ok(path);
          }
 
-         if file_name.starts_with(command_name) {
+         if file_name
+            .to_ascii_lowercase()
+            .starts_with(&command_name.to_ascii_lowercase())
+         {
             prefix_matches.push(path.clone());
          }
 
@@ -313,6 +421,7 @@ impl ToolInstaller {
       let tools_dir = Self::get_tools_dir(app_handle)?;
       let package_dir = tools_dir.join("bun").join(package);
       std::fs::create_dir_all(&package_dir)?;
+      Self::ensure_node_package_manifest(&package_dir)?;
 
       log::info!("Installing {} via Bun to {:?}", package, package_dir);
 
@@ -331,21 +440,10 @@ impl ToolInstaller {
          )));
       }
 
-      // Return the node_modules/.bin path for the configured command.
-      let bin_path = package_dir
-         .join("node_modules")
-         .join(".bin")
-         .join(Self::node_bin_name(command_name));
-      if bin_path.exists() {
-         return Self::validate_and_prepare(&bin_path);
-      }
-
-      // Try resolving via package.json bin field
-      if let Some(entrypoint) =
-         Self::resolve_node_package_entrypoint(&package_dir, package, command_name)
-         && entrypoint.exists()
+      if let Some(binary_path) =
+         Self::resolve_node_package_binary(&package_dir, package, command_name)
       {
-         return Self::validate_and_prepare(&entrypoint);
+         return Self::validate_and_prepare(&binary_path);
       }
 
       Err(ToolError::InstallationFailed(format!(
@@ -368,6 +466,7 @@ impl ToolInstaller {
       let tools_dir = Self::get_tools_dir(app_handle)?;
       let package_dir = tools_dir.join("npm").join(package);
       std::fs::create_dir_all(&package_dir)?;
+      Self::ensure_node_package_manifest(&package_dir)?;
 
       // Get npm path (should be alongside node)
       let npm_path = node_path
@@ -392,20 +491,10 @@ impl ToolInstaller {
          )));
       }
 
-      let bin_path = package_dir
-         .join("node_modules")
-         .join(".bin")
-         .join(Self::node_bin_name(command_name));
-      if bin_path.exists() {
-         return Self::validate_and_prepare(&bin_path);
-      }
-
-      // Try resolving via package.json bin field
-      if let Some(entrypoint) =
-         Self::resolve_node_package_entrypoint(&package_dir, package, command_name)
-         && entrypoint.exists()
+      if let Some(binary_path) =
+         Self::resolve_node_package_binary(&package_dir, package, command_name)
       {
-         return Self::validate_and_prepare(&entrypoint);
+         return Self::validate_and_prepare(&binary_path);
       }
 
       Err(ToolError::InstallationFailed(format!(
@@ -669,12 +758,16 @@ impl ToolInstaller {
                .package
                .as_ref()
                .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
-            Ok(tools_dir
-               .join("bun")
-               .join(package)
-               .join("node_modules")
-               .join(".bin")
-               .join(Self::node_bin_name(command_name)))
+            let package_dir = tools_dir.join("bun").join(package);
+            Ok(
+               Self::resolve_node_package_binary(&package_dir, package, command_name)
+                  .unwrap_or_else(|| {
+                     package_dir
+                        .join("node_modules")
+                        .join(".bin")
+                        .join(Self::default_node_bin_name(command_name))
+                  }),
+            )
          }
          ToolRuntime::Node => {
             let command_name = Self::configured_command_name(config);
@@ -682,12 +775,16 @@ impl ToolInstaller {
                .package
                .as_ref()
                .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
-            Ok(tools_dir
-               .join("npm")
-               .join(package)
-               .join("node_modules")
-               .join(".bin")
-               .join(Self::node_bin_name(command_name)))
+            let package_dir = tools_dir.join("npm").join(package);
+            Ok(
+               Self::resolve_node_package_binary(&package_dir, package, command_name)
+                  .unwrap_or_else(|| {
+                     package_dir
+                        .join("node_modules")
+                        .join(".bin")
+                        .join(Self::default_node_bin_name(command_name))
+                  }),
+            )
          }
          ToolRuntime::Python => {
             let bin_name = Self::bin_file_name(Self::configured_command_name(config));
@@ -749,10 +846,14 @@ impl ToolInstaller {
                return Ok(entrypoint);
             }
 
-            Ok(package_dir
-               .join("node_modules")
-               .join(".bin")
-               .join(Self::node_bin_name(command_name)))
+            Ok(
+               Self::resolve_node_bin_shim(&package_dir, command_name).unwrap_or_else(|| {
+                  package_dir
+                     .join("node_modules")
+                     .join(".bin")
+                     .join(Self::default_node_bin_name(command_name))
+               }),
+            )
          }
          ToolRuntime::Node => {
             let command_name = Self::configured_command_name(config);
@@ -768,10 +869,14 @@ impl ToolInstaller {
                return Ok(entrypoint);
             }
 
-            Ok(package_dir
-               .join("node_modules")
-               .join(".bin")
-               .join(Self::node_bin_name(command_name)))
+            Ok(
+               Self::resolve_node_bin_shim(&package_dir, command_name).unwrap_or_else(|| {
+                  package_dir
+                     .join("node_modules")
+                     .join(".bin")
+                     .join(Self::default_node_bin_name(command_name))
+               }),
+            )
          }
          _ => Self::get_tool_path(app_handle, config),
       }
@@ -808,5 +913,120 @@ mod tests {
          assert!(validate_binary_download_url("http://localhost:3000/tool.tar.gz").is_ok());
          assert!(validate_binary_download_url("http://127.0.0.1:8080/tool.tar.gz").is_ok());
       }
+   }
+
+   #[test]
+   fn creates_node_package_manifest_to_anchor_local_installs() {
+      let temp = tempfile::tempdir().unwrap();
+      let package_dir = temp.path().join("bun").join("typescript-language-server");
+      fs::create_dir_all(&package_dir).unwrap();
+
+      ToolInstaller::ensure_node_package_manifest(&package_dir).unwrap();
+
+      let package_json = package_dir.join("package.json");
+      let manifest = fs::read_to_string(package_json).unwrap();
+      assert!(manifest.contains("\"private\": true"));
+      assert!(manifest.contains("\"dependencies\": {}"));
+   }
+
+   #[test]
+   fn preserves_existing_node_package_manifest() {
+      let temp = tempfile::tempdir().unwrap();
+      let package_dir = temp.path().join("npm").join("eslint");
+      fs::create_dir_all(&package_dir).unwrap();
+      let package_json = package_dir.join("package.json");
+      fs::write(
+         &package_json,
+         "{ \"private\": true, \"dependencies\": { \"eslint\": \"*\" } }",
+      )
+      .unwrap();
+
+      ToolInstaller::ensure_node_package_manifest(&package_dir).unwrap();
+
+      let manifest = fs::read_to_string(package_json).unwrap();
+      assert!(manifest.contains("\"eslint\": \"*\""));
+   }
+
+   #[test]
+   fn resolves_node_bin_shim_when_present() {
+      let temp = tempfile::tempdir().unwrap();
+      let package_dir = temp.path().join("bun").join("typescript-language-server");
+      let bin_path =
+         package_dir
+            .join("node_modules")
+            .join(".bin")
+            .join(ToolInstaller::default_node_bin_name(
+               "typescript-language-server",
+            ));
+      fs::create_dir_all(bin_path.parent().unwrap()).unwrap();
+      fs::write(&bin_path, "").unwrap();
+
+      let resolved = ToolInstaller::resolve_node_package_binary(
+         &package_dir,
+         "typescript-language-server",
+         "typescript-language-server",
+      );
+
+      assert_eq!(resolved.as_deref(), Some(bin_path.as_path()));
+   }
+
+   #[test]
+   fn resolves_scoped_node_package_entrypoint_when_shim_is_missing() {
+      let temp = tempfile::tempdir().unwrap();
+      let package_dir = temp.path().join("bun").join("@vue").join("language-server");
+      let package_root = package_dir
+         .join("node_modules")
+         .join("@vue")
+         .join("language-server");
+      let entrypoint = package_root.join("bin").join("vue-language-server.js");
+      fs::create_dir_all(entrypoint.parent().unwrap()).unwrap();
+      fs::write(
+         package_root.join("package.json"),
+         r#"{
+  "name": "@vue/language-server",
+  "bin": {
+    "vue-language-server": "./bin/vue-language-server.js"
+  }
+}"#,
+      )
+      .unwrap();
+      fs::write(&entrypoint, "").unwrap();
+
+      let resolved = ToolInstaller::resolve_node_package_binary(
+         &package_dir,
+         "@vue/language-server",
+         "vue-language-server",
+      );
+
+      assert_eq!(resolved.as_deref(), Some(entrypoint.as_path()));
+   }
+
+   #[test]
+   fn rejects_unsafe_node_package_bin_paths() {
+      let temp = tempfile::tempdir().unwrap();
+      let package_root = temp.path().join("node_modules").join("bad-package");
+
+      assert!(ToolInstaller::safe_package_bin_path(&package_root, "../bad.js").is_none());
+      assert!(ToolInstaller::safe_package_bin_path(&package_root, "/tmp/bad.js").is_none());
+      assert!(
+         ToolInstaller::safe_package_bin_path(&package_root, "./bin/good.js")
+            .unwrap()
+            .ends_with("bin/good.js")
+      );
+   }
+
+   #[test]
+   fn picks_binary_case_insensitively_from_archive() {
+      let temp = tempfile::tempdir().unwrap();
+      let binary = temp.path().join(if cfg!(windows) {
+         "OmniSharp.exe"
+      } else {
+         "OmniSharp"
+      });
+      fs::write(&binary, "").unwrap();
+
+      let picked = ToolInstaller::pick_binary(temp.path(), "omnisharp").unwrap();
+
+      assert_eq!(picked, binary);
    }
 }
