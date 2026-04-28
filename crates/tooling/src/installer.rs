@@ -374,8 +374,9 @@ impl ToolInstaller {
       staging_dir: &Path,
       install_dir: &Path,
       name: &str,
+      command_name: &str,
    ) -> Result<PathBuf, ToolError> {
-      let source_binary = Self::pick_binary(staging_dir, name)?;
+      let source_binary = Self::pick_binary(staging_dir, command_name)?;
       platform::validate_downloaded_binary(&source_binary, name)
          .map_err(ToolError::InstallationFailed)?;
 
@@ -392,7 +393,7 @@ impl ToolInstaller {
       fs::create_dir_all(install_dir)?;
 
       let installed_binary = if relative_binary == Path::new("downloaded-binary") {
-         let bin_path = install_dir.join(Self::bin_file_name(name));
+         let bin_path = install_dir.join(Self::bin_file_name(command_name));
          fs::copy(&source_binary, &bin_path).map_err(|e| {
             ToolError::InstallationFailed(format!(
                "Failed to copy binary from {:?} to {:?}: {}",
@@ -453,12 +454,19 @@ impl ToolInstaller {
          }
          ToolRuntime::Binary => {
             if let Some(url) = config.download_url.as_ref() {
-               Self::download_binary(app_handle, &config.name, url).await
+               Self::download_binary(
+                  app_handle,
+                  &config.name,
+                  Self::configured_command_name(config),
+                  url,
+               )
+               .await
             } else {
-               which::which(&config.name).map_err(|_| {
+               let command_name = Self::configured_command_name(config);
+               which::which(command_name).map_err(|_| {
                   ToolError::NotFound(format!(
                      "{} (not found on PATH and no download URL configured)",
-                     config.name
+                     command_name
                   ))
                })
             }
@@ -733,6 +741,7 @@ impl ToolInstaller {
    async fn download_binary(
       app_handle: &tauri::AppHandle,
       name: &str,
+      command_name: &str,
       url: &str,
    ) -> Result<PathBuf, ToolError> {
       validate_binary_download_url(url)?;
@@ -778,7 +787,7 @@ impl ToolInstaller {
       let staging_dir = tempfile::tempdir()
          .map_err(|e| ToolError::InstallationFailed(format!("Failed to create temp dir: {}", e)))?;
       Self::extract_archive(&bytes, url, staging_dir.path())?;
-      Self::install_extracted_binary(staging_dir.path(), &install_dir, name)
+      Self::install_extracted_binary(staging_dir.path(), &install_dir, name, command_name)
    }
 
    /// Check if a tool is installed
@@ -859,9 +868,10 @@ impl ToolInstaller {
             Ok(tools_dir.join("cargo").join("bin").join(bin_name))
          }
          ToolRuntime::Binary => {
-            let bin_name = Self::bin_file_name(&config.name);
+            let command_name = Self::configured_command_name(config);
+            let bin_name = Self::bin_file_name(command_name);
             if config.download_url.is_none()
-               && let Ok(system_path) = which::which(&config.name)
+               && let Ok(system_path) = which::which(command_name)
             {
                Self::validate_existing_binary(&system_path, config)?;
                return Ok(system_path);
@@ -869,7 +879,7 @@ impl ToolInstaller {
 
             let install_dir = tools_dir.join("binary").join(&config.name);
             if install_dir.exists()
-               && let Ok(path) = Self::pick_binary(&install_dir, &config.name)
+               && let Ok(path) = Self::pick_binary(&install_dir, command_name)
             {
                Self::validate_existing_binary(&path, config)?;
                return Ok(path);
@@ -1107,7 +1117,8 @@ mod tests {
       fs::write(&snapshot, "").unwrap();
 
       let installed =
-         ToolInstaller::install_extracted_binary(staging.path(), &install_dir, "dart").unwrap();
+         ToolInstaller::install_extracted_binary(staging.path(), &install_dir, "dart", "dart")
+            .unwrap();
 
       assert_eq!(
          installed,
@@ -1121,5 +1132,36 @@ mod tests {
             .join("analysis_server.dart.snapshot")
             .exists()
       );
+   }
+
+   #[test]
+   fn installs_binary_archive_using_configured_command_name() {
+      let staging = tempfile::tempdir().unwrap();
+      let install = tempfile::tempdir().unwrap();
+      let install_dir = install.path().join("elixir-ls");
+      let launcher = staging.path().join(if cfg!(windows) {
+         "language_server.bat"
+      } else {
+         "language_server.sh"
+      });
+      let launch_script = staging.path().join("launch.sh");
+      fs::write(&launcher, "").unwrap();
+      fs::write(&launch_script, "").unwrap();
+
+      let command_name = if cfg!(windows) {
+         "language_server.bat"
+      } else {
+         "language_server.sh"
+      };
+      let installed = ToolInstaller::install_extracted_binary(
+         staging.path(),
+         &install_dir,
+         "elixir-ls",
+         command_name,
+      )
+      .unwrap();
+
+      assert_eq!(installed, install_dir.join(command_name));
+      assert!(install_dir.join("launch.sh").exists());
    }
 }

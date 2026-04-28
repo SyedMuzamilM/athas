@@ -4,6 +4,8 @@ use super::{
 };
 use std::collections::HashMap;
 
+const ELIXIR_LS_VERSION: &str = "v0.30.0";
+
 /// Tool configurations resolved from extension manifests.
 pub struct ToolRegistry;
 
@@ -41,6 +43,9 @@ impl ToolRegistry {
    }
 
    fn normalize_tool_config(mut config: ToolConfig) -> ToolConfig {
+      if config.command.is_none() {
+         config.command = Self::known_tool_command(&config);
+      }
       config.download_url = config
          .download_url
          .as_ref()
@@ -56,7 +61,22 @@ impl ToolRegistry {
 
       match config.name.as_str() {
          "dart" => Some(Self::dart_sdk_download_url()),
+         "elixir-ls" => Some(Self::elixir_ls_download_url()),
          "omnisharp" => Some(Self::omnisharp_download_url()),
+         _ => None,
+      }
+   }
+
+   fn known_tool_command(config: &ToolConfig) -> Option<String> {
+      if config.runtime != crate::ToolRuntime::Binary {
+         return None;
+      }
+
+      match config.name.as_str() {
+         "elixir-ls" if std::env::consts::OS == "windows" => {
+            Some("language_server.bat".to_string())
+         }
+         "elixir-ls" => Some("language_server.sh".to_string()),
          _ => None,
       }
    }
@@ -76,6 +96,13 @@ impl ToolRegistry {
       format!(
          "https://storage.googleapis.com/dart-archive/channels/stable/release/latest/sdk/dartsdk-{}-{}-release.zip",
          platform, arch
+      )
+   }
+
+   fn elixir_ls_download_url() -> String {
+      format!(
+         "https://github.com/elixir-lsp/elixir-ls/releases/download/{}/elixir-ls-{}.zip",
+         ELIXIR_LS_VERSION, ELIXIR_LS_VERSION
       )
    }
 
@@ -256,5 +283,42 @@ mod tests {
          "https://storage.googleapis.com/dart-archive/channels/stable/release/latest/sdk/dartsdk-"
       ));
       assert!(url.ends_with("-release.zip"));
+   }
+
+   #[test]
+   fn supplies_known_elixir_ls_download_url_and_command_for_binary_manifest() {
+      let config = ToolConfig {
+         name: "elixir-ls".to_string(),
+         command: None,
+         runtime: crate::ToolRuntime::Binary,
+         package: None,
+         download_url: None,
+         args: Vec::new(),
+         env: std::collections::HashMap::new(),
+      };
+
+      let language_tools = LanguageToolConfigSet {
+         lsp: Some(config),
+         formatter: None,
+         linter: None,
+      };
+
+      let tools = ToolRegistry::get_tools("elixir", Some(language_tools)).unwrap();
+      let resolved = tools.get(&ToolType::Lsp).unwrap();
+
+      assert_eq!(
+         resolved.command.as_deref(),
+         Some(if std::env::consts::OS == "windows" {
+            "language_server.bat"
+         } else {
+            "language_server.sh"
+         })
+      );
+      assert_eq!(
+         resolved.download_url.as_deref(),
+         Some(
+            "https://github.com/elixir-lsp/elixir-ls/releases/download/v0.30.0/elixir-ls-v0.30.0.zip"
+         )
+      );
    }
 }
