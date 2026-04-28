@@ -346,7 +346,7 @@ const CodeEditor = ({
       clearTimeout(searchTimerRef.current);
     }
 
-    if (!enableInteractiveServices || !isFindVisible) {
+    if (!enableInteractiveServices) {
       setSearchMatches([]);
       setCurrentMatchIndex(-1);
       return;

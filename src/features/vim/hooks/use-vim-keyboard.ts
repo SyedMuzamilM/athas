@@ -1,14 +1,18 @@
 import { useEffect, useRef } from "react";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
+import { useEditorUIStore } from "@/features/editor/stores/ui-store";
 import { useEditorViewStore } from "@/features/editor/stores/view-store";
 import { calculateOffsetFromPosition } from "@/features/editor/utils/position";
 import { useSettingsStore } from "@/features/settings/store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import {
   executeReplaceCommand,
   executeVimCommand,
+  getEditorContext,
 } from "@/features/vim/core/core/command-executor";
 import { getCommandParseStatus, parseVimCommand } from "@/features/vim/core/core/command-parser";
 import { createFindCharMotion } from "@/features/vim/core/motions/character-motions";
+import { getOperator } from "@/features/vim/core/operators/operator-registry";
 import { createDomEditorFacade } from "@/features/vim/core/dom-editor-facade";
 import { createVimEditing } from "@/features/vim/stores/vim-editing";
 import { useVimSearchStore } from "@/features/vim/stores/vim-search";
@@ -114,7 +118,7 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
   } = useVimStore.use.actions();
   const { setCursorVisibility, setCursorPosition } = useEditorStateStore.use.actions();
   const { setDisabled } = useEditorStateStore.use.actions();
-  const { startSearch, findNext, findPrevious } = useVimSearchStore.use.actions();
+  const { setLastSearch } = useVimSearchStore.use.actions();
 
   // Helper functions for accessing editor state
   const getCursorPosition = () => useEditorStateStore.getState().cursorPosition;
@@ -510,7 +514,19 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
         const lines = getLines();
         const range = motion.calculate(curPos, lines, count);
 
-        if (range.end.line !== curPos.line || range.end.column !== curPos.column) {
+        // If there's an operator pending (e.g., df; ct;), execute it
+        if (command?.operator) {
+          const operator = getOperator(command.operator);
+          if (operator) {
+            const context = getEditorContext();
+            if (context) {
+              operator.execute(range, context);
+              if (operator.entersInsertMode) {
+                setMode("insert");
+              }
+            }
+          }
+        } else if (range.end.line !== curPos.line || range.end.column !== curPos.column) {
           setCursorPosition(range.end);
           facade.collapseSelection(range.end.offset);
         }
@@ -523,33 +539,44 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
       // Handle special commands that don't fit the operator-motion pattern
       // These commands are handled directly without going through the key buffer
       switch (key) {
-        case "i":
-          e.preventDefault();
-          e.stopPropagation();
-          clearKeyBuffer();
-          setMode("insert");
-          return true;
+        case "i": {
+          // Only enter insert mode if there's no pending command in the buffer.
+          // When the buffer has an operator (e.g. "c" or "d"), "i" is a text
+          // object specifier (inner) and must fall through to the parser.
+          if (getKeyBuffer().length === 0) {
+            e.preventDefault();
+            e.stopPropagation();
+            clearKeyBuffer();
+            setMode("insert");
+            return true;
+          }
+          break;
+        }
         case "a": {
-          e.preventDefault();
-          e.stopPropagation();
-          clearKeyBuffer();
-          // Move cursor one position right before entering insert mode
-          const currentPos = getCursorPosition();
-          const lines = getLines();
-          const newColumn = Math.min(lines[currentPos.line].length, currentPos.column + 1);
-          const newOffset = calculateOffsetFromPosition(currentPos.line, newColumn, lines);
-          const newPosition = {
-            line: currentPos.line,
-            column: newColumn,
-            offset: newOffset,
-          };
-          setCursorPosition(newPosition);
+          // Same as "i" above: with a pending operator, "a" means "around".
+          if (getKeyBuffer().length === 0) {
+            e.preventDefault();
+            e.stopPropagation();
+            clearKeyBuffer();
+            // Move cursor one position right before entering insert mode
+            const currentPos = getCursorPosition();
+            const lines = getLines();
+            const newColumn = Math.min(lines[currentPos.line].length, currentPos.column + 1);
+            const newOffset = calculateOffsetFromPosition(currentPos.line, newColumn, lines);
+            const newPosition = {
+              line: currentPos.line,
+              column: newColumn,
+              offset: newOffset,
+            };
+            setCursorPosition(newPosition);
 
-          // Update textarea cursor
-          facade.collapseSelection(newOffset);
+            // Update textarea cursor
+            facade.collapseSelection(newOffset);
 
-          setMode("insert");
-          return true;
+            setMode("insert");
+            return true;
+          }
+          break;
         }
         case "A":
           e.preventDefault();
@@ -722,7 +749,8 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
           clearKeyBuffer();
           const curPos = getCursorPosition();
           useVimStore.getState().actions.pushJump(curPos.line, curPos.column);
-          startSearch("backward");
+          useUIState.getState().setIsFindVisible(true);
+          useVimSearchStore.getState().actions.setLastSearch("", "backward");
           return true;
         }
         case "r": {
@@ -770,7 +798,8 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
           clearKeyBuffer();
           const curPos = getCursorPosition();
           useVimStore.getState().actions.pushJump(curPos.line, curPos.column);
-          startSearch();
+          useUIState.getState().setIsFindVisible(true);
+          useVimSearchStore.getState().actions.setLastSearch("", "forward");
           return true;
         }
         case "n": {
@@ -779,7 +808,13 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
           clearKeyBuffer();
           const curPos = getCursorPosition();
           useVimStore.getState().actions.pushJump(curPos.line, curPos.column);
-          findNext();
+          const { lastSearchDirection } = useVimSearchStore.getState();
+          const { searchNext, searchPrevious } = useEditorUIStore.getState().actions;
+          if (lastSearchDirection === "backward") {
+            searchPrevious();
+          } else {
+            searchNext();
+          }
           return true;
         }
         case "N": {
@@ -788,7 +823,13 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
           clearKeyBuffer();
           const curPos = getCursorPosition();
           useVimStore.getState().actions.pushJump(curPos.line, curPos.column);
-          findPrevious();
+          const { lastSearchDirection } = useVimSearchStore.getState();
+          const { searchNext, searchPrevious } = useEditorUIStore.getState().actions;
+          if (lastSearchDirection === "backward") {
+            searchNext();
+          } else {
+            searchPrevious();
+          }
           return true;
         }
         case "F":
@@ -813,10 +854,10 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
           while (wordEnd < line.length && /\w/.test(line[wordEnd])) wordEnd++;
           const word = line.slice(wordStart, wordEnd);
           if (word) {
-            const { performSearch, findNext: searchFindNext } =
-              useVimSearchStore.getState().actions;
-            performSearch(word);
-            searchFindNext();
+            const { setSearchQuery, searchNext } = useEditorUIStore.getState().actions;
+            setSearchQuery(word);
+            searchNext();
+            useVimSearchStore.getState().actions.setLastSearch(word, "forward");
           }
           return true;
         }
@@ -834,10 +875,10 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
           while (wordEnd < line.length && /\w/.test(line[wordEnd])) wordEnd++;
           const word = line.slice(wordStart, wordEnd);
           if (word) {
-            const { performSearch, findPrevious: searchFindPrevious } =
-              useVimSearchStore.getState().actions;
-            performSearch(word);
-            searchFindPrevious();
+            const { setSearchQuery, searchPrevious } = useEditorUIStore.getState().actions;
+            setSearchQuery(word);
+            searchPrevious();
+            useVimSearchStore.getState().actions.setLastSearch(word, "backward");
           }
           return true;
         }

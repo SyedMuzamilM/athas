@@ -216,6 +216,13 @@ const useVimSearchStoreBase = create(
           }
         },
 
+        setLastSearch: (term: string, direction: SearchDirection) => {
+          set((state) => {
+            state.lastSearchTerm = term;
+            state.lastSearchDirection = direction;
+          });
+        },
+
         clearSearch: () => {
           set((state) => {
             state.matches = [];

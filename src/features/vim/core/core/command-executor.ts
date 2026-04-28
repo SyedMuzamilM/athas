@@ -57,6 +57,9 @@ export const executeVimCommand = (keys: string[]): boolean => {
       const action = getAction(command.action);
       if (!action) return false;
 
+      // Save undo state before mutating actions
+      context.facade.saveUndoState();
+
       // Don't track the repeat command itself
       if (command.action !== ".") {
         // Store this operation for repeat functionality (but only if it's repeatable)
@@ -88,6 +91,9 @@ export const executeVimCommand = (keys: string[]): boolean => {
       const operator = getOperator(command.operator);
       if (!operator) return false;
 
+      // Save undo state before mutating operators
+      context.facade.saveUndoState();
+
       let range: VimRange | null;
 
       if (command.motion && command.operator === command.motion) {
@@ -103,7 +109,18 @@ export const executeVimCommand = (keys: string[]): boolean => {
       }
       // Get range from motion
       else if (command.motion) {
-        const motion = getMotion(command.motion);
+        let motionKey = command.motion;
+
+        // Vim special case: cw/cW behaves like ce/cE when cursor is on a word character
+        if (command.operator === "c" && (motionKey === "w" || motionKey === "W")) {
+          const currentLine = context.lines[context.cursor.line];
+          const currentChar = currentLine?.[context.cursor.column];
+          if (currentChar && !/\s/.test(currentChar)) {
+            motionKey = motionKey === "w" ? "e" : "E";
+          }
+        }
+
+        const motion = getMotion(motionKey);
         if (!motion) return false;
 
         const motionCountArg = command.count === undefined ? undefined : command.count;
@@ -180,7 +197,7 @@ const refreshEditorContext = (context: EditorContext): void => {
   context.cursor = context.facade.getCursorPosition();
 };
 
-const getEditorContext = (): EditorContext | null => {
+export const getEditorContext = (): EditorContext | null => {
   const cursorState = useEditorStateStore.getState();
   const viewState = useEditorViewStore.getState();
   const bufferState = useBufferStore.getState();
@@ -248,6 +265,7 @@ export const executeReplaceCommand = (char: string, options: { count?: number } 
   const count = Math.max(1, options.count ?? 1);
   const replaceAction = createReplaceAction(char, count);
 
+  context.facade.saveUndoState();
   replaceAction.execute(context);
 
   // Track for repeat (.) functionality

@@ -55,7 +55,7 @@ describe("parseVimCommand", () => {
     const result = parseVimCommand(["d", "i", "w"]);
     expect(result).toEqual({
       operator: "d",
-      textObject: { mode: "i", object: "w" },
+      textObject: { mode: "inner", object: "w" },
     });
   });
 
