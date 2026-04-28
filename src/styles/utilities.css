@@ -71,6 +71,13 @@
   app-region: no-drag;
 }
 
+html[data-window-resize-dragging],
+html[data-window-resize-dragging] * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+}
+
 .tab-drag-preview {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }

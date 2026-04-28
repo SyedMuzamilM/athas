@@ -162,10 +162,7 @@ const ExtensionRow = ({
           Built-in
         </Badge>
       ) : isInstalling ? (
-        <div className="flex shrink-0 items-center gap-1.5 text-accent">
-          <RefreshCw className="animate-spin" />
-          <span className="ui-font ui-text-sm">Installing</span>
-        </div>
+        <span className="ui-font ui-text-sm shrink-0 text-accent">Installing</span>
       ) : extension.isInstalled ? (
         <div className="flex shrink-0 items-center gap-2">
           {(hasUpdate || hasRuntimeIssue) && onUpdate && (
