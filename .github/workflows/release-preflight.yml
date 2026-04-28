@@ -119,7 +119,8 @@ jobs:
         run: |
           if ([string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE) -or
               [string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE_PASSWORD)) {
-            throw "Windows signing secrets are required for release builds."
+            Write-Host "Windows Authenticode signing secrets are not configured; Windows installers will be built unsigned."
+            exit 0
           }
 
           New-Item -ItemType Directory -Force -Path certificate | Out-Null
