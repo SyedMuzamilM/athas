@@ -40,7 +40,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["app", "appimage", "deb", "dmg", "nsis", "rpm"],
     "createUpdaterArtifacts": true,
     "icon": [
       "icons/prod/32x32.png",
@@ -60,18 +60,7 @@
       "providerShortName": null,
       "entitlements": null
     },
-    "linux": {
-      "appimage": {
-        "files": {
-          "/usr/lib/x86_64-linux-gnu/libfreetype.so.6": "/usr/lib/"
-        }
-      }
-    },
-    "windows": {
-      "wix": {
-        "version": "0.4.6900"
-      }
-    }
+    "linux": {}
   },
   "plugins": {
     "deep-link": {
