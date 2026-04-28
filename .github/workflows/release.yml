@@ -61,7 +61,7 @@ jobs:
             os: "macos"
             args: "--target aarch64-apple-darwin"
             target: "aarch64-apple-darwin"
-            bundle_path: "src-tauri/target/aarch64-apple-darwin/release/bundle"
+            bundle_path: "target/aarch64-apple-darwin/release/bundle"
             timeout_minutes: 60
             rustflags: ""
           - platform: "macos-latest"
@@ -69,7 +69,7 @@ jobs:
             os: "macos"
             args: "--target x86_64-apple-darwin"
             target: "x86_64-apple-darwin"
-            bundle_path: "src-tauri/target/x86_64-apple-darwin/release/bundle"
+            bundle_path: "target/x86_64-apple-darwin/release/bundle"
             timeout_minutes: 60
             rustflags: ""
           - platform: "ubuntu-22.04"
@@ -77,7 +77,7 @@ jobs:
             os: "linux"
             args: ""
             target: ""
-            bundle_path: "src-tauri/target/release/bundle"
+            bundle_path: "target/release/bundle"
             timeout_minutes: 60
             rustflags: ""
           - platform: "ubuntu-22.04-arm"
@@ -85,7 +85,7 @@ jobs:
             os: "linux"
             args: ""
             target: ""
-            bundle_path: "src-tauri/target/release/bundle"
+            bundle_path: "target/release/bundle"
             timeout_minutes: 60
             rustflags: ""
           - platform: "windows-latest"
@@ -93,7 +93,7 @@ jobs:
             os: "windows"
             args: "--bundles nsis"
             target: ""
-            bundle_path: "src-tauri/target/release/bundle"
+            bundle_path: "target/release/bundle"
             timeout_minutes: 90
             rustflags: ""
           - platform: "windows-latest"
@@ -101,7 +101,7 @@ jobs:
             os: "windows"
             args: "--target aarch64-pc-windows-msvc --bundles nsis"
             target: "aarch64-pc-windows-msvc"
-            bundle_path: "src-tauri/target/aarch64-pc-windows-msvc/release/bundle"
+            bundle_path: "target/aarch64-pc-windows-msvc/release/bundle"
             timeout_minutes: 90
             rustflags: ""
 
@@ -266,8 +266,7 @@ jobs:
           NO_STRIP: ${{ matrix.os == 'linux' && 'true' || '' }}
           RUSTFLAGS: ${{ matrix.rustflags }}
         run: |
-          bun tauri build ${{ matrix.args }} \
-            ${{ needs.release-metadata.outputs.is_prerelease == 'true' && '--config src-tauri/tauri.preview.conf.json' || '' }}
+          bun tauri build ${{ matrix.args }} ${{ needs.release-metadata.outputs.is_prerelease == 'true' && '--config src-tauri/tauri.preview.conf.json' || '' }}
 
       - name: Collect Windows user installer (Windows only)
         if: matrix.os == 'windows'
