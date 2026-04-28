@@ -799,6 +799,7 @@ dependencies = [
  "url",
  "walkdir",
  "which",
+ "xz2",
  "zip 2.4.2",
 ]
 

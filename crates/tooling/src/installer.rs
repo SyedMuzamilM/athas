@@ -12,6 +12,7 @@ use std::{
 use tauri::Manager;
 use url::Url;
 use walkdir::WalkDir;
+use xz2::read::XzDecoder;
 use zip::ZipArchive;
 
 /// Maximum size for a managed binary tool download. Most single-file tools are
@@ -259,6 +260,28 @@ impl ToolInstaller {
    }
 
    fn extract_archive(bytes: &[u8], url: &str, target_dir: &Path) -> Result<(), ToolError> {
+      if url.ends_with(".tar.xz") || url.ends_with(".txz") {
+         let decoder = XzDecoder::new(Cursor::new(bytes));
+         let mut archive = tar::Archive::new(decoder);
+         let entries = archive.entries().map_err(|e| {
+            ToolError::InstallationFailed(format!("Failed to read tar.xz entries: {}", e))
+         })?;
+         for entry in entries {
+            let mut entry = entry.map_err(|e| {
+               ToolError::InstallationFailed(format!("Failed to read tar.xz entry: {}", e))
+            })?;
+            let unpacked = entry.unpack_in(target_dir).map_err(|e| {
+               ToolError::InstallationFailed(format!("Failed to unpack tar.xz entry: {}", e))
+            })?;
+            if !unpacked {
+               return Err(ToolError::InstallationFailed(
+                  "Rejected archive entry with invalid path".to_string(),
+               ));
+            }
+         }
+         return Ok(());
+      }
+
       if url.ends_with(".tar.gz") || url.ends_with(".tgz") {
          let decoder = GzDecoder::new(Cursor::new(bytes));
          let mut archive = tar::Archive::new(decoder);
