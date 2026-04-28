@@ -5,6 +5,11 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to build. Defaults to package.json version."
+        required: false
+        type: string
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -15,8 +20,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' }}
     outputs:
+      tag_name: ${{ steps.release_meta.outputs.tag_name }}
       release_name: ${{ steps.release_meta.outputs.release_name }}
       is_prerelease: ${{ steps.release_meta.outputs.is_prerelease }}
     steps:
@@ -33,12 +39,33 @@ jobs:
         id: release_meta
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_TAG: ${{ github.event.inputs.tag || '' }}
         run: |
+          set -euo pipefail
+
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            if [[ -n "$INPUT_TAG" ]]; then
+              tag="$INPUT_TAG"
+            else
+              version="$(bun -e 'console.log(JSON.parse(await Bun.file("package.json").text()).version)')"
+              tag="v${version}"
+            fi
+          else
+            tag="${GITHUB_REF_NAME}"
+          fi
+
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid release tag: $tag"
+            exit 1
+          fi
+
+          echo "tag_name=$tag" >> "${GITHUB_OUTPUT}"
+
           bun scripts/release/generate-notes.mjs \
-            --tag "${GITHUB_REF_NAME}" \
+            --tag "$tag" \
             --github-output "${GITHUB_OUTPUT}"
           bun scripts/release/generate-notes.mjs \
-            --tag "${GITHUB_REF_NAME}" \
+            --tag "$tag" \
             > release-body.md
 
       - name: Upload release metadata
@@ -361,7 +388,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    if: ${{ success() && startsWith(github.ref, 'refs/tags/v') }}
+    if: ${{ success() && (startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch') }}
     steps:
       - uses: actions/checkout@v6
 
@@ -384,9 +411,11 @@ jobs:
           merge-multiple: true
 
       - name: Assemble release assets
+        env:
+          TAG_NAME: ${{ needs.release-metadata.outputs.tag_name }}
         run: |
           bun scripts/release/release-assets.mjs assemble \
-            --tag "${GITHUB_REF_NAME}" \
+            --tag "${TAG_NAME}" \
             --repo "${{ github.repository }}" \
             --dir release-artifacts \
             --notes-file release-metadata/release-body.md \
@@ -395,6 +424,7 @@ jobs:
       - name: Create or update draft release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ needs.release-metadata.outputs.tag_name }}
           RELEASE_NAME: ${{ needs.release-metadata.outputs.release_name }}
           IS_PRERELEASE: ${{ needs.release-metadata.outputs.is_prerelease }}
         run: |
@@ -403,27 +433,27 @@ jobs:
           release_count="$(gh api "/repos/${{ github.repository }}/releases?per_page=100" \
             --paginate \
             --slurp \
-            --jq "map(.[] | select(.tag_name == \"${GITHUB_REF_NAME}\")) | length")"
+            --jq "map(.[] | select(.tag_name == \"${TAG_NAME}\")) | length")"
 
           if [[ "$release_count" -gt 1 ]]; then
-            echo "Found ${release_count} releases with tag ${GITHUB_REF_NAME}; refusing to upload into ambiguous release state."
+            echo "Found ${release_count} releases with tag ${TAG_NAME}; refusing to upload into ambiguous release state."
             exit 1
           fi
 
-          if gh release view "${GITHUB_REF_NAME}" --repo "${{ github.repository }}" >/dev/null 2>&1; then
-            is_draft="$(gh release view "${GITHUB_REF_NAME}" --repo "${{ github.repository }}" --json isDraft --jq ".isDraft")"
+          if gh release view "${TAG_NAME}" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            is_draft="$(gh release view "${TAG_NAME}" --repo "${{ github.repository }}" --json isDraft --jq ".isDraft")"
             if [[ "$is_draft" != "true" ]]; then
-              echo "Release ${GITHUB_REF_NAME} is already published; refusing to mutate it."
+              echo "Release ${TAG_NAME} is already published; refusing to mutate it."
               exit 1
             fi
 
-            gh release edit "${GITHUB_REF_NAME}" \
+            gh release edit "${TAG_NAME}" \
               --repo "${{ github.repository }}" \
               --title "${RELEASE_NAME}" \
               --notes-file release-metadata/release-body.md
           else
             create_args=(
-              release create "${GITHUB_REF_NAME}"
+              release create "${TAG_NAME}"
               --repo "${{ github.repository }}"
               --draft
               --target "${GITHUB_SHA}"
@@ -441,8 +471,9 @@ jobs:
       - name: Upload release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ needs.release-metadata.outputs.tag_name }}
         run: |
-          gh release upload "${GITHUB_REF_NAME}" \
+          gh release upload "${TAG_NAME}" \
             --repo "${{ github.repository }}" \
             prepared-release/* \
             --clobber
@@ -450,7 +481,8 @@ jobs:
       - name: Validate draft release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ needs.release-metadata.outputs.tag_name }}
         run: |
           bun scripts/release/release-assets.mjs verify \
-            --tag "${GITHUB_REF_NAME}" \
+            --tag "${TAG_NAME}" \
             --repo "${{ github.repository }}"
