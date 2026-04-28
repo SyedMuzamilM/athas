@@ -74,6 +74,14 @@ impl ToolInstaller {
       }
    }
 
+   fn script_bin_name(name: &str) -> String {
+      if cfg!(windows) {
+         format!("{}.cmd", name)
+      } else {
+         name.to_string()
+      }
+   }
+
    fn bin_file_name(name: &str) -> String {
       if cfg!(windows) {
          format!("{}.exe", name)
@@ -475,6 +483,13 @@ impl ToolInstaller {
             Self::install_via_cargo(app_handle, package, Self::configured_command_name(config))
                .await
          }
+         ToolRuntime::Ruby => {
+            let package = config
+               .package
+               .as_ref()
+               .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
+            Self::install_via_gem(app_handle, package, Self::configured_command_name(config)).await
+         }
          ToolRuntime::Binary => {
             if let Some(url) = config.download_url.as_ref() {
                Self::download_binary(
@@ -755,6 +770,125 @@ impl ToolInstaller {
       Self::validate_and_prepare(&bin_path)
    }
 
+   fn ruby_wrapper_path(package_dir: &Path, command_name: &str) -> PathBuf {
+      package_dir
+         .join("bin")
+         .join(Self::script_bin_name(command_name))
+   }
+
+   #[cfg(windows)]
+   fn batch_escape_path(path: &Path) -> String {
+      path.to_string_lossy().replace('%', "%%")
+   }
+
+   #[cfg(not(windows))]
+   fn shell_quote_path(path: &Path) -> String {
+      let escaped = path.to_string_lossy().replace('\'', "'\"'\"'");
+      format!("'{escaped}'")
+   }
+
+   fn write_ruby_wrapper(
+      package_dir: &Path,
+      command_name: &str,
+      gem_home: &Path,
+      gem_bin_dir: &Path,
+   ) -> Result<PathBuf, ToolError> {
+      let wrapper_path = Self::ruby_wrapper_path(package_dir, command_name);
+      if let Some(parent) = wrapper_path.parent() {
+         fs::create_dir_all(parent)?;
+      }
+
+      #[cfg(windows)]
+      {
+         let gem_command = gem_bin_dir.join(format!("{}.bat", command_name));
+         if !gem_command.exists() {
+            return Err(ToolError::InstallationFailed(format!(
+               "gem install did not create expected executable: {}",
+               gem_command.display()
+            )));
+         }
+         fs::write(
+            &wrapper_path,
+            format!(
+               "@echo off\r\nset \"GEM_HOME={}\"\r\nset \"GEM_PATH={}\"\r\ncall \"{}\" %*\r\n",
+               Self::batch_escape_path(gem_home),
+               Self::batch_escape_path(gem_home),
+               Self::batch_escape_path(&gem_command)
+            ),
+         )?;
+      }
+
+      #[cfg(not(windows))]
+      {
+         let gem_command = gem_bin_dir.join(command_name);
+         if !gem_command.exists() {
+            return Err(ToolError::InstallationFailed(format!(
+               "gem install did not create expected executable: {}",
+               gem_command.display()
+            )));
+         }
+         fs::write(
+            &wrapper_path,
+            format!(
+               "#!/bin/sh\nexport GEM_HOME={}\nexport GEM_PATH={}\nexec {} \"$@\"\n",
+               Self::shell_quote_path(gem_home),
+               Self::shell_quote_path(gem_home),
+               Self::shell_quote_path(&gem_command)
+            ),
+         )?;
+      }
+
+      Self::validate_and_prepare(&wrapper_path)
+   }
+
+   /// Install a package via RubyGems into an Athas-managed GEM_HOME.
+   async fn install_via_gem(
+      app_handle: &tauri::AppHandle,
+      package: &str,
+      command_name: &str,
+   ) -> Result<PathBuf, ToolError> {
+      let gem_path = which::which("gem").map_err(|_| {
+         ToolError::RuntimeNotAvailable(
+            "RubyGems 'gem' was not found. Install Ruby to use Ruby language tools.".to_string(),
+         )
+      })?;
+
+      let tools_dir = Self::get_tools_dir(app_handle)?;
+      let package_dir = tools_dir.join("ruby").join(package);
+      let gem_home = package_dir.join("gems");
+      let gem_bin_dir = package_dir.join("gem-bin");
+      std::fs::create_dir_all(&gem_home)?;
+      std::fs::create_dir_all(&gem_bin_dir)?;
+
+      log::info!("Installing {} via RubyGems to {:?}", package, gem_home);
+
+      let mut command = Command::new(&gem_path);
+      let output = configure_background_command(&mut command)
+         .args([
+            "install",
+            package,
+            "--install-dir",
+            gem_home.to_string_lossy().as_ref(),
+            "--bindir",
+            gem_bin_dir.to_string_lossy().as_ref(),
+            "--no-document",
+         ])
+         .env("GEM_HOME", &gem_home)
+         .env("GEM_PATH", &gem_home)
+         .output()
+         .map_err(|e| ToolError::InstallationFailed(e.to_string()))?;
+
+      if !output.status.success() {
+         let stderr = String::from_utf8_lossy(&output.stderr);
+         return Err(ToolError::InstallationFailed(format!(
+            "gem install failed: {}",
+            stderr
+         )));
+      }
+
+      Self::write_ruby_wrapper(&package_dir, command_name, &gem_home, &gem_bin_dir)
+   }
+
    /// Download a binary directly.
    ///
    /// Enforces:
@@ -889,6 +1023,16 @@ impl ToolInstaller {
          ToolRuntime::Rust => {
             let bin_name = Self::bin_file_name(Self::configured_command_name(config));
             Ok(tools_dir.join("cargo").join("bin").join(bin_name))
+         }
+         ToolRuntime::Ruby => {
+            let package = config
+               .package
+               .as_ref()
+               .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
+            Ok(Self::ruby_wrapper_path(
+               &tools_dir.join("ruby").join(package),
+               Self::configured_command_name(config),
+            ))
          }
          ToolRuntime::Binary => {
             let command_name = Self::configured_command_name(config);
@@ -1092,6 +1236,50 @@ mod tests {
       );
 
       assert_eq!(resolved.as_deref(), Some(entrypoint.as_path()));
+   }
+
+   #[test]
+   fn writes_ruby_wrapper_for_managed_gem_executable() {
+      let temp = tempfile::tempdir().unwrap();
+      let package_dir = temp.path().join("ruby").join("solargraph");
+      let gem_home = package_dir.join("gems");
+      let gem_bin_dir = package_dir.join("gem-bin");
+      let gem_command = gem_bin_dir.join(if cfg!(windows) {
+         "solargraph.bat"
+      } else {
+         "solargraph"
+      });
+      fs::create_dir_all(gem_command.parent().unwrap()).unwrap();
+      fs::write(&gem_command, "").unwrap();
+
+      let wrapper =
+         ToolInstaller::write_ruby_wrapper(&package_dir, "solargraph", &gem_home, &gem_bin_dir)
+            .unwrap();
+
+      assert_eq!(
+         wrapper,
+         package_dir
+            .join("bin")
+            .join(ToolInstaller::script_bin_name("solargraph"))
+      );
+      let content = fs::read_to_string(wrapper).unwrap();
+      assert!(content.contains("GEM_HOME"));
+      assert!(content.contains(gem_command.to_string_lossy().as_ref()));
+   }
+
+   #[test]
+   fn rejects_ruby_wrapper_when_gem_executable_is_missing() {
+      let temp = tempfile::tempdir().unwrap();
+      let package_dir = temp.path().join("ruby").join("solargraph");
+
+      let result = ToolInstaller::write_ruby_wrapper(
+         &package_dir,
+         "solargraph",
+         &package_dir.join("gems"),
+         &package_dir.join("gem-bin"),
+      );
+
+      assert!(matches!(result, Err(ToolError::InstallationFailed(_))));
    }
 
    #[test]

@@ -46,6 +46,7 @@ impl ToolRegistry {
 
    fn normalize_tool_config(mut config: ToolConfig) -> ToolConfig {
       Self::apply_known_package_tool(&mut config);
+      Self::apply_known_ruby_tool(&mut config);
       if config.command.is_none() {
          config.command = Self::known_tool_command(&config);
       }
@@ -88,6 +89,21 @@ impl ToolRegistry {
       };
 
       config.runtime = crate::ToolRuntime::Bun;
+      config.package = Some(package.to_string());
+      config.download_url = None;
+   }
+
+   fn apply_known_ruby_tool(config: &mut ToolConfig) {
+      if config.runtime != crate::ToolRuntime::Binary {
+         return;
+      }
+
+      let package = match config.name.as_str() {
+         "solargraph" => "solargraph",
+         _ => return,
+      };
+
+      config.runtime = crate::ToolRuntime::Ruby;
       config.package = Some(package.to_string());
       config.download_url = None;
    }
@@ -445,6 +461,31 @@ mod tests {
          assert_eq!(resolved.runtime, crate::ToolRuntime::Bun);
          assert_eq!(resolved.package.as_deref(), Some(package));
       }
+   }
+
+   #[test]
+   fn converts_known_ruby_backed_language_servers_to_gems() {
+      let config = ToolConfig {
+         name: "solargraph".to_string(),
+         command: None,
+         runtime: crate::ToolRuntime::Binary,
+         package: None,
+         download_url: None,
+         args: vec!["stdio".to_string()],
+         env: std::collections::HashMap::new(),
+      };
+
+      let language_tools = LanguageToolConfigSet {
+         lsp: Some(config),
+         formatter: None,
+         linter: None,
+      };
+
+      let tools = ToolRegistry::get_tools("ruby", Some(language_tools)).unwrap();
+      let resolved = tools.get(&ToolType::Lsp).unwrap();
+      assert_eq!(resolved.runtime, crate::ToolRuntime::Ruby);
+      assert_eq!(resolved.package.as_deref(), Some("solargraph"));
+      assert!(resolved.download_url.is_none());
    }
 
    #[test]
