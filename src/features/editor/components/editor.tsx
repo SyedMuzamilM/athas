@@ -15,6 +15,7 @@ import { useOnClickOutside } from "usehooks-ts";
 import { useGitGutter } from "@/features/git/hooks/use-git-gutter";
 import { isEditorContent } from "@/features/panes/types/pane-content";
 import { useSettingsStore } from "@/features/settings/store";
+import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useVimStore } from "@/features/vim/stores/vim-store";
 import { useZoomStore } from "@/features/window/stores/zoom-store";
 import { Button } from "@/ui/button";
@@ -150,6 +151,7 @@ export function Editor({
   const fontFamily = useEditorSettingsStore.use.fontFamily();
   const zoomLevel = useZoomStore.use.editorZoomLevel();
   const vimModeEnabled = useSettingsStore((state) => state.settings.vimMode);
+  const setIsFindVisible = useUIState((state) => state.setIsFindVisible);
   const aiCompletionEnabled = useSettingsStore((state) => state.settings.aiCompletion);
   const aiAutocompleteModelId = useSettingsStore((state) => state.settings.aiAutocompleteModelId);
   const inlineGitBlameEnabled = useSettingsStore((state) => state.settings.enableInlineGitBlame);
@@ -499,6 +501,7 @@ export function Editor({
     bufferId,
     updateBufferContent,
     handleInput,
+    tabSize,
   });
 
   // Inline edit hook
@@ -1416,14 +1419,36 @@ export function Editor({
             onPaste={editorOps.paste}
             onSelectAll={editorOps.selectAll}
             onDelete={editorOps.deleteSelection}
+            onFind={() => setIsFindVisible(true)}
+            onGoToLine={() => {
+              void keymapRegistry.executeCommand("editor.goToLine");
+            }}
+            onDuplicate={() => {
+              void keymapRegistry.executeCommand("editor.duplicateLine");
+            }}
+            onIndent={editorOps.indent}
+            onOutdent={editorOps.outdent}
+            onToggleComment={() => {
+              void keymapRegistry.executeCommand("editor.toggleComment");
+            }}
+            onFormat={() => {
+              void keymapRegistry.executeCommand("editor.formatDocument");
+            }}
+            onToggleCase={editorOps.toggleCase}
+            onMoveLineUp={() => {
+              void keymapRegistry.executeCommand("editor.moveLineUp");
+            }}
+            onMoveLineDown={() => {
+              void keymapRegistry.executeCommand("editor.moveLineDown");
+            }}
             onGoToDefinition={() => {
-              keymapRegistry.executeCommand("editor.goToDefinition");
+              void keymapRegistry.executeCommand("editor.goToDefinition");
             }}
             onFindReferences={() => {
-              keymapRegistry.executeCommand("editor.goToReferences");
+              void keymapRegistry.executeCommand("editor.goToReferences");
             }}
             onRenameSymbol={() => {
-              keymapRegistry.executeCommand("editor.renameSymbol");
+              void keymapRegistry.executeCommand("editor.renameSymbol");
             }}
           />,
           document.body,
