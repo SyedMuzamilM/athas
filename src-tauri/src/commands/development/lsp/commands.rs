@@ -433,6 +433,6 @@ pub fn lsp_document_close(lsp_manager: State<'_, LspManager>, file_path: String)
 }
 
 #[tauri::command]
-pub fn lsp_is_language_supported(_file_path: String) -> bool {
-   true
+pub fn lsp_is_language_supported(lsp_manager: State<'_, LspManager>, file_path: String) -> bool {
+   lsp_manager.get_client_for_file(&file_path).is_some()
 }

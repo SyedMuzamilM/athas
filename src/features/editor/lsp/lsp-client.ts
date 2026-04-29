@@ -18,7 +18,12 @@ import { hasTextContent } from "@/features/panes/types/pane-content";
 import { useBufferStore } from "../stores/buffer-store";
 import { logger } from "../utils/logger";
 import { useLspStore } from "./lsp-store";
-import { applyWorkspaceEdit, isWorkspaceEdit, type WorkspaceEdit } from "./workspace-edit";
+import {
+  applyWorkspaceEdit,
+  filePathFromUri,
+  isWorkspaceEdit,
+  type WorkspaceEdit,
+} from "./workspace-edit";
 
 export interface LspError {
   message: string;
@@ -240,7 +245,7 @@ export class LspClient {
           logger.debug("LSPClient", `Received diagnostics for ${uri}:`, diagnostics);
 
           // Convert URI to file path
-          const filePath = uri.replace("file://", "");
+          const filePath = filePathFromUri(uri);
 
           // Convert LSP diagnostics to our internal format
           const diagnosticsList = diagnostics || [];
@@ -493,6 +498,7 @@ export class LspClient {
     const displayNames: Record<string, string> = {
       typescript: "TypeScript",
       javascript: "JavaScript",
+      javascriptreact: "JavaScript React",
       rust: "Rust",
       python: "Python",
       go: "Go",
@@ -505,11 +511,27 @@ export class LspClient {
       html: "HTML",
       angular: "Angular Template",
       css: "CSS",
+      dart: "Dart",
+      dockerfile: "Dockerfile",
+      elixir: "Elixir",
       json: "JSON",
+      jsonc: "JSONC",
+      kotlin: "Kotlin",
+      lua: "Lua",
       yaml: "YAML",
+      nix: "Nix",
+      ocaml: "OCaml",
+      scala: "Scala",
+      solidity: "Solidity",
+      svelte: "Svelte",
+      swift: "Swift",
+      terraform: "Terraform",
       toml: "TOML",
+      typescriptreact: "TypeScript React",
       markdown: "Markdown",
       bash: "Bash",
+      vue: "Vue",
+      zig: "Zig",
     };
     return displayNames[languageId] || languageId;
   }
