@@ -18,6 +18,7 @@ import { hasTextContent } from "@/features/panes/types/pane-content";
 import { useBufferStore } from "../stores/buffer-store";
 import { logger } from "../utils/logger";
 import { useLspStore } from "./lsp-store";
+import { applyWorkspaceEdit, isWorkspaceEdit } from "./workspace-edit";
 
 export interface LspError {
   message: string;
@@ -75,6 +76,26 @@ function isBenignHoverError(error: unknown): boolean {
     message.includes("column is beyond end of file") ||
     message.includes("no lsp client for this file")
   );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function getCodeActionEdit(actionPayload: unknown): unknown {
+  if (!isRecord(actionPayload)) return null;
+  return actionPayload.edit;
+}
+
+function hasCodeActionCommand(actionPayload: unknown): boolean {
+  return isRecord(actionPayload) && isRecord(actionPayload.command);
+}
+
+function withoutWorkspaceEdit(actionPayload: unknown): unknown {
+  if (!isRecord(actionPayload)) return actionPayload;
+
+  const { edit: _edit, ...commandPayload } = actionPayload;
+  return commandPayload;
 }
 
 export class LspClient {
@@ -905,10 +926,25 @@ export class LspClient {
     actionPayload: unknown,
   ): Promise<ApplyDiagnosticCodeActionResult> {
     try {
-      return await invoke<ApplyDiagnosticCodeActionResult>("lsp_apply_code_action", {
+      let appliedEdit = false;
+      const edit = getCodeActionEdit(actionPayload);
+      if (isWorkspaceEdit(edit)) {
+        await applyWorkspaceEdit(edit);
+        appliedEdit = true;
+
+        if (!hasCodeActionCommand(actionPayload)) {
+          return { applied: true };
+        }
+
+        actionPayload = withoutWorkspaceEdit(actionPayload);
+      }
+
+      const result = await invoke<ApplyDiagnosticCodeActionResult>("lsp_apply_code_action", {
         filePath,
         actionPayload,
       });
+
+      return appliedEdit && !result.applied ? { applied: true, reason: result.reason } : result;
     } catch (error) {
       logger.warn("LSPClient", "LSP apply code action failed:", error);
       return {
