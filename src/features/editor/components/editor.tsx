@@ -114,6 +114,7 @@ export function Editor({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const contentContainerRef = useRef<HTMLDivElement>(null);
   const highlightRef = useRef<HTMLDivElement>(null);
+  const primaryCursorRef = useRef<HTMLDivElement>(null);
   const multiCursorRef = useRef<HTMLDivElement>(null);
   const searchHighlightRef = useRef<HTMLDivElement>(null);
   const selectionLayerRef = useRef<HTMLDivElement>(null);
@@ -768,6 +769,7 @@ export function Editor({
     minimapEnabled,
     switchGuardRef,
     highlightRef,
+    primaryCursorRef,
     multiCursorRef,
     searchHighlightRef,
     selectionLayerRef,
@@ -1121,6 +1123,7 @@ export function Editor({
         />
         {useGlobalEditorState && !wordWrap && !readOnly && (
           <PrimaryCursorLayer
+            ref={primaryCursorRef}
             cursorPosition={cursorPosition}
             visualLine={visualCursorLine}
             fontSize={fontSize}
