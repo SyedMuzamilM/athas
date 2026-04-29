@@ -1,5 +1,5 @@
 import type React from "react";
-import { useCallback, useEffect, useMemo, useRef, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { CsvPreview } from "@/extensions/viewers/csv/csv-preview";
 import { useLspIntegration } from "@/features/editor/hooks/use-lsp-integration";
 import { useEditorScroll } from "@/features/editor/hooks/use-scroll";
@@ -69,6 +69,7 @@ interface GoToLineEventDetail {
 }
 
 const SEARCH_DEBOUNCE_MS = 300; // Debounce search regex matching
+const LSP_VIEWPORT_LINE_BUFFER = 30;
 
 const CodeEditor = ({
   className,
@@ -94,6 +95,10 @@ const CodeEditor = ({
   const semanticTokensRef = useRef<HTMLDivElement>(null);
   const renameInputRef = useRef<HTMLDivElement>(null);
   const lspScrollRafRef = useRef<number | null>(null);
+  const [lspVisibleLineRange, setLspVisibleLineRange] = useState({
+    startLine: 0,
+    endLine: 120,
+  });
   const { setRefs, setContent, setFileInfo, setActiveEditorViewKey } =
     useEditorStateStore.use.actions();
   const { setDisabled } = useEditorSettingsStore.use.actions();
@@ -209,6 +214,7 @@ const CodeEditor = ({
   const inlayHints = useInlayHints(
     enableInteractiveServices ? filePath : undefined,
     enableInteractiveServices,
+    lspVisibleLineRange,
   );
 
   // Code lens
@@ -235,6 +241,24 @@ const CodeEditor = ({
     [filePath, lspClient],
   );
 
+  const updateLspVisibleLineRange = useCallback(
+    (scrollTop: number, viewportHeight: number) => {
+      const startLine = Math.max(
+        0,
+        Math.floor(scrollTop / zoomedLineHeight) - LSP_VIEWPORT_LINE_BUFFER,
+      );
+      const endLine =
+        Math.ceil((scrollTop + viewportHeight) / zoomedLineHeight) + LSP_VIEWPORT_LINE_BUFFER;
+
+      setLspVisibleLineRange((current) =>
+        current.startLine === startLine && current.endLine === endLine
+          ? current
+          : { startLine, endLine },
+      );
+    },
+    [zoomedLineHeight],
+  );
+
   // Sync LSP overlay containers with textarea scroll via RAF (matches highlight layer timing)
   const syncLspOverlayTransform = useCallback((scrollTop: number, scrollLeft: number) => {
     const transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
@@ -256,6 +280,7 @@ const CodeEditor = ({
       if (lspScrollRafRef.current !== null) return;
       lspScrollRafRef.current = requestAnimationFrame(() => {
         syncLspOverlayTransform(textarea.scrollTop, textarea.scrollLeft);
+        updateLspVisibleLineRange(textarea.scrollTop, textarea.clientHeight);
         lspScrollRafRef.current = null;
       });
     };
@@ -263,6 +288,7 @@ const CodeEditor = ({
     textarea.addEventListener("scroll", handleScroll, { passive: true });
     // Sync initial position
     syncLspOverlayTransform(textarea.scrollTop, textarea.scrollLeft);
+    updateLspVisibleLineRange(textarea.scrollTop, textarea.clientHeight);
 
     return () => {
       textarea.removeEventListener("scroll", handleScroll);
@@ -271,7 +297,7 @@ const CodeEditor = ({
         lspScrollRafRef.current = null;
       }
     };
-  }, [syncLspOverlayTransform]);
+  }, [syncLspOverlayTransform, updateLspVisibleLineRange]);
 
   // Combine mouse move handlers for hover and definition link
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
