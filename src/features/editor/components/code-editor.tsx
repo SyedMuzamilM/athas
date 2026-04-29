@@ -18,6 +18,7 @@ import { CompletionDropdown } from "../completion/completion-dropdown";
 import CodeLensOverlay from "../lsp/code-lens-overlay";
 import { HoverTooltip } from "../lsp/hover-tooltip";
 import InlayHintsOverlay from "../lsp/inlay-hints-overlay";
+import { LspClient } from "../lsp/lsp-client";
 import RenameInput from "../lsp/rename-input";
 import SemanticTokensOverlay from "../lsp/semantic-tokens-overlay";
 import { SignatureHelpTooltip } from "../lsp/signature-help-tooltip";
@@ -112,6 +113,7 @@ const CodeEditor = ({
   const { setSearchMatches, setCurrentMatchIndex } = useEditorUIStore.use.actions();
   const { settings } = useSettingsStore();
   const isFindVisible = useUIState((state) => state.isFindVisible);
+  const lspClient = useMemo(() => LspClient.getInstance(), []);
 
   // Apply zoom to font size for position calculations (must match editor.tsx)
   const zoomedFontSize = settings.fontSize * zoomLevel;
@@ -218,6 +220,19 @@ const CodeEditor = ({
   const semanticTokens = useSemanticTokens(
     enableInteractiveServices ? filePath : undefined,
     enableInteractiveServices,
+  );
+
+  const handleCodeLensExecute = useCallback(
+    (lens: { title: string; command?: string; arguments?: unknown[] }) => {
+      if (!filePath || !lens.command) return;
+
+      void lspClient.applyCodeAction(filePath, {
+        title: lens.title,
+        command: lens.command,
+        arguments: lens.arguments ?? [],
+      });
+    },
+    [filePath, lspClient],
   );
 
   // Sync LSP overlay containers with textarea scroll via RAF (matches highlight layer timing)
@@ -486,6 +501,7 @@ const CodeEditor = ({
               lineHeight={zoomedLineHeight}
               scrollTop={editorRef.current?.querySelector("textarea")?.scrollTop ?? 0}
               viewportHeight={editorRef.current?.clientHeight ?? 600}
+              onExecute={handleCodeLensExecute}
             />
           )}
 

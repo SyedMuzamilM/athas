@@ -289,6 +289,7 @@ pub async fn lsp_get_code_lens(
             line: lens.range.start.line,
             title: cmd.title,
             command: Some(cmd.command),
+            arguments: cmd.arguments,
          })
       })
       .collect())

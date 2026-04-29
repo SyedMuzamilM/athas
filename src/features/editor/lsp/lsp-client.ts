@@ -737,6 +737,7 @@ export class LspClient {
       line: number;
       title: string;
       command?: string;
+      arguments?: unknown[];
     }[]
   > {
     try {
