@@ -1009,6 +1009,7 @@ export class LspClient {
   async notifyDocumentClose(filePath: string): Promise<void> {
     try {
       await invoke<void>("lsp_document_close", { filePath });
+      useDiagnosticsStore.getState().actions.clearDiagnostics(filePath);
     } catch (error) {
       logger.error("LSPClient", "LSP document close error:", error);
     }
