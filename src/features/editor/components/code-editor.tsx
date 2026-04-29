@@ -1,5 +1,13 @@
 import type React from "react";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { CsvPreview } from "@/extensions/viewers/csv/csv-preview";
 import { useLspIntegration } from "@/features/editor/hooks/use-lsp-integration";
 import { useEditorScroll } from "@/features/editor/hooks/use-scroll";
@@ -95,6 +103,7 @@ const CodeEditor = ({
   const semanticTokensRef = useRef<HTMLDivElement>(null);
   const renameInputRef = useRef<HTMLDivElement>(null);
   const lspScrollRafRef = useRef<number | null>(null);
+  const [contentOffsetLeft, setContentOffsetLeft] = useState(0);
   const [lspVisibleLineRange, setLspVisibleLineRange] = useState({
     startLine: 0,
     endLine: 120,
@@ -132,6 +141,7 @@ const CodeEditor = ({
     : () => {};
   const isPreviewBuffer = activeBuffer?.isPreview ?? false;
   const enableInteractiveServices = isActiveSurface && !isPreviewBuffer && !readOnly;
+  const enableInlayHints = enableInteractiveServices && settings.parameterHints;
 
   const showMarkdownPreview = activeBuffer?.type === "markdownPreview";
   const showHtmlPreview = activeBuffer?.type === "htmlPreview";
@@ -212,8 +222,8 @@ const CodeEditor = ({
 
   // Inlay hints
   const inlayHints = useInlayHints(
-    enableInteractiveServices ? filePath : undefined,
-    enableInteractiveServices,
+    enableInlayHints ? filePath : undefined,
+    enableInlayHints,
     lspVisibleLineRange,
   );
 
@@ -298,6 +308,45 @@ const CodeEditor = ({
       }
     };
   }, [syncLspOverlayTransform, updateLspVisibleLineRange]);
+
+  useLayoutEffect(() => {
+    const container = editorRef.current;
+    if (!container) return;
+
+    const updateContentOffset = () => {
+      const contentContainer = container.querySelector(
+        "[data-editor-content-container]",
+      ) as HTMLElement | null;
+
+      if (!contentContainer) {
+        setContentOffsetLeft(0);
+        return;
+      }
+
+      const containerRect = container.getBoundingClientRect();
+      const contentRect = contentContainer.getBoundingClientRect();
+      const nextOffset = Math.max(0, contentRect.left - containerRect.left);
+      setContentOffsetLeft((current) =>
+        Math.abs(current - nextOffset) < 0.5 ? current : nextOffset,
+      );
+    };
+
+    const frame = requestAnimationFrame(updateContentOffset);
+    const resizeObserver =
+      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(updateContentOffset);
+    resizeObserver?.observe(container);
+    const contentContainer = container.querySelector(
+      "[data-editor-content-container]",
+    ) as HTMLElement | null;
+    if (contentContainer) {
+      resizeObserver?.observe(contentContainer);
+    }
+
+    return () => {
+      cancelAnimationFrame(frame);
+      resizeObserver?.disconnect();
+    };
+  }, [activeBufferId, showMarkdownPreview, showHtmlPreview, showCsvPreview]);
 
   // Combine mouse move handlers for hover and definition link
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -532,13 +581,14 @@ const CodeEditor = ({
           )}
 
           {/* Inlay Hints */}
-          {enableInteractiveServices && inlayHints.length > 0 && (
+          {enableInlayHints && inlayHints.length > 0 && (
             <InlayHintsOverlay
               ref={inlayHintsRef}
               hints={inlayHints}
               fontSize={zoomedFontSize}
               lineHeight={zoomedLineHeight}
               charWidth={zoomedFontSize * 0.6}
+              contentOffsetLeft={contentOffsetLeft}
               scrollTop={editorRef.current?.querySelector("textarea")?.scrollTop ?? 0}
               viewportHeight={editorRef.current?.clientHeight ?? 600}
             />

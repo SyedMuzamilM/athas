@@ -30,12 +30,13 @@ export const useInlayHints = (
   const lastInputTimestamp = useEditorUIStore.use.lastInputTimestamp();
 
   const fetchHints = useCallback(async () => {
+    const id = ++requestIdRef.current;
+
     if (!filePath || !enabled || !extensionRegistry.isLspSupported(filePath)) {
       setHints([]);
       return;
     }
 
-    const id = ++requestIdRef.current;
     const lspClient = LspClient.getInstance();
 
     const result = await lspClient.getInlayHints(filePath, lineRange.startLine, lineRange.endLine);

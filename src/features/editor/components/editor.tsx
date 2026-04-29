@@ -1080,6 +1080,7 @@ export function Editor({
 
       <div
         ref={contentContainerRef}
+        data-editor-content-container
         className={`overlay-editor-container relative min-h-0 min-w-0 flex-1 bg-primary-bg ${className || ""}`}
         onMouseMove={onMouseMove}
         onMouseLeave={onMouseLeave}
