@@ -1,9 +1,9 @@
-interface LspPosition {
+export interface LspPosition {
   line: number;
   character: number;
 }
 
-interface LspTextEdit {
+export interface LspTextEdit {
   range: {
     start: LspPosition;
     end: LspPosition;
@@ -18,7 +18,7 @@ interface TextDocumentEdit {
   edits: LspTextEdit[];
 }
 
-interface WorkspaceEdit {
+export interface WorkspaceEdit {
   changes?: Record<string, LspTextEdit[]>;
   documentChanges?: Array<TextDocumentEdit | unknown>;
 }

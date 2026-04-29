@@ -18,7 +18,7 @@ import { hasTextContent } from "@/features/panes/types/pane-content";
 import { useBufferStore } from "../stores/buffer-store";
 import { logger } from "../utils/logger";
 import { useLspStore } from "./lsp-store";
-import { applyWorkspaceEdit, isWorkspaceEdit } from "./workspace-edit";
+import { applyWorkspaceEdit, isWorkspaceEdit, type WorkspaceEdit } from "./workspace-edit";
 
 export interface LspError {
   message: string;
@@ -859,32 +859,10 @@ export class LspClient {
     line: number,
     character: number,
     newName: string,
-  ): Promise<{
-    changes?: Record<
-      string,
-      {
-        range: {
-          start: { line: number; character: number };
-          end: { line: number; character: number };
-        };
-        newText: string;
-      }[]
-    >;
-  } | null> {
+  ): Promise<WorkspaceEdit | null> {
     try {
       logger.debug("LSPClient", `Renaming at ${filePath}:${line}:${character} to "${newName}"`);
-      const result = await invoke<{
-        changes?: Record<
-          string,
-          {
-            range: {
-              start: { line: number; character: number };
-              end: { line: number; character: number };
-            };
-            newText: string;
-          }[]
-        >;
-      } | null>("lsp_rename", {
+      const result = await invoke<WorkspaceEdit | null>("lsp_rename", {
         filePath,
         line,
         character,
