@@ -26,7 +26,7 @@ import { formatRelativeDate } from "@/utils/date";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { getBranches } from "../api/git-branches-api";
 import { getGitLog } from "../api/git-commits-api";
-import { getCommitDiff, getFileDiff, getStashDiff } from "../api/git-diff-api";
+import { getCommitDiff, getFileDiff, getRefDiff, getStashDiff } from "../api/git-diff-api";
 import { resolveRepositoryPath } from "../api/git-repo-api";
 import { applyStash, dropStash, getStashes, popStash } from "../api/git-stash-api";
 import { getGitStatus } from "../api/git-status-api";
@@ -620,6 +620,47 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     }
   };
 
+  const handleViewTagComparison = async (baseRef: string, targetRef: string, title: string) => {
+    if (!activeRepoPath || !onFileSelect) return;
+
+    try {
+      const diffs = await getRefDiff(activeRepoPath, baseRef, targetRef);
+
+      if (diffs && diffs.length > 0) {
+        const { additions, deletions } = countDiffStats(diffs);
+
+        const multiDiff: MultiFileDiff = {
+          title,
+          repoPath: activeRepoPath,
+          commitHash: `${baseRef}..${targetRef}`,
+          files: diffs,
+          totalFiles: diffs.length,
+          totalAdditions: additions,
+          totalDeletions: deletions,
+        };
+
+        const encodedTitle = encodeURIComponent(title);
+        useBufferStore
+          .getState()
+          .actions.openBuffer(
+            `diff://tag/${encodedTitle}/all-files`,
+            `${title} (${diffs.length} files)`,
+            "",
+            false,
+            undefined,
+            true,
+            true,
+            multiDiff,
+          );
+      } else {
+        alert(`No changes between ${baseRef} and ${targetRef}.`);
+      }
+    } catch (error) {
+      console.error("Error getting tag comparison:", error);
+      alert(`Failed to compare ${baseRef} and ${targetRef}:\n${error}`);
+    }
+  };
+
   const handleStashListAction = async (
     action: () => Promise<boolean>,
     stashIndex: number,
@@ -799,14 +840,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
               repoPath={activeRepoPath}
               onBranchChange={refreshAfterAction}
             />
-            {(gitStatus.ahead > 0 || gitStatus.behind > 0) && (
-              <span className="ui-text-sm shrink-0 text-text-lighter">
-                {gitStatus.ahead > 0 && <span className="text-git-added">↑{gitStatus.ahead}</span>}
-                {gitStatus.behind > 0 && (
-                  <span className="text-git-deleted">↓{gitStatus.behind}</span>
-                )}
-              </span>
-            )}
           </div>
 
           <div className="flex shrink-0 items-center gap-1">
@@ -896,6 +929,8 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
             stagedFiles={stagedFiles}
             currentBranch={gitStatus.branch}
             repoPath={activeRepoPath}
+            ahead={gitStatus.ahead}
+            behind={gitStatus.behind}
             onCommitSuccess={refreshAfterAction}
           />
         </div>
@@ -1050,6 +1085,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         onClose={() => setShowTagManager(false)}
         repoPath={activeRepoPath}
         onRefresh={refreshAfterAction}
+        onViewTagComparison={handleViewTagComparison}
       />
     </>
   );
