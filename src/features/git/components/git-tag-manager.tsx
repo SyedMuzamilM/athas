@@ -4,6 +4,7 @@ import { Button } from "@/ui/button";
 import { CommandEmpty, CommandItem, CommandList } from "@/ui/command";
 import Input from "@/ui/input";
 import { formatShortDate } from "@/utils/date";
+import { matchesSearchQuery } from "@/utils/search-match";
 import { createTag, deleteTag, getTags } from "../api/git-tags-api";
 import type { GitTag } from "../types/git-types";
 import GitCommandSurface from "./git-command-surface";
@@ -31,13 +32,9 @@ const GitTagManager = ({ isOpen, onClose, repoPath, onRefresh }: GitTagManagerPr
   }, [isOpen, repoPath]);
 
   const filteredTags = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    if (!normalizedQuery) return tags;
-    return tags.filter(
-      (tag) =>
-        tag.name.toLowerCase().includes(normalizedQuery) ||
-        tag.commit.toLowerCase().includes(normalizedQuery) ||
-        tag.message?.toLowerCase().includes(normalizedQuery),
+    if (!query.trim()) return tags;
+    return tags.filter((tag) =>
+      matchesSearchQuery(query, [tag.name, tag.commit, tag.message ?? ""]),
     );
   }, [query, tags]);
 

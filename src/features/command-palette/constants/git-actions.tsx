@@ -1,7 +1,7 @@
 import {
   ArrowUp,
+  Archive,
   ClockCounterClockwise,
-  Eye,
   FolderOpen,
   GitBranch,
   GitCommit,
@@ -127,7 +127,7 @@ export const createGitActions = (params: GitActionsParams): Action[] => {
       id: "git-view-stashes",
       label: "Git: View Stashes",
       description: "Open stash list",
-      icon: <Eye />,
+      icon: <Archive />,
       category: "Git",
       action: () => openGitAction({ type: "view-stashes" }),
     },
