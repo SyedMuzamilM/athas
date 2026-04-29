@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { editorAPI } from "@/features/editor/extensions/api";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { LspClient } from "./lsp-client";
-import { applyWorkspaceEdit, isWorkspaceEdit } from "./workspace-edit";
+import { applyWorkspaceEdit, isWorkspaceEdit, offsetFromPosition } from "./workspace-edit";
 import { logger } from "../utils/logger";
 
 interface RenameState {
@@ -12,21 +12,50 @@ interface RenameState {
   column: number;
 }
 
+function getWordUnderCursor(line: string, column: number): string {
+  const before = line.slice(0, column + 1).match(/[\w$]+$/);
+  const after = line.slice(column).match(/^[\w$]*/);
+  return (before?.[0] || "") + (after?.[0]?.slice(1) || "");
+}
+
+function getTextForRange(
+  content: string,
+  range: {
+    start: { line: number; character: number };
+    end: { line: number; character: number };
+  },
+): string {
+  const start = offsetFromPosition(content, range.start);
+  const end = offsetFromPosition(content, range.end);
+  return content.slice(start, end);
+}
+
 export const useRename = (filePath: string | undefined) => {
   const [renameState, setRenameState] = useState<RenameState | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const startRename = useCallback(() => {
+  const startRename = useCallback(async () => {
     if (!filePath) return;
 
     const cursorPosition = useEditorStateStore.getState().cursorPosition;
     const lines = editorAPI.getLines();
     const currentLine = lines[cursorPosition.line] || "";
-
-    // Extract word under cursor
-    const before = currentLine.slice(0, cursorPosition.column + 1).match(/[\w$]+$/);
-    const after = currentLine.slice(cursorPosition.column).match(/^[\w$]*/);
-    const symbol = (before?.[0] || "") + (after?.[0]?.slice(1) || "");
+    const content = editorAPI.getContent();
+    const lspClient = LspClient.getInstance();
+    const prepared = await lspClient.prepareRename(
+      filePath,
+      cursorPosition.line,
+      cursorPosition.column,
+    );
+    const preparedRange = prepared?.range
+      ? prepared.range
+      : prepared?.start && prepared?.end
+        ? { start: prepared.start, end: prepared.end }
+        : null;
+    const symbol =
+      prepared?.placeholder ||
+      (preparedRange ? getTextForRange(content, preparedRange) : "") ||
+      getWordUnderCursor(currentLine, cursorPosition.column);
 
     if (!symbol) return;
 
@@ -89,7 +118,7 @@ export const useRename = (filePath: string | undefined) => {
 
   // Listen for rename event
   useEffect(() => {
-    const handler = () => startRename();
+    const handler = () => void startRename();
     window.addEventListener("editor-rename-symbol", handler);
     return () => window.removeEventListener("editor-rename-symbol", handler);
   }, [startRename]);

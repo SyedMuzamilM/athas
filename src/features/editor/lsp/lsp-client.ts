@@ -30,6 +30,17 @@ export interface LspError {
   code?: string;
 }
 
+interface PrepareRenameResult {
+  range?: {
+    start: { line: number; character: number };
+    end: { line: number; character: number };
+  };
+  placeholder?: string;
+  defaultBehavior?: boolean;
+  start?: { line: number; character: number };
+  end?: { line: number; character: number };
+}
+
 function normalizeLspError(error: unknown): LspError {
   if (error instanceof Error) {
     return { message: error.message };
@@ -897,6 +908,23 @@ export class LspClient {
       return result;
     } catch (error) {
       logger.error("LSPClient", "LSP rename error:", error);
+      return null;
+    }
+  }
+
+  async prepareRename(
+    filePath: string,
+    line: number,
+    character: number,
+  ): Promise<PrepareRenameResult | null> {
+    try {
+      return await invoke<PrepareRenameResult | null>("lsp_prepare_rename", {
+        filePath,
+        line,
+        character,
+      });
+    } catch (error) {
+      logger.debug("LSPClient", "LSP prepare rename unavailable:", error);
       return null;
     }
   }

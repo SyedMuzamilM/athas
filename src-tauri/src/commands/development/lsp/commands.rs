@@ -11,7 +11,7 @@ use super::{
 use athas_lsp::{LspError, LspManager, LspResult};
 use lsp_types::{
    CodeActionOrCommand, CompletionItem, DocumentSymbolResponse, GotoDefinitionResponse, Hover,
-   Location, SemanticTokensResult, SignatureHelp, WorkspaceEdit,
+   Location, PrepareRenameResponse, SemanticTokensResult, SignatureHelp, WorkspaceEdit,
 };
 use serde_json::Value;
 use std::path::PathBuf;
@@ -398,6 +398,22 @@ pub async fn lsp_rename(
       .await
       .map_err(|e| {
          log::error!("Failed to rename: {}", e);
+         e.into()
+      })
+}
+
+#[tauri::command]
+pub async fn lsp_prepare_rename(
+   lsp_manager: State<'_, LspManager>,
+   file_path: String,
+   line: u32,
+   character: u32,
+) -> LspResult<Option<PrepareRenameResponse>> {
+   lsp_manager
+      .prepare_rename(&file_path, line, character)
+      .await
+      .map_err(|e| {
+         log::error!("Failed to prepare rename: {}", e);
          e.into()
       })
 }
