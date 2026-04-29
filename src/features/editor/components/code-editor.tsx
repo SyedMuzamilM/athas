@@ -19,10 +19,12 @@ import CodeLensOverlay from "../lsp/code-lens-overlay";
 import { HoverTooltip } from "../lsp/hover-tooltip";
 import InlayHintsOverlay from "../lsp/inlay-hints-overlay";
 import RenameInput from "../lsp/rename-input";
+import SemanticTokensOverlay from "../lsp/semantic-tokens-overlay";
 import { SignatureHelpTooltip } from "../lsp/signature-help-tooltip";
 import { useCodeLens } from "../lsp/use-code-lens";
 import { useInlayHints } from "../lsp/use-inlay-hints";
 import { useRename } from "../lsp/use-rename";
+import { useSemanticTokens } from "../lsp/use-semantic-tokens";
 import { MarkdownPreview } from "../markdown/markdown-preview";
 import type { Position } from "../types/editor";
 import { ScrollDebugOverlay } from "./debug/scroll-debug-overlay";
@@ -88,6 +90,7 @@ const CodeEditor = ({
   const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
   const codeLensRef = useRef<HTMLDivElement>(null);
   const inlayHintsRef = useRef<HTMLDivElement>(null);
+  const semanticTokensRef = useRef<HTMLDivElement>(null);
   const renameInputRef = useRef<HTMLDivElement>(null);
   const lspScrollRafRef = useRef<number | null>(null);
   const { setRefs, setContent, setFileInfo, setActiveEditorViewKey } =
@@ -212,10 +215,15 @@ const CodeEditor = ({
     enableInteractiveServices,
   );
 
+  const semanticTokens = useSemanticTokens(
+    enableInteractiveServices ? filePath : undefined,
+    enableInteractiveServices,
+  );
+
   // Sync LSP overlay containers with textarea scroll via RAF (matches highlight layer timing)
   const syncLspOverlayTransform = useCallback((scrollTop: number, scrollLeft: number) => {
     const transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
-    for (const ref of [codeLensRef, inlayHintsRef, renameInputRef]) {
+    for (const ref of [codeLensRef, inlayHintsRef, semanticTokensRef, renameInputRef]) {
       if (ref.current) {
         ref.current.style.transform = transform;
       }
@@ -455,6 +463,19 @@ const CodeEditor = ({
 
           {/* Completion Dropdown */}
           {enableInteractiveServices && <CompletionDropdown />}
+
+          {/* Semantic Tokens */}
+          {enableInteractiveServices && semanticTokens.length > 0 && (
+            <SemanticTokensOverlay
+              ref={semanticTokensRef}
+              tokens={semanticTokens}
+              content={value}
+              fontSize={zoomedFontSize}
+              charWidth={zoomedFontSize * 0.6}
+              scrollTop={editorRef.current?.querySelector("textarea")?.scrollTop ?? 0}
+              viewportHeight={editorRef.current?.clientHeight ?? 600}
+            />
+          )}
 
           {/* Code Lens */}
           {enableInteractiveServices && codeLenses.length > 0 && (
