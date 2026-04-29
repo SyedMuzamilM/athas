@@ -370,6 +370,14 @@ pub async fn lsp_get_signature_help(
 }
 
 #[tauri::command]
+pub fn lsp_get_signature_trigger_characters(
+   lsp_manager: State<'_, LspManager>,
+   file_path: String,
+) -> Vec<String> {
+   lsp_manager.get_signature_help_trigger_characters(&file_path)
+}
+
+#[tauri::command]
 pub async fn lsp_get_references(
    lsp_manager: State<'_, LspManager>,
    file_path: String,

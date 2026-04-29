@@ -848,6 +848,15 @@ export class LspClient {
     }
   }
 
+  async getSignatureTriggerCharacters(filePath: string): Promise<string[]> {
+    try {
+      return await invoke<string[]>("lsp_get_signature_trigger_characters", { filePath });
+    } catch (error) {
+      logger.debug("LSPClient", "LSP signature trigger characters unavailable:", error);
+      return [];
+    }
+  }
+
   async getReferences(
     filePath: string,
     line: number,

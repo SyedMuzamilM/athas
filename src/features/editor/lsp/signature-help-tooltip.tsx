@@ -22,7 +22,7 @@ interface SignatureHelpResult {
   activeParameter?: number;
 }
 
-const TRIGGER_CHARS = ["(", ","];
+const DEFAULT_TRIGGER_CHARS = ["(", ","];
 
 interface SignatureHelpTooltipProps {
   editorRef: RefObject<HTMLDivElement | null>;
@@ -40,6 +40,7 @@ export const SignatureHelpTooltip = ({
   const lastInputTimestamp = useEditorUIStore.use.lastInputTimestamp();
   const requestIdRef = useRef(0);
   const scrollOffsetRef = useRef({ top: 0, left: 0 });
+  const [triggerCharacters, setTriggerCharacters] = useState(DEFAULT_TRIGGER_CHARS);
 
   // Track scroll position
   useEffect(() => {
@@ -57,6 +58,25 @@ export const SignatureHelpTooltip = ({
     handleScroll();
     return () => textarea.removeEventListener("scroll", handleScroll);
   }, [editorRef, filePath]);
+
+  useEffect(() => {
+    if (!filePath || !extensionRegistry.isLspSupported(filePath)) {
+      setTriggerCharacters(DEFAULT_TRIGGER_CHARS);
+      return;
+    }
+
+    let cancelled = false;
+    const lspClient = LspClient.getInstance();
+
+    lspClient.getSignatureTriggerCharacters(filePath).then((characters) => {
+      if (cancelled) return;
+      setTriggerCharacters(characters.length > 0 ? characters : DEFAULT_TRIGGER_CHARS);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [filePath]);
 
   const fetchSignatureHelp = useCallback(async () => {
     if (!filePath || !extensionRegistry.isLspSupported(filePath)) {
@@ -94,12 +114,12 @@ export const SignatureHelpTooltip = ({
     if (offset <= 0) return;
 
     const charBefore = content[offset - 1];
-    if (TRIGGER_CHARS.includes(charBefore)) {
+    if (triggerCharacters.includes(charBefore)) {
       void fetchSignatureHelp();
     } else if (charBefore === ")") {
       setSignatureHelp(null);
     }
-  }, [editorRef, lastInputTimestamp, cursorPosition.offset, fetchSignatureHelp]);
+  }, [editorRef, lastInputTimestamp, cursorPosition.offset, fetchSignatureHelp, triggerCharacters]);
 
   // Hide on cursor navigation (no typing)
   useEffect(() => {

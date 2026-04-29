@@ -278,6 +278,7 @@ fn main() {
          lsp_get_inlay_hints,
          lsp_get_document_symbols,
          lsp_get_signature_help,
+         lsp_get_signature_trigger_characters,
          lsp_get_references,
          lsp_rename,
          lsp_prepare_rename,
