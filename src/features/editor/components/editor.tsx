@@ -814,20 +814,32 @@ export function Editor({
       if (!(scrollContainer instanceof HTMLDivElement)) return;
 
       const handleWheel = (e: WheelEvent) => {
+        const isHorizontalIntent = e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY);
+        const deltaTop = isHorizontalIntent ? 0 : e.deltaY;
+        const deltaLeft =
+          isHorizontalIntent && e.shiftKey && Math.abs(e.deltaY) > Math.abs(e.deltaX)
+            ? e.deltaY
+            : isHorizontalIntent
+              ? e.deltaX
+              : 0;
         const canScrollY =
-          (e.deltaY < 0 && scrollContainer.scrollTop > 0) ||
-          (e.deltaY > 0 &&
+          (deltaTop < 0 && scrollContainer.scrollTop > 0) ||
+          (deltaTop > 0 &&
             scrollContainer.scrollTop + scrollContainer.clientHeight <
               scrollContainer.scrollHeight);
         const canScrollX =
-          (e.deltaX < 0 && scrollContainer.scrollLeft > 0) ||
-          (e.deltaX > 0 &&
+          (deltaLeft < 0 && scrollContainer.scrollLeft > 0) ||
+          (deltaLeft > 0 &&
             scrollContainer.scrollLeft + scrollContainer.clientWidth < scrollContainer.scrollWidth);
 
         if (!canScrollY && !canScrollX) return;
 
-        scrollContainer.scrollTop += e.deltaY;
-        scrollContainer.scrollLeft += e.deltaX;
+        if (canScrollY) {
+          scrollContainer.scrollTop += deltaTop;
+        }
+        if (canScrollX) {
+          scrollContainer.scrollLeft += deltaLeft;
+        }
         e.preventDefault();
       };
 

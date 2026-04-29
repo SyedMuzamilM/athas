@@ -67,7 +67,6 @@ const statusBadgeClass: Record<string, string> = {
 };
 
 const MAX_HUNK_ACTION_DIFF_LINES = 1200;
-const MAX_AUTO_EXPANDED_DIFF_FILES = 8;
 
 function parseGitHubRemoteSlug(remoteUrl: string): { owner: string; repo: string } | null {
   const normalized = remoteUrl.trim();
@@ -437,10 +436,6 @@ const DiffFileSection = memo(function DiffFileSection({
 function getInitialExpandedFiles(multiDiff: MultiFileDiff): Set<string> {
   if (multiDiff.initiallyExpandedFileKey) {
     return new Set([multiDiff.initiallyExpandedFileKey]);
-  }
-
-  if (multiDiff.files.length > MAX_AUTO_EXPANDED_DIFF_FILES) {
-    return new Set();
   }
 
   return new Set(
