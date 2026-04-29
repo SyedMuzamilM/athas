@@ -545,7 +545,13 @@ const CodeEditor = ({
           )}
 
           {/* Signature Help */}
-          {enableInteractiveServices && <SignatureHelpTooltip />}
+          {enableInteractiveServices && (
+            <SignatureHelpTooltip
+              editorRef={editorRef}
+              filePath={filePath}
+              cursorPosition={displayCursorPosition}
+            />
+          )}
 
           {/* Rename Input */}
           {enableInteractiveServices && rename.renameState && (
