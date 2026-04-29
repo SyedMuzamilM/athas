@@ -31,6 +31,18 @@ Contributions are welcome! See the [contributing guide](CONTRIBUTING.md).
 Please also review our [Code of Conduct](CODE_OF_CONDUCT.md) and
 [Contributor License and Feedback Agreement](CONTRIBUTOR_LICENSE_AND_FEEDBACK_AGREEMENT.md).
 
+### Nix
+
+Linux contributors can enter a Nix development shell with:
+
+```sh
+nix develop
+bun install --frozen-lockfile
+bun dev
+```
+
+See [nix/README.md](nix/README.md) for the current scope and packaging notes.
+
 ## Support
 
 - [Issues](https://github.com/athasdev/athas/issues)
