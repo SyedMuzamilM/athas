@@ -1,11 +1,9 @@
+use crate::app_runtime::AthasRuntime;
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicU32, Ordering};
 #[cfg(target_os = "macos")]
 use tauri::TitleBarStyle;
-use tauri::{
-   AppHandle, Emitter, Manager, WebviewBuilder, WebviewUrl, WebviewWindow, command,
-   webview::PageLoadEvent,
-};
+use tauri::{Emitter, Manager, WebviewBuilder, WebviewUrl, command, webview::PageLoadEvent};
 
 // Counter for generating unique web viewer labels
 static WEB_VIEWER_COUNTER: AtomicU32 = AtomicU32::new(0);
@@ -76,7 +74,7 @@ fn build_window_open_url(request: Option<&CreateAppWindowRequest>) -> String {
    format!("/?{}", serializer.finish())
 }
 
-pub fn configure_app_window(window: &WebviewWindow) {
+pub fn configure_app_window(window: &tauri::WebviewWindow<AthasRuntime>) {
    #[cfg(target_os = "macos")]
    {
       use window_vibrancy::{NSVisualEffectMaterial, apply_vibrancy};
@@ -97,7 +95,7 @@ pub fn configure_app_window(window: &WebviewWindow) {
 }
 
 pub fn create_app_window_internal(
-   app: &AppHandle,
+   app: &tauri::AppHandle<AthasRuntime>,
    request: Option<CreateAppWindowRequest>,
 ) -> Result<String, String> {
    let label = format!(
@@ -134,7 +132,7 @@ pub fn create_app_window_internal(
 
 #[command]
 pub async fn create_app_window(
-   app: tauri::AppHandle,
+   app: tauri::AppHandle<AthasRuntime>,
    request: Option<CreateAppWindowRequest>,
 ) -> Result<String, String> {
    create_app_window_internal(&app, request)
@@ -312,7 +310,7 @@ fn build_webview_bridge_script(webview_label: &str) -> Result<String, String> {
 
 #[command]
 pub async fn create_embedded_webview(
-   app: tauri::AppHandle,
+   app: tauri::AppHandle<AthasRuntime>,
    url: String,
    x: f64,
    y: f64,
@@ -390,7 +388,7 @@ pub async fn create_embedded_webview(
 
 #[command]
 pub async fn close_embedded_webview(
-   app: tauri::AppHandle,
+   app: tauri::AppHandle<AthasRuntime>,
    webview_label: String,
 ) -> Result<(), String> {
    if let Some(webview) = app.get_webview(&webview_label) {
@@ -403,7 +401,7 @@ pub async fn close_embedded_webview(
 
 #[command]
 pub async fn navigate_embedded_webview(
-   app: tauri::AppHandle,
+   app: tauri::AppHandle<AthasRuntime>,
    webview_label: String,
    url: String,
 ) -> Result<(), String> {
@@ -425,7 +423,7 @@ pub async fn navigate_embedded_webview(
 
 #[command]
 pub async fn resize_embedded_webview(
-   app: tauri::AppHandle,
+   app: tauri::AppHandle<AthasRuntime>,
    webview_label: String,
    x: f64,
    y: f64,
@@ -451,7 +449,7 @@ pub async fn resize_embedded_webview(
 
 #[command]
 pub async fn set_webview_visible(
-   app: tauri::AppHandle,
+   app: tauri::AppHandle<AthasRuntime>,
    webview_label: String,
    visible: bool,
 ) -> Result<(), String> {
@@ -473,7 +471,7 @@ pub async fn set_webview_visible(
 
 #[command]
 pub async fn open_webview_devtools(
-   app: tauri::AppHandle,
+   app: tauri::AppHandle<AthasRuntime>,
    webview_label: String,
 ) -> Result<(), String> {
    if let Some(webview) = app.get_webview(&webview_label) {
@@ -568,7 +566,7 @@ fn infer_webview_protocol(value: &str) -> &'static str {
 
 #[command]
 pub async fn set_webview_zoom(
-   app: tauri::AppHandle,
+   app: tauri::AppHandle<AthasRuntime>,
    webview_label: String,
    zoom_level: f64,
 ) -> Result<(), String> {

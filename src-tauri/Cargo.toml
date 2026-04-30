@@ -5,6 +5,30 @@ description = "Athas code editor"
 authors = ["you"]
 edition = "2024"
 
+[features]
+default = ["tauri-wry"]
+tauri-wry = [
+  "athas-ai/tauri-wry",
+  "athas-debugger/tauri-wry",
+  "athas-extensions/tauri-wry",
+  "athas-lsp/tauri-wry",
+  "athas-remote/tauri-wry",
+  "athas-terminal/tauri-wry",
+  "athas-tooling/tauri-wry",
+  "tauri/wry",
+  "tauri/x11",
+]
+linux-cef = [
+  "athas-ai/linux-cef",
+  "athas-debugger/linux-cef",
+  "athas-extensions/linux-cef",
+  "athas-lsp/linux-cef",
+  "athas-remote/linux-cef",
+  "athas-terminal/linux-cef",
+  "athas-tooling/linux-cef",
+  "tauri/cef",
+]
+
 [lints]
 workspace = true
 
@@ -27,18 +51,18 @@ env_logger = "0.11.8"
 futures-util = "0.3"
 git2 = { version = "0.20", features = ["vendored-libgit2", "vendored-openssl"] }
 athas-runtime = { path = "../crates/runtime" }
-athas-tooling = { path = "../crates/tooling" }
-athas-lsp = { path = "../crates/lsp" }
-athas-remote = { path = "../crates/remote" }
+athas-tooling = { path = "../crates/tooling", default-features = false }
+athas-lsp = { path = "../crates/lsp", default-features = false }
+athas-remote = { path = "../crates/remote", default-features = false }
 athas-project = { path = "../crates/project" }
 athas-database = { path = "../crates/database" }
 athas-version-control = { path = "../crates/version-control" }
-athas-extensions = { path = "../crates/extensions" }
-athas-terminal = { path = "../crates/terminal" }
-athas-ai = { path = "../crates/ai" }
+athas-extensions = { path = "../crates/extensions", default-features = false }
+athas-terminal = { path = "../crates/terminal", default-features = false }
+athas-ai = { path = "../crates/ai", default-features = false }
 athas-github = { path = "../crates/github" }
 athas-fff-search = { path = "../crates/fff-search" }
-athas-debugger = { path = "../crates/debugger" }
+athas-debugger = { path = "../crates/debugger", default-features = false }
 mimalloc = { version = "0.1", default-features = false }
 log = "0.4.27"
 percent-encoding = "2"
@@ -63,7 +87,15 @@ sqlx = { version = "0.8.6", default-features = false, features = [
   "postgres",
   "mysql",
 ] }
-tauri = { version = "2", features = ["protocol-asset", "macos-private-api", "unstable", "test"] }
+tauri = { version = "2", default-features = false, features = [
+  "compression",
+  "common-controls-v6",
+  "dynamic-acl",
+  "macos-private-api",
+  "protocol-asset",
+  "test",
+  "unstable",
+] }
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-http = "2"

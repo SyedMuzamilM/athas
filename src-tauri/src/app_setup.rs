@@ -1,4 +1,5 @@
 use crate::{
+   app_runtime::AthasRuntime,
    commands::{self, FffSearchState, FileClipboard, ThemeCache},
    file_events::TauriFileChangeEmitter,
    menu,
@@ -11,13 +12,13 @@ use athas_lsp::LspManager;
 use athas_project::FileWatcher;
 use log::{debug, info};
 use std::sync::Arc;
-use tauri::{Emitter, Manager, Wry};
+use tauri::{Emitter, Manager};
 #[cfg(not(target_os = "windows"))]
 use tauri_plugin_os::platform;
 use tauri_plugin_store::StoreExt;
 use tokio::sync::Mutex;
 
-pub fn configure_app(app: &mut tauri::App<Wry>) -> Result<(), Box<dyn std::error::Error>> {
+pub fn configure_app(app: &mut tauri::App<AthasRuntime>) -> Result<(), Box<dyn std::error::Error>> {
    configure_menu(app)?;
    register_managed_state(app);
    emit_cli_open_requests(app);
@@ -31,7 +32,7 @@ pub fn configure_app(app: &mut tauri::App<Wry>) -> Result<(), Box<dyn std::error
    Ok(())
 }
 
-fn configure_menu(app: &mut tauri::App<Wry>) -> Result<(), Box<dyn std::error::Error>> {
+fn configure_menu(app: &mut tauri::App<AthasRuntime>) -> Result<(), Box<dyn std::error::Error>> {
    let store = app.store("settings.json")?;
 
    #[cfg(target_os = "windows")]
@@ -61,7 +62,7 @@ fn configure_menu(app: &mut tauri::App<Wry>) -> Result<(), Box<dyn std::error::E
    Ok(())
 }
 
-fn register_managed_state(app: &mut tauri::App<Wry>) {
+fn register_managed_state(app: &mut tauri::App<AthasRuntime>) {
    log::info!("Starting app!");
 
    app.manage(Arc::new(FileWatcher::new(Arc::new(
@@ -85,7 +86,7 @@ fn register_managed_state(app: &mut tauri::App<Wry>) {
    app.manage(FffSearchState::new());
 }
 
-fn emit_cli_open_requests(app: &tauri::App<Wry>) {
+fn emit_cli_open_requests(app: &tauri::App<AthasRuntime>) {
    let cwd = std::env::current_dir().unwrap_or_default();
    let args: Vec<String> = std::env::args().skip(1).collect();
    let open_requests = commands::development::cli_args::parse_cli_args(&args, &cwd);
@@ -105,20 +106,22 @@ fn emit_cli_open_requests(app: &tauri::App<Wry>) {
    });
 }
 
-fn configure_initial_window(app: &tauri::App<Wry>) {
+fn configure_initial_window(app: &tauri::App<AthasRuntime>) {
    if let Some(window) = app.get_webview_window("main") {
       commands::ui::window::configure_app_window(&window);
    }
 }
 
-fn get_active_webview_window(app: &tauri::AppHandle<Wry>) -> Option<tauri::WebviewWindow<Wry>> {
+fn get_active_webview_window(
+   app: &tauri::AppHandle<AthasRuntime>,
+) -> Option<tauri::WebviewWindow<AthasRuntime>> {
    app.get_focused_window()
       .and_then(|window| app.get_webview_window(window.label()))
       .or_else(|| app.get_webview_window("main"))
       .or_else(|| app.webview_windows().into_values().next())
 }
 
-fn handle_menu_event(app_handle: &tauri::AppHandle<Wry>, event: tauri::menu::MenuEvent) {
+fn handle_menu_event(app_handle: &tauri::AppHandle<AthasRuntime>, event: tauri::menu::MenuEvent) {
    match event.id().0.as_str() {
       "new_window" => {
          let app_handle = app_handle.clone();
@@ -134,10 +137,12 @@ fn handle_menu_event(app_handle: &tauri::AppHandle<Wry>, event: tauri::menu::Men
             match event_id {
                "quit" => {
                   info!("Quit menu item clicked");
+                  shutdown_background_services(app_handle);
                   std::process::exit(0);
                }
                "quit_app" => {
                   info!("Quit app menu item triggered");
+                  shutdown_background_services(app_handle);
                   std::process::exit(0);
                }
                "new_file" => {
@@ -260,5 +265,25 @@ fn handle_menu_event(app_handle: &tauri::AppHandle<Wry>, event: tauri::menu::Men
             }
          }
       }
+   }
+}
+
+pub(crate) fn shutdown_background_services(app_handle: &tauri::AppHandle<AthasRuntime>) {
+   if let Some(acp_bridge) = app_handle.try_state::<Arc<Mutex<AcpAgentBridge>>>() {
+      let acp_bridge = acp_bridge.inner().clone();
+      tauri::async_runtime::block_on(async move {
+         let bridge = acp_bridge.lock().await;
+         if let Err(error) = bridge.stop_agent().await {
+            log::debug!("ACP shutdown returned error: {}", error);
+         }
+      });
+   }
+
+   if let Some(lsp_manager) = app_handle.try_state::<LspManager>() {
+      lsp_manager.shutdown();
+   }
+
+   if let Some(terminal_manager) = app_handle.try_state::<Arc<TerminalManager>>() {
+      terminal_manager.close_all();
    }
 }

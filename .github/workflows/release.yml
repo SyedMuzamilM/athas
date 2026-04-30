@@ -87,6 +87,7 @@ jobs:
             artifact: "macos-aarch64"
             os: "macos"
             args: "--target aarch64-apple-darwin"
+            cargo_features: ""
             target: "aarch64-apple-darwin"
             bundle_path: "target/aarch64-apple-darwin/release/bundle"
             timeout_minutes: 60
@@ -95,6 +96,7 @@ jobs:
             artifact: "macos-x86_64"
             os: "macos"
             args: "--target x86_64-apple-darwin"
+            cargo_features: ""
             target: "x86_64-apple-darwin"
             bundle_path: "target/x86_64-apple-darwin/release/bundle"
             timeout_minutes: 60
@@ -103,22 +105,25 @@ jobs:
             artifact: "linux-x86_64"
             os: "linux"
             args: ""
+            cargo_features: "--no-default-features --features linux-cef"
             target: ""
             bundle_path: "target/release/bundle"
-            timeout_minutes: 60
+            timeout_minutes: 120
             rustflags: ""
           - platform: "ubuntu-22.04-arm"
             artifact: "linux-aarch64"
             os: "linux"
             args: ""
+            cargo_features: "--no-default-features --features linux-cef"
             target: ""
             bundle_path: "target/release/bundle"
-            timeout_minutes: 60
+            timeout_minutes: 120
             rustflags: ""
           - platform: "windows-latest"
             artifact: "windows-x86_64"
             os: "windows"
             args: "--bundles nsis"
+            cargo_features: ""
             target: ""
             bundle_path: "target/release/bundle"
             timeout_minutes: 90
@@ -127,6 +132,7 @@ jobs:
             artifact: "windows-aarch64"
             os: "windows"
             args: "--target aarch64-pc-windows-msvc --bundles nsis"
+            cargo_features: ""
             target: "aarch64-pc-windows-msvc"
             bundle_path: "target/aarch64-pc-windows-msvc/release/bundle"
             timeout_minutes: 90
@@ -174,6 +180,13 @@ jobs:
         with:
           cache-on-failure: true
 
+      - name: Cache CEF binaries (Linux only)
+        if: matrix.os == 'linux'
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/cef
+          key: ${{ runner.os }}-${{ runner.arch }}-cef-v146.4.1
+
       - name: Cache Bun dependencies
         uses: actions/cache@v4
         with:
@@ -186,7 +199,11 @@ jobs:
         if: matrix.os == 'linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.0-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils file
+          sudo apt-get install -y libgtk-3-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils file
+
+      - name: Install Tauri CEF CLI (Linux only)
+        if: matrix.os == 'linux'
+        run: cargo install tauri-cli --git https://github.com/tauri-apps/tauri --branch feat/cef --locked
 
       - name: Install frontend dependencies
         run: bun install --ignore-scripts && bun scripts/postinstall.ts
@@ -314,7 +331,11 @@ jobs:
           NO_STRIP: ${{ matrix.os == 'linux' && 'true' || '' }}
           RUSTFLAGS: ${{ matrix.rustflags }}
         run: |
-          bun tauri build ${{ matrix.args }} ${{ needs.release-metadata.outputs.is_prerelease == 'true' && '--config src-tauri/tauri.preview.conf.json' || '' }}
+          if [[ "${{ matrix.os }}" == "linux" ]]; then
+            cargo tauri build ${{ matrix.args }} ${{ matrix.cargo_features }} ${{ needs.release-metadata.outputs.is_prerelease == 'true' && '--config src-tauri/tauri.preview.conf.json' || '' }}
+          else
+            bun tauri build ${{ matrix.args }} ${{ needs.release-metadata.outputs.is_prerelease == 'true' && '--config src-tauri/tauri.preview.conf.json' || '' }}
+          fi
 
       - name: Collect Windows user installer (Windows only)
         if: matrix.os == 'windows'

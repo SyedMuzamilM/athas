@@ -4,14 +4,16 @@ use super::{
    bridge_prompt::run_prompt,
    client::{AthasAcpClient, PermissionResponse},
    config::AgentRegistry,
+   process::{stop_child_tree, terminate_process_group},
    types::{AcpAgentCapabilities, AcpAgentStatus, AcpEvent, AgentConfig, SessionConfigOption},
 };
+use crate::runtime::AthasAppHandle as AppHandle;
 use acp::Agent;
 use agent_client_protocol as acp;
 use anyhow::{Context, Result, bail};
 use athas_terminal::TerminalManager;
 use std::{sync::Arc, thread};
-use tauri::{AppHandle, Emitter};
+use tauri::Emitter;
 use tokio::{
    process::Child,
    runtime::Runtime,
@@ -25,6 +27,7 @@ pub(super) struct AcpWorker {
    session_id: Option<acp::SessionId>,
    auth_method_id: Option<String>,
    process: Option<Child>,
+   process_group_id: Option<u32>,
    io_handle: Option<tokio::task::JoinHandle<()>>,
    client: Option<Arc<AthasAcpClient>>,
    agent_id: Option<String>,
@@ -39,6 +42,7 @@ impl AcpWorker {
          session_id: None,
          auth_method_id: None,
          process: None,
+         process_group_id: None,
          io_handle: None,
          client: None,
          agent_id: None,
@@ -78,6 +82,7 @@ impl AcpWorker {
             self.connection = None;
             self.session_id = None;
             self.process = None;
+            self.process_group_id = None;
             self.client = None;
             self.agent_id = None;
             self.agent_capabilities = None;
@@ -129,6 +134,7 @@ impl AcpWorker {
       self.connection = Some(initialized.connection);
       self.session_id = initialized.session_id.clone();
       self.auth_method_id = initialized.auth_method_id;
+      self.process_group_id = initialized.process_group_id;
       self.process = Some(initialized.process);
       self.io_handle = Some(initialized.io_handle);
       self.client = Some(initialized.client);
@@ -250,8 +256,8 @@ impl AcpWorker {
          handle.abort();
       }
 
-      if let Some(mut process) = self.process.take() {
-         let _ = process.kill().await;
+      if let Some(process) = self.process.take() {
+         stop_child_tree(process, self.process_group_id.take()).await;
       }
 
       self.connection = None;
@@ -261,6 +267,7 @@ impl AcpWorker {
       self.agent_id = None;
       self.agent_capabilities = None;
       self.app_handle = None;
+      self.process_group_id = None;
 
       Ok(())
    }
@@ -276,6 +283,19 @@ impl AcpWorker {
             agent_capabilities: self.agent_capabilities.clone(),
          },
          None => AcpAgentStatus::default(),
+      }
+   }
+}
+
+impl Drop for AcpWorker {
+   fn drop(&mut self) {
+      if let Some(handle) = self.io_handle.take() {
+         handle.abort();
+      }
+
+      if let Some(mut process) = self.process.take() {
+         terminate_process_group(self.process_group_id.take());
+         let _ = process.start_kill();
       }
    }
 }

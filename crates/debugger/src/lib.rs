@@ -13,7 +13,7 @@ use std::{
    },
    thread,
 };
-use tauri::{AppHandle, Emitter, Wry};
+use tauri::{AppHandle, Emitter, Runtime};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -66,14 +66,16 @@ struct DebugSessionHandle {
 }
 
 pub struct DebugManager {
-   app_handle: AppHandle<Wry>,
+   emitter: Arc<dyn Fn(&str, Value) + Send + Sync>,
    sessions: Arc<Mutex<HashMap<String, DebugSessionHandle>>>,
 }
 
 impl DebugManager {
-   pub fn new(app_handle: AppHandle<Wry>) -> Self {
+   pub fn new<R: Runtime>(app_handle: AppHandle<R>) -> Self {
       Self {
-         app_handle,
+         emitter: Arc::new(move |event, payload| {
+            let _ = app_handle.emit(event, payload);
+         }),
          sessions: Arc::new(Mutex::new(HashMap::new())),
       }
    }
@@ -130,8 +132,8 @@ impl DebugManager {
       };
 
       spawn_stdin_writer(stdin, stdin_rx);
-      spawn_stdout_reader(self.app_handle.clone(), session_id.clone(), stdout);
-      spawn_stderr_reader(self.app_handle.clone(), session_id.clone(), stderr);
+      spawn_stdout_reader(Arc::clone(&self.emitter), session_id.clone(), stdout);
+      spawn_stderr_reader(Arc::clone(&self.emitter), session_id.clone(), stderr);
 
       self
          .sessions
@@ -148,7 +150,7 @@ impl DebugManager {
          );
 
       spawn_exit_watcher(
-         self.app_handle.clone(),
+         Arc::clone(&self.emitter),
          Arc::clone(&self.sessions),
          info.id.clone(),
          child,
@@ -215,7 +217,7 @@ impl DebugManager {
          let _ = child.kill();
       }
 
-      emit_session_ended(&self.app_handle, session_id, "stopped");
+      emit_session_ended(&self.emitter, session_id, "stopped");
       Ok(())
    }
 
@@ -257,7 +259,7 @@ fn spawn_stdin_writer(
 }
 
 fn spawn_stdout_reader(
-   app_handle: AppHandle<Wry>,
+   emitter: Arc<dyn Fn(&str, Value) + Send + Sync>,
    session_id: String,
    stdout: std::process::ChildStdout,
 ) {
@@ -267,7 +269,8 @@ fn spawn_stdout_reader(
       loop {
          match read_protocol_message(&mut reader) {
             Ok(Some(message)) => {
-               let _ = app_handle.emit(
+               emit_payload(
+                  &emitter,
                   "debugger_message",
                   DebugProtocolMessage {
                      session_id: session_id.clone(),
@@ -276,12 +279,12 @@ fn spawn_stdout_reader(
                );
             }
             Ok(None) => {
-               emit_session_ended(&app_handle, &session_id, "adapter stdout closed");
+               emit_session_ended(&emitter, &session_id, "adapter stdout closed");
                break;
             }
             Err(error) => {
                log::warn!("Debug adapter stdout read error: {error}");
-               emit_session_ended(&app_handle, &session_id, "adapter stdout read error");
+               emit_session_ended(&emitter, &session_id, "adapter stdout read error");
                break;
             }
          }
@@ -290,7 +293,7 @@ fn spawn_stdout_reader(
 }
 
 fn spawn_stderr_reader(
-   app_handle: AppHandle<Wry>,
+   emitter: Arc<dyn Fn(&str, Value) + Send + Sync>,
    session_id: String,
    stderr: std::process::ChildStderr,
 ) {
@@ -304,7 +307,8 @@ fn spawn_stderr_reader(
             Ok(0) => break,
             Ok(_) => {
                if !line.trim().is_empty() {
-                  let _ = app_handle.emit(
+                  emit_payload(
+                     &emitter,
                      "debugger_output",
                      DebugProcessOutput {
                         session_id: session_id.clone(),
@@ -324,7 +328,7 @@ fn spawn_stderr_reader(
 }
 
 fn spawn_exit_watcher(
-   app_handle: AppHandle<Wry>,
+   emitter: Arc<dyn Fn(&str, Value) + Send + Sync>,
    sessions: Arc<Mutex<HashMap<String, DebugSessionHandle>>>,
    session_id: String,
    child: Arc<Mutex<Child>>,
@@ -342,7 +346,7 @@ fn spawn_exit_watcher(
          sessions.remove(&session_id);
       }
 
-      emit_session_ended(&app_handle, &session_id, &reason);
+      emit_session_ended(&emitter, &session_id, &reason);
    });
 }
 
@@ -377,8 +381,23 @@ fn read_protocol_message(
    Ok(Some(serde_json::from_slice(&content)?))
 }
 
-fn emit_session_ended(app_handle: &AppHandle<Wry>, session_id: &str, reason: &str) {
-   let _ = app_handle.emit(
+fn emit_payload<S: Serialize>(
+   emitter: &Arc<dyn Fn(&str, Value) + Send + Sync>,
+   event: &str,
+   payload: S,
+) {
+   if let Ok(value) = serde_json::to_value(payload) {
+      emitter(event, value);
+   }
+}
+
+fn emit_session_ended(
+   emitter: &Arc<dyn Fn(&str, Value) + Send + Sync>,
+   session_id: &str,
+   reason: &str,
+) {
+   emit_payload(
+      emitter,
       "debugger_session_ended",
       DebugSessionEnded {
          session_id: session_id.to_string(),

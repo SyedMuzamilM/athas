@@ -6,6 +6,7 @@ use super::{
       SessionConfigOptionKind, SessionConfigOptionValue, UiAction,
    },
 };
+use crate::runtime::AthasAppHandle as AppHandle;
 use agent_client_protocol as acp;
 use async_trait::async_trait;
 use athas_terminal::{TerminalConfig, TerminalManager};
@@ -14,7 +15,7 @@ use std::{
    path::PathBuf,
    sync::{Arc, Mutex as StdMutex},
 };
-use tauri::{AppHandle, Emitter, Listener};
+use tauri::{Emitter, Listener};
 use tokio::sync::{Mutex, mpsc, oneshot};
 
 /// Response for permission requests
