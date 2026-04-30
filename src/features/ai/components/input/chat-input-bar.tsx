@@ -1,9 +1,9 @@
 import {
   BookOpen,
   Command as CommandIcon,
+  ArrowUp,
   Key,
   Microphone as Mic,
-  PaperPlaneTilt,
   Stop,
   X,
 } from "@phosphor-icons/react";
@@ -17,6 +17,13 @@ import type { AIChatSkill } from "@/features/ai/types/skills";
 import type { SlashCommand } from "@/features/ai/types/acp";
 import type { AIChatInputBarProps } from "@/features/ai/types/ai-chat";
 import { getProviderById } from "@/features/ai/types/providers";
+import { openSidebarResourceBuffer } from "@/features/sidebar-drag/open-sidebar-resource";
+import {
+  hasSidebarResourceDragData,
+  readSidebarResourceDragData,
+  SIDEBAR_RESOURCE_DROP_ON_AI_EVENT,
+  type SidebarDragResource,
+} from "@/features/sidebar-drag/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
@@ -53,6 +60,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const [hasInputText, setHasInputText] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [interimTranscript, setInterimTranscript] = useState("");
+  const [isContextDragOver, setIsContextDragOver] = useState(false);
   const [activeInlineControl, setActiveInlineControl] = useState<
     "provider" | "model" | "mode" | "commands" | null
   >(null);
@@ -100,6 +108,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const setIsContextDropdownOpen = useAIChatStore((state) => state.setIsContextDropdownOpen);
   const toggleBufferSelection = useAIChatStore((state) => state.toggleBufferSelection);
   const toggleFileSelection = useAIChatStore((state) => state.toggleFileSelection);
+  const setSelectedBufferIds = useAIChatStore((state) => state.setSelectedBufferIds);
+  const setSelectedFilesPaths = useAIChatStore((state) => state.setSelectedFilesPaths);
   const showMention = useAIChatStore((state) => state.showMention);
   const hideMention = useAIChatStore((state) => state.hideMention);
   const updatePosition = useAIChatStore((state) => state.updatePosition);
@@ -159,6 +169,95 @@ const AIChatInputBar = memo(function AIChatInputBar({
     mentionState.active,
     hideMention,
   ]);
+
+  const addBufferToContext = useCallback(
+    (bufferId: string) => {
+      const currentSelectedBufferIds = useAIChatStore.getState().selectedBufferIds;
+      if (currentSelectedBufferIds.has(bufferId)) return;
+      const nextSelectedBufferIds = new Set(currentSelectedBufferIds);
+      nextSelectedBufferIds.add(bufferId);
+      setSelectedBufferIds(nextSelectedBufferIds);
+    },
+    [setSelectedBufferIds],
+  );
+
+  const addPathToContext = useCallback(
+    (filePath: string) => {
+      const currentSelectedFilesPaths = useAIChatStore.getState().selectedFilesPaths;
+      if (currentSelectedFilesPaths.has(filePath)) return;
+      const nextSelectedFilesPaths = new Set(currentSelectedFilesPaths);
+      nextSelectedFilesPaths.add(filePath);
+      setSelectedFilesPaths(nextSelectedFilesPaths);
+    },
+    [setSelectedFilesPaths],
+  );
+
+  const addSidebarResourceToContext = useCallback(
+    async (resource: SidebarDragResource) => {
+      if (resource.type === "file") {
+        const matchingBuffer = !resource.isDir
+          ? buffers.find((buffer) => buffer.path === resource.path)
+          : null;
+        if (matchingBuffer) {
+          addBufferToContext(matchingBuffer.id);
+        } else {
+          addPathToContext(resource.path);
+        }
+        return;
+      }
+
+      if (resource.type === "git-worktree") {
+        addPathToContext(resource.path);
+        return;
+      }
+
+      const bufferId = await openSidebarResourceBuffer(resource);
+      if (bufferId) {
+        addBufferToContext(bufferId);
+      }
+    },
+    [addBufferToContext, addPathToContext, buffers],
+  );
+
+  useEffect(() => {
+    const handleSidebarResourceDropOnAI = (event: Event) => {
+      const resource = (event as CustomEvent<{ resource?: SidebarDragResource }>).detail?.resource;
+      if (!resource) return;
+      void addSidebarResourceToContext(resource);
+    };
+
+    window.addEventListener(SIDEBAR_RESOURCE_DROP_ON_AI_EVENT, handleSidebarResourceDropOnAI);
+    return () =>
+      window.removeEventListener(SIDEBAR_RESOURCE_DROP_ON_AI_EVENT, handleSidebarResourceDropOnAI);
+  }, [addSidebarResourceToContext]);
+
+  const handleContextDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+    if (!hasSidebarResourceDragData(event.dataTransfer)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.dataTransfer.dropEffect = "copy";
+    setIsContextDragOver(true);
+  }, []);
+
+  const handleContextDragLeave = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+    const relatedTarget = event.relatedTarget as HTMLElement | null;
+    if (!relatedTarget || !event.currentTarget.contains(relatedTarget)) {
+      setIsContextDragOver(false);
+    }
+  }, []);
+
+  const handleContextDrop = useCallback(
+    async (event: React.DragEvent<HTMLDivElement>) => {
+      const resource = readSidebarResourceDragData(event.dataTransfer);
+      if (!resource) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      setIsContextDragOver(false);
+      await addSidebarResourceToContext(resource);
+    },
+    [addSidebarResourceToContext],
+  );
 
   // Computed state for send button
   const hasImages = pastedImages.length > 0;
@@ -985,12 +1084,17 @@ const AIChatInputBar = memo(function AIChatInputBar({
   return (
     <div
       ref={aiChatContainerRef}
-      className="ai-chat-container relative z-20 bg-transparent px-3 pt-2 pb-3"
+      className="ai-chat-container relative z-20 bg-transparent px-3 pt-1.5 pb-1"
     >
       <div
+        data-ai-context-drop-target
+        onDragOver={handleContextDragOver}
+        onDragLeave={handleContextDragLeave}
+        onDrop={handleContextDrop}
         className={cn(
-          "overflow-hidden border border-border/70 bg-[color-mix(in_srgb,var(--color-secondary-bg)_82%,var(--color-border)_18%)] pb-1 transition-[border-radius,background-color,border-color]",
+          "overflow-hidden border border-border/70 bg-[color-mix(in_srgb,var(--color-secondary-bg)_82%,var(--color-border)_18%)] pb-1 transition-[border-radius,background-color,border-color,box-shadow]",
           hasAttachedComposerDropdown ? "rounded-t-xl rounded-b-2xl" : "rounded-2xl",
+          isContextDragOver && "border-accent bg-accent/5 shadow-[0_0_0_1px_var(--color-accent)]",
         )}
       >
         <div className="overflow-hidden rounded-xl border border-border/60 bg-[color-mix(in_srgb,var(--color-primary-bg)_96%,var(--color-secondary-bg)_4%)]">
@@ -1119,10 +1223,12 @@ const AIChatInputBar = memo(function AIChatInputBar({
                 className={cn(
                   chatComposerIconButtonClassName(),
                   isSendDisabled
-                    ? "cursor-not-allowed text-text-lighter opacity-50"
-                    : (hasInputText || hasImages) && isInputEnabled
-                      ? "text-accent hover:bg-accent/8 hover:text-accent/80"
-                      : "text-text-lighter hover:text-text",
+                    ? "cursor-not-allowed bg-hover/40 text-text-lighter opacity-50"
+                    : isStreaming
+                      ? "bg-error/10 text-error hover:bg-error/15 hover:text-error"
+                      : (hasInputText || hasImages) && isInputEnabled
+                        ? "bg-accent text-white hover:bg-accent/85 hover:text-white"
+                        : "bg-hover/70 text-text-lighter hover:bg-hover hover:text-text",
                 )}
                 tooltip={
                   isStreaming ? "Stop generation" : queueCount > 0 ? "Add to queue" : "Send message"
@@ -1130,7 +1236,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
                 shortcut={isStreaming ? "escape" : "enter"}
                 aria-label={isStreaming ? "Stop generation" : "Send message"}
               >
-                {isStreaming ? <Stop /> : <PaperPlaneTilt />}
+                {isStreaming ? <Stop /> : <ArrowUp />}
               </Button>
             </div>
           </div>

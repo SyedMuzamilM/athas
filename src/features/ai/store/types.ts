@@ -63,6 +63,7 @@ export interface AIChatState {
   messageQueue: QueuedMessage[];
   isProcessingQueue: boolean;
   pendingAgentLaunchRequest: PendingAgentLaunchRequest | null;
+  activeAgentChatIds: string[];
   mode: ChatMode;
   outputStyle: OutputStyle;
 
@@ -119,6 +120,8 @@ export interface AIChatActions {
   processNextMessage: () => QueuedMessage | null;
   clearMessageQueue: () => void;
   setPendingAgentLaunchRequest: (request: PendingAgentLaunchRequest | null) => void;
+  registerActiveAgentChat: (chatId: string) => void;
+  setActiveAgentChatOrder: (chatIds: string[]) => void;
 
   // Input actions
   setInput: (input: string) => void;

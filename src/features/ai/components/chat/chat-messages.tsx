@@ -15,6 +15,7 @@ import { ChatMessage } from "./chat-message";
 interface ChatMessagesProps {
   onApplyCode?: (code: string, language?: string) => void;
   acpEvents?: ChatAcpEvent[];
+  chatId?: string | null;
 }
 
 const getTimestampMs = (value: Date | string): number => {
@@ -25,7 +26,7 @@ const getTimestampMs = (value: Date | string): number => {
 
 export const ChatMessages = memo(
   forwardRef<HTMLDivElement, ChatMessagesProps>(function ChatMessages(
-    { onApplyCode, acpEvents },
+    { onApplyCode, acpEvents, chatId },
     ref,
   ) {
     const { currentChatId, chats } = useAIChatStore(
@@ -39,8 +40,8 @@ export const ChatMessages = memo(
     const [skillsInitialView, setSkillsInitialView] = useState<"list" | "editor">("list");
 
     const currentChat = useMemo(
-      () => chats.find((chat) => chat.id === currentChatId),
-      [chats, currentChatId],
+      () => chats.find((chat) => chat.id === (chatId ?? currentChatId)),
+      [chatId, chats, currentChatId],
     );
     const messages = currentChat?.messages || [];
     const timelineItems = useMemo(

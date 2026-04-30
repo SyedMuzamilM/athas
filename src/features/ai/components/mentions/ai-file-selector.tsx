@@ -1,6 +1,7 @@
 import { MagnifyingGlass as Search } from "@phosphor-icons/react";
 import { useEffect, useMemo, type RefObject } from "react";
 import { useDebounce } from "use-debounce";
+import { useFffSearch } from "@/features/global-search/hooks/use-fff-search";
 import { useFileSearch } from "@/features/global-search/hooks/use-file-search";
 import { FileListItem } from "@/features/global-search/components/file-list-item";
 import type { FileCategory, FileItem } from "@/features/global-search/models/types";
@@ -25,6 +26,9 @@ interface AIFileSelectorProps {
   searchInputRef?: RefObject<HTMLInputElement | null>;
   listClassName?: string;
   emptyLabel?: string;
+  compact?: boolean;
+  autoFocusSearchInput?: boolean;
+  useBackendSearch?: boolean;
 }
 
 function flattenFileSearchResults(categorizedFiles: ReturnType<typeof useFileSearch>) {
@@ -43,6 +47,9 @@ function flattenFileSearchResults(categorizedFiles: ReturnType<typeof useFileSea
   return result;
 }
 
+const canUseBackendFileSearch = (rootPath: string | null | undefined): rootPath is string =>
+  Boolean(rootPath) && !rootPath?.startsWith("remote://") && !rootPath?.startsWith("diff://");
+
 export function AIFileSelector({
   files,
   query,
@@ -55,31 +62,54 @@ export function AIFileSelector({
   searchInputRef,
   listClassName,
   emptyLabel = "No matching files found",
+  compact = false,
+  autoFocusSearchInput = false,
+  useBackendSearch = true,
 }: AIFileSelectorProps) {
-  const [debouncedQuery] = useDebounce(query, 100);
-  const fileItems = useMemo<FileItem[]>(
-    () =>
-      files
-        .filter((file) => !file.isDir)
-        .map((file) => ({
-          name: file.name,
-          path: file.path,
-          isDir: false,
-        })),
-    [files],
-  );
+  const [debouncedQuery] = useDebounce(query, 50);
+  const isBackendSearchActive =
+    useBackendSearch && debouncedQuery.trim().length > 0 && canUseBackendFileSearch(rootFolderPath);
+  const { hits: backendHits } = useFffSearch(debouncedQuery, isBackendSearchActive, rootFolderPath);
+  const fileItems = useMemo<FileItem[]>(() => {
+    if (isBackendSearchActive) return [];
+
+    return files
+      .filter((file) => !file.isDir)
+      .map((file) => ({
+        name: file.name,
+        path: file.path,
+        isDir: false,
+      }));
+  }, [files, isBackendSearchActive]);
   const categorizedFiles = useFileSearch(fileItems, debouncedQuery);
-  const results = useMemo(() => flattenFileSearchResults(categorizedFiles), [categorizedFiles]);
+  const results = useMemo(() => {
+    if (isBackendSearchActive) {
+      return backendHits.map((hit, index) => ({
+        file: { name: hit.name, path: hit.path, isDir: false },
+        category: "other" as const,
+        index,
+      }));
+    }
+
+    return flattenFileSearchResults(categorizedFiles);
+  }, [backendHits, categorizedFiles, isBackendSearchActive]);
 
   useEffect(() => {
     if (selectedIndex <= results.length - 1) return;
     onSelectedIndexChange?.(Math.max(results.length - 1, 0));
   }, [onSelectedIndexChange, results.length, selectedIndex]);
 
+  useEffect(() => {
+    if (!showSearchInput || !autoFocusSearchInput) return;
+
+    const frame = requestAnimationFrame(() => searchInputRef?.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [autoFocusSearchInput, searchInputRef, showSearchInput]);
+
   return (
     <>
       {showSearchInput && (
-        <div className={chatComposerDropdownHeaderClassName}>
+        <div className={cn(chatComposerDropdownHeaderClassName, compact && "px-1.5 py-1.5")}>
           <Input
             ref={searchInputRef}
             type="text"
@@ -87,6 +117,7 @@ export function AIFileSelector({
             value={query}
             onChange={(event) => onQueryChange?.(event.target.value)}
             variant="ghost"
+            size={compact ? "xs" : "sm"}
             leftIcon={Search}
             className="w-full"
             aria-label="Search files"
@@ -113,6 +144,7 @@ export function AIFileSelector({
                 onClick={() => onSelect(file)}
                 onPreview={() => onSelectedIndexChange?.(index)}
                 rootFolderPath={rootFolderPath}
+                compact={compact}
               />
             ))
           )}
