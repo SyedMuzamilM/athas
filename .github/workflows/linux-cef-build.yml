@@ -114,7 +114,7 @@ jobs:
       - name: Build Linux CEF bundles
         run: |
           cargo tauri build \
-            --bundles appimage,deb,rpm \
+            --bundles deb,rpm \
             --config '{"bundle":{"createUpdaterArtifacts":false}}' \
             -- \
             --no-default-features \
@@ -125,7 +125,6 @@ jobs:
         with:
           name: linux-cef-${{ runner.arch }}
           path: |
-            target/release/bundle/**/*.AppImage
             target/release/bundle/**/*.deb
             target/release/bundle/**/*.rpm
           if-no-files-found: error
