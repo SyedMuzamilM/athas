@@ -114,10 +114,11 @@ jobs:
       - name: Build Linux CEF bundles
         run: |
           cargo tauri build \
-            --no-default-features \
-            --features linux-cef \
             --bundles appimage,deb,rpm \
-            --config '{"bundle":{"createUpdaterArtifacts":false}}'
+            --config '{"bundle":{"createUpdaterArtifacts":false}}' \
+            -- \
+            --no-default-features \
+            --features linux-cef
 
       - name: Upload Linux CEF bundles
         uses: actions/upload-artifact@v4

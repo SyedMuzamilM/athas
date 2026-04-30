@@ -332,7 +332,7 @@ jobs:
           RUSTFLAGS: ${{ matrix.rustflags }}
         run: |
           if [[ "${{ matrix.os }}" == "linux" ]]; then
-            cargo tauri build ${{ matrix.args }} ${{ matrix.cargo_features }} ${{ needs.release-metadata.outputs.is_prerelease == 'true' && '--config src-tauri/tauri.preview.conf.json' || '' }}
+            cargo tauri build ${{ matrix.args }} ${{ needs.release-metadata.outputs.is_prerelease == 'true' && '--config src-tauri/tauri.preview.conf.json' || '' }} -- ${{ matrix.cargo_features }}
           else
             bun tauri build ${{ matrix.args }} ${{ needs.release-metadata.outputs.is_prerelease == 'true' && '--config src-tauri/tauri.preview.conf.json' || '' }}
           fi
