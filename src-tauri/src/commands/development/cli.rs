@@ -1,7 +1,8 @@
+use crate::app_runtime::AppHandle;
 use std::fs;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
-use tauri::{AppHandle, command};
+use tauri::command;
 
 // Platform-specific CLI paths
 #[cfg(unix)]

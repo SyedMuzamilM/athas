@@ -1,8 +1,8 @@
-use crate::commands::fuzzy::FffSearchState;
+use crate::{app_runtime::AppHandle, commands::fuzzy::FffSearchState};
 use athas_fff_search::{GrepMode, GrepSearchOptions, parse_grep_query};
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};
-use tauri::{AppHandle, State};
+use tauri::State;
 
 const INITIAL_SCAN_WAIT_TIMEOUT: Duration = Duration::from_millis(1500);
 const INITIAL_SCAN_WAIT_INTERVAL: Duration = Duration::from_millis(25);

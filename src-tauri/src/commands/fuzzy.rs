@@ -1,3 +1,4 @@
+use crate::app_runtime::AppHandle;
 use athas_fff_search::{FffSearch, FffSearchHit};
 use nucleo_matcher::{
    Config, Matcher, Utf32Str,
@@ -8,7 +9,7 @@ use std::{
    path::{Path, PathBuf},
    sync::{Mutex, OnceLock},
 };
-use tauri::{AppHandle, Manager, State};
+use tauri::{Manager, State};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FuzzyMatchItem {

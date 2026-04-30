@@ -1,3 +1,4 @@
+use crate::app_runtime::AppHandle;
 use athas_ai::{AcpAgentBridge, AcpAgentStatus, AgentConfig, AgentRuntime};
 use athas_runtime::{RuntimeManager, RuntimeType};
 use athas_tooling::{ToolConfig, ToolInstaller, ToolRuntime};
@@ -7,7 +8,7 @@ use std::{
    path::{Path, PathBuf},
    sync::Arc,
 };
-use tauri::{AppHandle, Manager, State};
+use tauri::{Manager, State};
 use tokio::sync::Mutex;
 
 pub type AcpBridgeState = Arc<Mutex<AcpAgentBridge>>;
