@@ -168,6 +168,71 @@ export const isBinaryFile = (path: string): boolean => {
   return binaryExtensions.some((ext) => lowerPath.endsWith(ext));
 };
 
+const TEXT_FILE_NAMES = new Set([
+  ".dockerignore",
+  ".env",
+  ".env.example",
+  ".gitignore",
+  ".npmrc",
+  "bun.lock",
+  "cargo.lock",
+  "gemfile.lock",
+  "go.mod",
+  "go.sum",
+  "package-lock.json",
+  "pnpm-lock.yaml",
+  "yarn.lock",
+]);
+
+const TEXT_EXTENSIONS = new Set([
+  ".c",
+  ".cfg",
+  ".conf",
+  ".cpp",
+  ".css",
+  ".csv",
+  ".diff",
+  ".env",
+  ".go",
+  ".h",
+  ".hpp",
+  ".html",
+  ".ini",
+  ".java",
+  ".js",
+  ".json",
+  ".jsonc",
+  ".jsx",
+  ".log",
+  ".md",
+  ".mdx",
+  ".patch",
+  ".php",
+  ".py",
+  ".rb",
+  ".rs",
+  ".scss",
+  ".sh",
+  ".sql",
+  ".svg",
+  ".toml",
+  ".ts",
+  ".tsx",
+  ".txt",
+  ".xml",
+  ".yaml",
+  ".yml",
+  ".zig",
+]);
+
+export const isKnownTextFile = (path: string): boolean => {
+  const fileName = getBaseName(path, "").toLowerCase();
+  if (TEXT_FILE_NAMES.has(fileName)) return true;
+
+  const lowerPath = path.toLowerCase();
+  return Array.from(TEXT_EXTENSIONS).some((extension) => lowerPath.endsWith(extension));
+};
+
 /**
  * Best-effort binary sniffing for files with unknown extensions.
  * Treat null bytes and a high ratio of control bytes as unsupported for the text editor.

@@ -46,8 +46,16 @@ export async function fffSetWorkspace(basePath: string): Promise<void> {
   return invoke("fff_set_workspace", { basePath });
 }
 
-export async function fffSearchFiles(query: string, limit = 100): Promise<FffSearchHit[]> {
-  return invoke<FffSearchHit[]>("fff_search_files", { query, limit });
+export async function fffSearchFiles(
+  query: string,
+  limit = 100,
+  rootPath?: string | null,
+): Promise<FffSearchHit[]> {
+  return invoke<FffSearchHit[]>("fff_search_files", {
+    query,
+    limit,
+    rootPath: rootPath || null,
+  });
 }
 
 export async function fffTrackAccess(path: string): Promise<void> {

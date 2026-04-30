@@ -770,6 +770,7 @@ export function Editor({
     viewStateKey: viewStateKey ?? bufferId ?? null,
     linesCount: lines.length,
     minimapEnabled,
+    lockVerticalScroll: !scrollable,
     switchGuardRef,
     highlightRef,
     primaryCursorRef,
@@ -783,6 +784,31 @@ export function Editor({
     inlineDiffRef,
     setEditorScrollTop,
     handleViewportScroll,
+  });
+
+  useLayoutEffect(() => {
+    const textarea = inputRef.current;
+    if (!textarea) return;
+
+    const transform = `translate(-${textarea.scrollLeft}px, -${textarea.scrollTop}px)`;
+    const overlayRefs = [
+      highlightRef,
+      primaryCursorRef,
+      multiCursorRef,
+      searchHighlightRef,
+      selectionLayerRef,
+      vimCursorRef,
+      autocompleteCompletionRef,
+      inlineEditOverlayRef,
+      gitBlameRef,
+      inlineDiffRef,
+    ];
+
+    for (const overlayRef of overlayRefs) {
+      if (overlayRef.current) {
+        overlayRef.current.style.transform = transform;
+      }
+    }
   });
 
   useDragScroll(inputRef);
@@ -802,7 +828,7 @@ export function Editor({
     };
   }, [inputRef, isActiveSurface]);
 
-  // Non-macOS wheel forwarding
+  // Wheel forwarding for embedded editors and non-macOS textarea scrolling.
   useEffect(() => {
     const textarea = inputRef.current;
     if (!textarea) return;
@@ -811,7 +837,7 @@ export function Editor({
       const scrollContainer =
         textarea.closest("[data-editor-outer-scroll]") ??
         textarea.closest("[data-diff-stack-scroll-container]");
-      if (!(scrollContainer instanceof HTMLDivElement)) return;
+      if (!(scrollContainer instanceof HTMLElement)) return;
 
       const handleWheel = (e: WheelEvent) => {
         const isHorizontalIntent = e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY);
@@ -832,7 +858,17 @@ export function Editor({
           (deltaLeft > 0 &&
             scrollContainer.scrollLeft + scrollContainer.clientWidth < scrollContainer.scrollWidth);
 
-        if (!canScrollY && !canScrollX) return;
+        if (textarea.scrollTop !== 0) {
+          textarea.scrollTop = 0;
+        }
+
+        if (!canScrollY && !canScrollX) {
+          if (deltaTop !== 0 || deltaLeft !== 0) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+          return;
+        }
 
         if (canScrollY) {
           scrollContainer.scrollTop += deltaTop;
@@ -841,6 +877,7 @@ export function Editor({
           scrollContainer.scrollLeft += deltaLeft;
         }
         e.preventDefault();
+        e.stopPropagation();
       };
 
       textarea.addEventListener("wheel", handleWheel, { passive: false });

@@ -74,13 +74,34 @@ fn build_fff_grep_pattern(request: &SearchFilesRequest) -> (String, GrepMode) {
    (final_pattern, mode)
 }
 
+fn should_skip_fff_path(path: &str) -> bool {
+   path.starts_with("remote://") || path.starts_with("diff://") || path.trim().is_empty()
+}
+
+fn byte_offset_to_char_offset(text: &str, byte_offset: usize) -> usize {
+   if byte_offset >= text.len() {
+      return text.chars().count();
+   }
+
+   text
+      .char_indices()
+      .take_while(|(index, _)| *index < byte_offset)
+      .count()
+}
+
+fn byte_range_to_char_range(text: &str, start: usize, end: usize) -> (usize, usize) {
+   let char_start = byte_offset_to_char_offset(text, start);
+   let char_end = byte_offset_to_char_offset(text, end);
+   (char_start, char_end.max(char_start + 1))
+}
+
 #[tauri::command]
 pub fn search_files_content(
    app: AppHandle,
    state: State<'_, FffSearchState>,
    request: SearchFilesRequest,
 ) -> Result<Vec<FileSearchResult>, String> {
-   if request.query.trim().is_empty() {
+   if request.query.trim().is_empty() || should_skip_fff_path(&request.root_path) {
       return Ok(Vec::new());
    }
 
@@ -144,23 +165,26 @@ pub fn search_files_content(
          continue;
       };
 
-      let start_end = grep_match
+      let line_content = grep_match.line_content;
+      let start_end_bytes = grep_match
          .match_byte_offsets
          .first()
          .map(|(start, end)| (*start as usize, *end as usize))
          .unwrap_or((grep_match.col, grep_match.col + request.query.len()));
+      let start_end = byte_range_to_char_range(&line_content, start_end_bytes.0, start_end_bytes.1);
       let match_ranges = grep_match
          .match_byte_offsets
          .iter()
-         .map(|(start, end)| SearchMatchRange {
-            start: *start as usize,
-            end: *end as usize,
+         .map(|(start, end)| {
+            let (start, end) =
+               byte_range_to_char_range(&line_content, *start as usize, *end as usize);
+            SearchMatchRange { start, end }
          })
          .collect();
 
       let search_match = SearchMatch {
          line_number: grep_match.line_number as usize,
-         line_content: grep_match.line_content,
+         line_content,
          column_start: start_end.0,
          column_end: start_end.1,
          match_ranges,

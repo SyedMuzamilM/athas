@@ -251,12 +251,20 @@ impl FffSearchState {
    }
 }
 
+fn should_skip_fff_path(path: &str) -> bool {
+   path.starts_with("remote://") || path.starts_with("diff://") || path.trim().is_empty()
+}
+
 #[tauri::command]
 pub fn fff_set_workspace(
    app: AppHandle,
    state: State<'_, FffSearchState>,
    base_path: String,
 ) -> Result<(), String> {
+   if should_skip_fff_path(&base_path) {
+      return Ok(());
+   }
+
    state.ensure_workspace(&app, Path::new(&base_path))
 }
 
@@ -266,7 +274,20 @@ pub fn fff_search_files(
    state: State<'_, FffSearchState>,
    query: String,
    limit: Option<usize>,
+   root_path: Option<String>,
 ) -> Result<Vec<FffSearchHit>, String> {
+   if query.trim().is_empty() {
+      return Ok(Vec::new());
+   }
+
+   if let Some(root_path) = root_path.as_deref() {
+      if should_skip_fff_path(root_path) {
+         return Ok(Vec::new());
+      }
+
+      state.ensure_workspace(&app, Path::new(root_path))?;
+   }
+
    let fff = state.get_or_init(&app)?;
    fff.search(&query, limit.unwrap_or(100))
       .map_err(|e| format!("fff search: {e}"))
@@ -278,6 +299,10 @@ pub fn fff_track_access(
    state: State<'_, FffSearchState>,
    path: String,
 ) -> Result<(), String> {
+   if should_skip_fff_path(&path) {
+      return Ok(());
+   }
+
    let fff = state.get_or_init(&app)?;
    fff.track_access(std::path::Path::new(&path))
       .map_err(|e| format!("fff track_access: {e}"))
