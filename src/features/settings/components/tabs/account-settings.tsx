@@ -18,6 +18,7 @@ import { useSettingsSyncStore } from "@/features/settings/stores/settings-sync-s
 import { useProFeature } from "@/extensions/ui/hooks/use-pro-feature";
 import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
 import { useAuthStore } from "@/features/window/stores/auth-store";
+import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Switch from "@/ui/switch";
 import Section, { SettingRow } from "../settings-section";
@@ -38,6 +39,8 @@ export const AccountSettings = () => {
   const settingsSyncLastSyncedAt = useSettingsSyncStore((state) => state.lastSyncedAt);
   const settingsSyncLastSource = useSettingsSyncStore((state) => state.lastSyncSource);
 
+  const isEnterprise = subscription?.subscription?.plan === "enterprise";
+  const isPaidPlan = isPro || isEnterprise;
   const planLabel =
     subscription?.subscription?.plan === "enterprise" ? "Enterprise" : isPro ? "Pro" : "Free";
 
@@ -45,8 +48,8 @@ export const AccountSettings = () => {
     await openUrl("https://athas.dev/dashboard");
   };
 
-  const handleViewPricing = async () => {
-    await openUrl("https://athas.dev/pricing");
+  const handleManagePlan = async () => {
+    await openUrl(isPaidPlan ? "https://athas.dev/dashboard/billing" : "https://athas.dev/pricing");
   };
 
   const handleToggleSettingsSync = async (checked: boolean) => {
@@ -88,7 +91,7 @@ export const AccountSettings = () => {
 
   const settingsSyncDescription = !isAuthenticated
     ? "Sign in to access cloud settings sync across devices."
-    : !isPro
+    : !isPaidPlan
       ? "Cloud settings sync is included with Pro."
       : settingsSyncLastSyncedAt
         ? `Last synced ${new Date(settingsSyncLastSyncedAt).toLocaleString()}${settingsSyncLastSource ? ` from ${settingsSyncLastSource}` : ""}.`
@@ -120,19 +123,27 @@ export const AccountSettings = () => {
         </SettingRow>
 
         {isAuthenticated && (
-          <SettingRow
-            label="Plan"
-            description="Free includes core features. Pro unlocks premium capabilities like custom extension generation."
-          >
-            <span className="ui-font text-[length:var(--app-ui-control-font-size)] text-text">
-              {planLabel}
-            </span>
+          <SettingRow label="Plan" description="Manage your Athas subscription and billing.">
+            <div className="flex items-center gap-2">
+              {isPaidPlan ? (
+                <Badge
+                  variant="default"
+                  shape="pill"
+                  size="compact"
+                  className="border-accent/30 bg-accent/10 text-accent"
+                >
+                  {planLabel}
+                </Badge>
+              ) : null}
+              <Button variant="default" size="xs" onClick={handleManagePlan} className="ui-text-sm">
+                <CreditCard />
+                {isPaidPlan ? "Manage plan" : "Upgrade plan"}
+              </Button>
+            </div>
           </SettingRow>
         )}
-      </Section>
 
-      {isAuthenticated && (
-        <Section title="Billing">
+        {isAuthenticated && (
           <SettingRow
             label="Cloud Settings Sync"
             description={
@@ -141,72 +152,56 @@ export const AccountSettings = () => {
                 : settingsSyncDescription
             }
           >
-            {isPro ? (
+            {isPaidPlan ? (
               <Switch
                 checked={settingsSyncHydrated ? settingsSyncEnabled : false}
                 onChange={(checked) => void handleToggleSettingsSync(checked)}
                 size="sm"
-                disabled={!settingsSyncHydrated || settingsSyncIsSyncing}
+                disabled={!settingsSyncHydrated}
               />
             ) : (
+              <Switch checked={false} onChange={() => undefined} size="sm" disabled />
+            )}
+          </SettingRow>
+        )}
+
+        {isPaidPlan && settingsSyncEnabled ? (
+          <>
+            <SettingRow
+              label="Sync Now"
+              description="Upload this device's current settings snapshot to the cloud."
+            >
               <Button
                 variant="default"
                 size="xs"
-                onClick={handleViewPricing}
+                onClick={() => void handleSyncNow()}
                 className="ui-text-sm"
+                disabled={settingsSyncIsSyncing}
               >
-                <CreditCard />
-                Upgrade to Pro
+                <CloudArrowUp />
+                {settingsSyncIsSyncing ? "Syncing..." : "Sync Now"}
               </Button>
-            )}
-          </SettingRow>
+            </SettingRow>
 
-          {isPro && settingsSyncEnabled ? (
-            <>
-              <SettingRow
-                label="Sync Now"
-                description="Upload this device's current settings snapshot to the cloud."
+            <SettingRow
+              label="Restore From Cloud"
+              description="Replace this device's non-sensitive settings with the cloud snapshot."
+            >
+              <Button
+                variant="default"
+                size="xs"
+                onClick={() => void handleRestoreFromCloud()}
+                className="ui-text-sm"
+                disabled={settingsSyncIsSyncing}
               >
-                <Button
-                  variant="default"
-                  size="xs"
-                  onClick={() => void handleSyncNow()}
-                  className="ui-text-sm"
-                  disabled={settingsSyncIsSyncing}
-                >
-                  <CloudArrowUp />
-                  {settingsSyncIsSyncing ? "Syncing..." : "Sync Now"}
-                </Button>
-              </SettingRow>
+                <CloudArrowDown />
+                Restore
+              </Button>
+            </SettingRow>
+          </>
+        ) : null}
 
-              <SettingRow
-                label="Restore From Cloud"
-                description="Replace this device's non-sensitive settings with the cloud snapshot."
-              >
-                <Button
-                  variant="default"
-                  size="xs"
-                  onClick={() => void handleRestoreFromCloud()}
-                  className="ui-text-sm"
-                  disabled={settingsSyncIsSyncing}
-                >
-                  <CloudArrowDown />
-                  Restore
-                </Button>
-              </SettingRow>
-            </>
-          ) : null}
-
-          <SettingRow
-            label="Upgrade to Pro"
-            description="Open pricing to compare plans and upgrade your account."
-          >
-            <Button variant="default" size="xs" onClick={handleViewPricing} className="ui-text-sm">
-              <CreditCard />
-              {isPro ? "View Pricing" : "Upgrade to Pro"}
-            </Button>
-          </SettingRow>
-
+        {isAuthenticated && (
           <SettingRow
             label="Manage Account"
             description="Open your Athas dashboard to manage billing and subscription details."
@@ -221,7 +216,9 @@ export const AccountSettings = () => {
               Open Dashboard
             </Button>
           </SettingRow>
+        )}
 
+        {isAuthenticated && (
           <SettingRow
             label="Sign Out"
             description="End your current Athas account session on this device."
@@ -236,8 +233,8 @@ export const AccountSettings = () => {
               Sign Out
             </Button>
           </SettingRow>
-        </Section>
-      )}
+        )}
+      </Section>
     </div>
   );
 };

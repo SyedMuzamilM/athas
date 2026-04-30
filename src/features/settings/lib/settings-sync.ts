@@ -6,6 +6,7 @@ import {
 } from "@/features/settings/stores/settings-sync-store";
 import {
   fetchSettingsSyncSnapshot,
+  isAuthInvalidError,
   pushSettingsSyncSnapshot,
   type CloudSettingsSyncSnapshot,
 } from "@/features/window/services/auth-api";
@@ -383,6 +384,28 @@ function clearSettingsSubscription() {
   }
 }
 
+function getSettingsSyncErrorMessage(error: unknown): string {
+  if (isAuthInvalidError(error)) {
+    return "Cloud settings sync could not access your account. Your session is still signed in.";
+  }
+
+  return error instanceof Error ? error.message : "Settings sync failed.";
+}
+
+function handleSettingsSyncError(error: unknown, options?: { disable?: boolean }) {
+  const message = getSettingsSyncErrorMessage(error);
+
+  if (options?.disable) {
+    writeMeta({ enabled: false });
+    clearSettingsSubscription();
+    useSettingsSyncStore.getState().actions.setEnabled(false);
+  }
+
+  useSettingsSyncStore.getState().actions.setError(message);
+
+  return message;
+}
+
 export function initializeSettingsSyncPreferences() {
   hydrateSettingsSyncStore();
   hasCompletedInitialSync = false;
@@ -391,8 +414,13 @@ export function initializeSettingsSyncPreferences() {
 export async function enableSettingsSync(): Promise<void> {
   writeMeta({ enabled: true });
   useSettingsSyncStore.getState().actions.setEnabled(true);
-  await runInitialSettingsSync();
-  ensureSettingsSubscription();
+  try {
+    await runInitialSettingsSync();
+    ensureSettingsSubscription();
+  } catch (error) {
+    const message = handleSettingsSyncError(error, { disable: true });
+    throw new Error(message);
+  }
 }
 
 export function disableSettingsSync() {
@@ -403,19 +431,29 @@ export function disableSettingsSync() {
 }
 
 export async function syncSettingsNow(): Promise<void> {
-  await pushLocalSnapshot("local");
+  try {
+    await pushLocalSnapshot("local");
+  } catch (error) {
+    const message = handleSettingsSyncError(error);
+    throw new Error(message);
+  }
 }
 
 export async function restoreSettingsFromCloud(): Promise<void> {
-  useSettingsSyncStore.getState().actions.startSync();
-  const snapshot = await fetchSettingsSyncSnapshot();
-  if (!snapshot) {
-    const message = "No cloud settings snapshot found yet.";
-    useSettingsSyncStore.getState().actions.setError(message);
+  try {
+    useSettingsSyncStore.getState().actions.startSync();
+    const snapshot = await fetchSettingsSyncSnapshot();
+    if (!snapshot) {
+      const message = "No cloud settings snapshot found yet.";
+      useSettingsSyncStore.getState().actions.setError(message);
+      throw new Error(message);
+    }
+
+    await applyRemoteSnapshot(snapshot);
+  } catch (error) {
+    const message = handleSettingsSyncError(error);
     throw new Error(message);
   }
-
-  await applyRemoteSnapshot(snapshot);
 }
 
 export async function ensureSettingsSyncStarted(params: {
@@ -433,7 +471,11 @@ export async function ensureSettingsSyncStarted(params: {
 
   ensureSettingsSubscription();
   if (!hasCompletedInitialSync) {
-    await runInitialSettingsSync();
-    hasCompletedInitialSync = true;
+    try {
+      await runInitialSettingsSync();
+      hasCompletedInitialSync = true;
+    } catch (error) {
+      handleSettingsSyncError(error, { disable: isAuthInvalidError(error) });
+    }
   }
 }

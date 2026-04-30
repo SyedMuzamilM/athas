@@ -1,17 +1,7 @@
-import {
-  DownloadSimple,
-  GearSix,
-  PuzzlePiece,
-  Sparkle,
-  TerminalWindow,
-  WarningCircle,
-  X,
-} from "@phosphor-icons/react";
-import { type ReactNode, useEffect, useRef, useState } from "react";
-import { Dropdown } from "@/ui/dropdown";
+import { DownloadSimple, PuzzlePiece, TerminalWindow, WarningCircle } from "@phosphor-icons/react";
+import { type ReactNode } from "react";
 import { Tab, TabsList } from "@/ui/tabs";
 import Tooltip from "@/ui/tooltip";
-import { useAIChatStore } from "@/features/ai/store/store";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics-store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
@@ -23,31 +13,13 @@ import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
 import { useUpdater } from "@/features/settings/hooks/use-updater";
 import { useSettingsStore } from "@/features/settings/store";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
-import { useAuthStore } from "@/features/window/stores/auth-store";
-import Badge from "@/ui/badge";
-import { Button } from "@/ui/button";
-import { getApiBase } from "@/utils/api-base";
 import { cn } from "@/utils/cn";
 import { useUIState } from "@/features/window/stores/ui-state-store";
-import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
 import type {
   FooterLeadingItemId,
   FooterTrailingItemId,
 } from "@/features/layout/config/item-order";
 import { useFileSystemStore } from "../../../file-system/controllers/store";
-
-type AutocompleteUsageSummary = {
-  periodStart: string;
-  periodEnd: string;
-  budgetCents: number;
-  reservedCents: number;
-  spendCents: number;
-  remainingCents: number;
-  requestsCount: number;
-  promptTokens: number;
-  completionTokens: number;
-  maxRequestCostCents: number;
-};
 
 type FooterItem<T extends string> = {
   id: T;
@@ -70,51 +42,6 @@ function orderFooterItems<T extends string>(items: Array<FooterItem<T>>, ordered
     .filter((item): item is FooterItem<T> => Boolean(item));
   const missingItems = items.filter((item) => !orderedIds.includes(item.id));
   return [...orderedItems, ...missingItems];
-}
-
-function extractAutocompleteUsage(subscription: unknown): AutocompleteUsageSummary | null {
-  if (!subscription || typeof subscription !== "object") return null;
-
-  const container = subscription as Record<string, unknown>;
-  const autocomplete =
-    container.autocomplete && typeof container.autocomplete === "object"
-      ? (container.autocomplete as Record<string, unknown>)
-      : null;
-  const usageCandidate = autocomplete?.usage;
-
-  if (!usageCandidate || typeof usageCandidate !== "object") return null;
-
-  const usage = usageCandidate as Record<string, unknown>;
-  if (
-    typeof usage.periodStart !== "string" ||
-    typeof usage.periodEnd !== "string" ||
-    typeof usage.budgetCents !== "number" ||
-    typeof usage.spendCents !== "number"
-  ) {
-    return null;
-  }
-
-  return usage as unknown as AutocompleteUsageSummary;
-}
-
-function formatUsdFromCents(cents: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(cents / 100);
-}
-
-function formatUsageDate(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(date);
 }
 
 function FooterTabControl({
@@ -160,233 +87,7 @@ function FooterTabControl({
   );
 }
 
-const AiUsageStatusIndicator = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const subscription = useAuthStore((state) => state.subscription);
-  const checkAllProviderApiKeys = useAIChatStore((state) => state.checkAllProviderApiKeys);
-  const hasOpenRouterKey = useAIChatStore(
-    (state) => state.providerApiKeys.get("openrouter") || false,
-  );
-  const { signIn, isSigningIn } = useDesktopSignIn({
-    onSuccess: () => setIsOpen(false),
-  });
-  const uiState = useUIState();
-  const hasBlockingModalOpen = useUIState(
-    (state) =>
-      state.isQuickOpenVisible ||
-      state.isCommandPaletteVisible ||
-      state.isGlobalSearchVisible ||
-      state.isSettingsDialogVisible ||
-      state.isThemeSelectorVisible ||
-      state.isIconThemeSelectorVisible ||
-      state.isProjectPickerVisible ||
-      state.isDatabaseConnectionVisible,
-  );
-
-  const subscriptionStatus = subscription?.status ?? "free";
-  const enterprisePolicy = subscription?.enterprise?.policy;
-  const managedPolicy = enterprisePolicy?.managedMode ? enterprisePolicy : null;
-  const isPro = subscriptionStatus === "pro";
-  const aiAllowedByPolicy = managedPolicy ? managedPolicy.aiCompletionEnabled : true;
-  const byokAllowedByPolicy = managedPolicy ? managedPolicy.allowByok : true;
-  const planLabel = (() => {
-    if (!isAuthenticated) return "Guest";
-    if (subscriptionStatus === "pro") return "Pro";
-    return "Free";
-  })();
-  const usesByok = isAuthenticated && !isPro;
-  const autocompleteUsage = extractAutocompleteUsage(subscription);
-  const usageProgress =
-    autocompleteUsage && autocompleteUsage.budgetCents > 0
-      ? Math.min(
-          100,
-          Math.max(0, (autocompleteUsage.spendCents / autocompleteUsage.budgetCents) * 100),
-        )
-      : 0;
-
-  const modeLabel = (() => {
-    if (!isAuthenticated) return "Guest";
-    if (!aiAllowedByPolicy) return "Blocked";
-    if (isPro) return "Hosted";
-    if (!byokAllowedByPolicy) return "Blocked";
-    return hasOpenRouterKey ? "BYOK" : "Key required";
-  })();
-
-  const indicatorLabel = !isAuthenticated ? "Guest" : planLabel;
-
-  const modeToneClass = (() => {
-    if (!isAuthenticated || !aiAllowedByPolicy) return "text-error";
-    if (usesByok && !hasOpenRouterKey) return "text-warning";
-    if (usesByok) return "text-accent";
-    return "text-accent";
-  })();
-
-  const refreshAll = async () => {
-    await checkAllProviderApiKeys();
-  };
-
-  const openBillingDashboard = async () => {
-    const apiBase = getApiBase();
-    const billingUrl = new URL("/dashboard/billing", apiBase).toString();
-    const { openUrl } = await import("@tauri-apps/plugin-opener");
-    await openUrl(billingUrl);
-  };
-
-  useEffect(() => {
-    void refreshAll();
-  }, [checkAllProviderApiKeys]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    void refreshAll();
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (!isOpen || !hasBlockingModalOpen) return;
-    setIsOpen(false);
-  }, [hasBlockingModalOpen, isOpen]);
-
-  const handleSignIn = async () => {
-    await signIn();
-  };
-
-  return (
-    <div className="relative">
-      <Button
-        ref={buttonRef}
-        type="button"
-        onClick={() => {
-          const nextOpen = !isOpen;
-          setIsOpen(nextOpen);
-          if (nextOpen) {
-            void refreshAll();
-          }
-        }}
-        variant="secondary"
-        size="xs"
-        className={cn(
-          "rounded-md border-transparent bg-transparent px-2 text-text-lighter hover:bg-hover/60",
-          "ui-font ui-text-sm gap-1 font-medium",
-          modeToneClass,
-          isOpen && "bg-hover/70",
-        )}
-        style={{ minHeight: 0, minWidth: 0 }}
-        tooltip={`${planLabel} • ${modeLabel}`}
-      >
-        <span className="ui-font ui-text-sm">{indicatorLabel}</span>
-      </Button>
-      <Dropdown
-        isOpen={isOpen}
-        anchorRef={buttonRef}
-        anchorSide="top"
-        anchorAlign="end"
-        onClose={() => setIsOpen(false)}
-        className="w-[320px] overflow-hidden rounded-xl p-0"
-      >
-        <div className="flex items-center justify-between border-border/70 border-b bg-secondary-bg/55 px-3 py-2.5">
-          <div className="flex items-center gap-2">
-            <span className="ui-font ui-text-md font-medium text-text">AI</span>
-            {isPro ? (
-              <Badge
-                variant="default"
-                shape="pill"
-                size="compact"
-                className="border-accent/30 bg-accent/10 text-accent"
-              >
-                Pro
-              </Badge>
-            ) : null}
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Button
-              onClick={() => {
-                setIsOpen(false);
-                uiState.openSettingsDialog("ai");
-              }}
-              variant="secondary"
-              size="icon-sm"
-              className="px-0 text-text-lighter"
-              tooltip="AI Settings"
-              aria-label="Open AI settings"
-            >
-              <GearSix weight="duotone" />
-            </Button>
-            <Button
-              onClick={() => setIsOpen(false)}
-              variant="secondary"
-              size="icon-sm"
-              className="px-0 text-text-lighter"
-              aria-label="Close AI status dropdown"
-            >
-              <X weight="bold" />
-            </Button>
-          </div>
-        </div>
-        {!isAuthenticated ? (
-          <div className="p-2.5">
-            <Button
-              onClick={() => void handleSignIn()}
-              disabled={isSigningIn}
-              variant="primary"
-              size="sm"
-              className="mt-2 w-full justify-center rounded-lg text-white hover:opacity-90"
-            >
-              {isSigningIn ? "Signing in..." : "Sign in"}
-            </Button>
-          </div>
-        ) : (
-          <>
-            <Button
-              type="button"
-              onClick={() => void openBillingDashboard()}
-              variant="ghost"
-              className="ui-font block h-auto w-full justify-start border-border/60 border-b rounded-none p-2.5 text-left transition-colors hover:bg-hover/40"
-            >
-              <div className="mb-1.5 flex items-center justify-between">
-                <span className="ui-text-sm text-text-lighter">Usage</span>
-                <span className="ui-text-xs text-text-lighter/70">Current period</span>
-              </div>
-              {autocompleteUsage ? (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="ui-text-sm text-text-lighter">Hosted autocomplete</span>
-                    <span className="ui-text-sm font-medium text-text">
-                      {formatUsdFromCents(autocompleteUsage.spendCents)} /{" "}
-                      {formatUsdFromCents(autocompleteUsage.budgetCents)}
-                    </span>
-                  </div>
-                  <div className="h-1.5 overflow-hidden rounded-full bg-primary-bg/80">
-                    <div
-                      className="h-full rounded-full bg-accent transition-[width] duration-200"
-                      style={{ width: `${usageProgress}%` }}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="ui-text-xs text-text-lighter/70">
-                      {formatUsageDate(autocompleteUsage.periodStart)} -{" "}
-                      {formatUsageDate(autocompleteUsage.periodEnd)}
-                    </span>
-                    <span className="ui-text-xs text-text-lighter/70">
-                      Resets {formatUsageDate(autocompleteUsage.periodEnd)}
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <div className="ui-text-sm text-text-lighter/80">Usage unavailable</div>
-              )}
-            </Button>
-          </>
-        )}
-      </Dropdown>
-    </div>
-  );
-};
-
 const Footer = () => {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const settings = useSettingsStore((state) => state.settings);
   const uiState = useUIState();
   const activeBufferId = useBufferStore.use.activeBufferId();
@@ -567,35 +268,7 @@ const Footer = () => {
     (item): item is FooterItem<FooterLeadingItemId> => item !== null,
   );
 
-  const footerTrailingItemsSource: Array<FooterItem<FooterTrailingItemId> | null> = [
-    isAuthenticated
-      ? {
-          id: "ai-usage",
-          label: "AI usage",
-          content: <AiUsageStatusIndicator />,
-        }
-      : null,
-    {
-      id: "ai-chat",
-      label: "AI chat",
-      content: (
-        <FooterTabControl
-          tooltip="Toggle AI Chat"
-          active={settings.isAIChatVisible}
-          className={FOOTER_ICON_TAB_CLASS_NAME}
-          commandId="workbench.toggleAIChat"
-          onClick={() => {
-            useSettingsStore.getState().toggleAIChatVisible();
-          }}
-        >
-          <Sparkle weight="duotone" />
-        </FooterTabControl>
-      ),
-    },
-  ];
-  const footerTrailingItems = footerTrailingItemsSource.filter(
-    (item): item is FooterItem<FooterTrailingItemId> => item !== null,
-  );
+  const footerTrailingItems: Array<FooterItem<FooterTrailingItemId>> = [];
 
   return (
     <div className="relative z-20 flex min-h-9 shrink-0 items-center justify-between bg-secondary-bg/70 px-2.5 py-1 backdrop-blur-sm">
