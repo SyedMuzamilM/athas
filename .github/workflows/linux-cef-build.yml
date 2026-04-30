@@ -1,0 +1,130 @@
+name: "Linux CEF Build"
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - ".github/workflows/linux-cef-build.yml"
+      - ".github/workflows/release.yml"
+      - "Cargo.lock"
+      - "Cargo.toml"
+      - "crates/**"
+      - "src-tauri/**"
+      - "package.json"
+      - "bun.lock"
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: "Linux runner to build on"
+        required: true
+        default: "ubuntu-22.04"
+        type: choice
+        options:
+          - "ubuntu-22.04"
+          - "ubuntu-22.04-arm"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ inputs.runner || 'ubuntu-22.04' }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: github.repository == 'athasdev/athas'
+    name: Build Linux CEF bundles
+    runs-on: ${{ inputs.runner || 'ubuntu-22.04' }}
+    timeout-minutes: 120
+    env:
+      CARGO_TERM_COLOR: always
+      NO_STRIP: "true"
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Free disk space
+        run: |
+          echo "Disk usage before cleanup:"
+          df -h
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /opt/hostedtoolcache/CodeQL || true
+          sudo docker system prune -af || true
+          sudo apt-get clean
+          echo "Disk usage after cleanup:"
+          df -h
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+
+      - name: Cache CEF binaries
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/cef
+          key: ${{ runner.os }}-${{ runner.arch }}-cef-v146.4.1
+
+      - name: Cache Bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils file
+
+      - name: Install Tauri CEF CLI
+        run: cargo install tauri-cli --git https://github.com/tauri-apps/tauri --branch feat/cef --locked
+
+      - name: Install frontend dependencies
+        run: bun install --ignore-scripts && bun scripts/postinstall.ts
+
+      - name: Check Linux CEF feature graph
+        run: |
+          set -euo pipefail
+          cargo tree -p athas --no-default-features --features linux-cef -i tauri-runtime-cef
+          cargo tree -p athas --no-default-features --features linux-cef -i tauri-runtime-wry >/tmp/tauri-runtime-wry.txt 2>&1 || true
+          if grep -q '^tauri-runtime-wry ' /tmp/tauri-runtime-wry.txt; then
+            echo "tauri-runtime-wry must not be present in the Linux CEF build"
+            cat /tmp/tauri-runtime-wry.txt
+            exit 1
+          fi
+          cargo tree -p athas --no-default-features --features linux-cef -i webkit2gtk >/tmp/webkit2gtk.txt 2>&1 || true
+          if grep -q '^webkit2gtk ' /tmp/webkit2gtk.txt; then
+            echo "webkit2gtk must not be present in the Linux CEF build"
+            cat /tmp/webkit2gtk.txt
+            exit 1
+          fi
+
+      - name: Build Linux CEF bundles
+        run: |
+          cargo tauri build \
+            --no-default-features \
+            --features linux-cef \
+            --bundles appimage,deb,rpm \
+            --config '{"bundle":{"createUpdaterArtifacts":false}}'
+
+      - name: Upload Linux CEF bundles
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-cef-${{ runner.arch }}
+          path: |
+            target/release/bundle/**/*.AppImage
+            target/release/bundle/**/*.deb
+            target/release/bundle/**/*.rpm
+          if-no-files-found: error
