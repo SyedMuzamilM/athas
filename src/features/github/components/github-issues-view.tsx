@@ -17,6 +17,7 @@ import {
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
+import { writeSidebarResourceDragData } from "@/features/sidebar-drag/sidebar-resource-drag";
 import GitHubSidebarLoadingBar from "./github-sidebar-loading-bar";
 import { useGitHubStore } from "../stores/github-store";
 import type { IssueListItem } from "../types/github";
@@ -28,16 +29,31 @@ interface IssueListItemProps {
   issue: IssueListItem;
   isActive: boolean;
   onSelect: () => void;
+  repoPath?: string | null;
 }
 
-const IssueRow = memo(({ issue, isActive, onSelect }: IssueListItemProps) => (
+const IssueRow = memo(({ issue, isActive, onSelect, repoPath }: IssueListItemProps) => (
   <Button
     onClick={onSelect}
+    draggable
+    onDragStart={(event) => {
+      writeSidebarResourceDragData(event.dataTransfer, {
+        type: "github-issue",
+        repoPath: repoPath ?? undefined,
+        number: issue.number,
+        title: issue.title,
+        authorAvatarUrl:
+          issue.author.avatarUrl ||
+          `https://github.com/${encodeURIComponent(issue.author.login || "github")}.png?size=32`,
+        url: issue.url,
+        name: `Issue #${issue.number}`,
+      });
+    }}
     variant="ghost"
     size="sm"
     active={isActive}
     className={cn(
-      "h-auto w-full min-w-0 items-start justify-start rounded-xl px-3 py-2.5 text-left",
+      "h-auto w-full min-w-0 cursor-grab items-start justify-start rounded-xl px-3 py-2.5 text-left transition-[transform,background-color,opacity] active:cursor-grabbing",
     )}
   >
     <img
@@ -180,6 +196,7 @@ const GitHubIssuesView = memo(({ refreshNonce = 0 }: GitHubIssuesViewProps) => {
                 key={issue.number}
                 issue={issue}
                 isActive={activeIssueNumber === issue.number}
+                repoPath={repoPath}
                 onSelect={() =>
                   startTransition(() => {
                     openGitHubIssueBuffer({

@@ -4,12 +4,17 @@ import { PROVIDER_REGISTRY } from "@/features/database/providers/provider-regist
 import CodeEditor from "@/features/editor/components/code-editor";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import type { Buffer } from "@/features/editor/stores/buffer-store";
-import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { stageHunk, unstageHunk } from "@/features/git/api/git-status-api";
 import type { GitHunk } from "@/features/git/types/git-types";
 import { useGitHubStore } from "@/features/github/stores/github-store";
 import { formatDiffBufferLabel } from "@/features/git/utils/diff-buffer-label";
+import { openSidebarResourceBuffer } from "@/features/sidebar-drag/open-sidebar-resource";
+import {
+  hasSidebarResourceDragData,
+  readSidebarResourceDragData,
+  type SidebarDragResource,
+} from "@/features/sidebar-drag/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/store";
 import TabBar from "@/features/tabs/components/tab-bar";
 import { extractDroppedFilePaths } from "@/features/file-system/utils/file-system-dropped-paths";
@@ -304,6 +309,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       point: { x: number; y: number },
     ) => {
       if (fileDragData.isDir) return;
+      if (!handleFileOpen) return;
 
       const target = resolveDropTarget(point);
       if (target.paneId !== pane.id) return;
@@ -321,30 +327,16 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       setActivePane(targetPaneId);
 
       try {
-        const content = await readFileContent(fileDragData.path);
-        const existingBuffer = buffers.find((buffer) => buffer.path === fileDragData.path);
-        const targetPane = usePaneStore.getState().actions.getPaneById(targetPaneId);
-
-        if (existingBuffer) {
-          if (!targetPane?.bufferIds.includes(existingBuffer.id)) {
-            addBufferToPane(targetPaneId, existingBuffer.id, true);
+        await handleFileOpen(fileDragData.path, false);
+        const openedBufferId = useBufferStore.getState().activeBufferId;
+        if (openedBufferId) {
+          const targetPane = usePaneStore.getState().actions.getPaneById(targetPaneId);
+          if (!targetPane?.bufferIds.includes(openedBufferId)) {
+            addBufferToPane(targetPaneId, openedBufferId, true);
           } else {
-            setActivePaneBuffer(targetPaneId, existingBuffer.id);
+            setActivePaneBuffer(targetPaneId, openedBufferId);
           }
-        } else {
-          const bufferId = openBuffer(
-            fileDragData.path,
-            fileDragData.name,
-            content,
-            false,
-            undefined,
-            false,
-            false,
-          );
-          const nextTargetPane = usePaneStore.getState().actions.getPaneById(targetPaneId);
-          if (!nextTargetPane?.bufferIds.includes(bufferId)) {
-            addBufferToPane(targetPaneId, bufferId, true);
-          }
+          useBufferStore.getState().actions.setActiveBuffer(openedBufferId);
         }
 
         const newActivePane = usePaneStore.getState().actions.getActivePane();
@@ -357,7 +349,44 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         delete window.__fileDragData;
       }
     },
-    [addBufferToPane, buffers, openBuffer, pane.id, setActivePane, setActivePaneBuffer, splitPane],
+    [addBufferToPane, handleFileOpen, pane.id, setActivePane, setActivePaneBuffer, splitPane],
+  );
+
+  const openSidebarResourceInPane = useCallback(
+    async (resource: SidebarDragResource, point: { x: number; y: number }) => {
+      const opensBuffer =
+        !(resource.type === "file" && resource.isDir) && resource.type !== "git-worktree";
+      const target = resolveDropTarget(point);
+      if (target.paneId !== pane.id) return;
+
+      let targetPaneId = pane.id;
+      if (opensBuffer && target.zone && target.zone !== "center") {
+        const direction =
+          target.zone === "left" || target.zone === "right" ? "horizontal" : "vertical";
+        const placement = target.zone === "left" || target.zone === "top" ? "before" : "after";
+        const newPaneId = splitPane(pane.id, direction, undefined, placement);
+        if (!newPaneId) return;
+        targetPaneId = newPaneId;
+      }
+
+      setActivePane(targetPaneId);
+
+      try {
+        const bufferId = await openSidebarResourceBuffer(resource);
+        if (!bufferId) return;
+
+        const targetPane = usePaneStore.getState().actions.getPaneById(targetPaneId);
+        if (!targetPane?.bufferIds.includes(bufferId)) {
+          addBufferToPane(targetPaneId, bufferId, true);
+        } else {
+          setActivePaneBuffer(targetPaneId, bufferId);
+        }
+        useBufferStore.getState().actions.setActiveBuffer(bufferId);
+      } catch (error) {
+        console.error("Failed to open sidebar resource from drop:", error);
+      }
+    },
+    [addBufferToPane, pane.id, setActivePane, setActivePaneBuffer, splitPane],
   );
 
   const getCarouselWidthBounds = useCallback(() => {
@@ -521,9 +550,16 @@ export function PaneContainer({ pane }: PaneContainerProps) {
     const hasTabData =
       e.dataTransfer.types.includes("application/tab-data") || !!getInternalTabDragData();
     const hasFilePath = e.dataTransfer.types.includes("text/plain");
+    const hasSidebarResource = hasSidebarResourceDragData(e.dataTransfer);
     const hasFileDragData = !!window.__fileDragData;
 
-    if (hasTabData || hasFilePath || hasFileDragData || e.dataTransfer.types.includes("Files")) {
+    if (
+      hasTabData ||
+      hasSidebarResource ||
+      hasFilePath ||
+      hasFileDragData ||
+      e.dataTransfer.types.includes("Files")
+    ) {
       e.dataTransfer.dropEffect = "move";
       setIsDragOver(true);
       if (hasTabData) {
@@ -657,6 +693,12 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         return;
       }
 
+      const sidebarResource = readSidebarResourceDragData(e.dataTransfer);
+      if (sidebarResource) {
+        await openSidebarResourceInPane(sidebarResource, { x: e.clientX, y: e.clientY });
+        return;
+      }
+
       const droppedPaths = extractDroppedFilePaths(e.dataTransfer);
       if (droppedPaths.length > 0 && handleFileOpen) {
         for (const droppedPath of droppedPaths) {
@@ -675,6 +717,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       setActivePaneBuffer,
       openBuffer,
       handleFileOpen,
+      openSidebarResourceInPane,
     ],
   );
 

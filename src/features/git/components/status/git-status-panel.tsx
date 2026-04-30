@@ -2,6 +2,7 @@ import { Archive, Check, FileText, Minus, Plus, Trash as Trash2 } from "@phospho
 import type React from "react";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
+import { writeSidebarResourceDragData } from "@/features/sidebar-drag/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/store";
 import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
@@ -355,6 +356,7 @@ const GitStatusPanel = ({
               onUnstage={() => handleUnstageFile(file.path)}
               disabled={isLoading}
               showFileIcon
+              repoPath={repoPath}
             />
           ))}
         </div>
@@ -404,8 +406,18 @@ const GitStatusPanel = ({
                 type="button"
                 onClick={() => toggleFolderCollapsed(section, folderNode.fullPath)}
                 variant="ghost"
-                className="file-tree-row ui-font ui-text-sm mx-1 flex h-6 w-[calc(100%-8px)] justify-start gap-1.5 rounded-md px-1.5 py-1 text-left text-text hover:bg-hover"
+                className="file-tree-row ui-font ui-text-sm mx-1 flex h-6 w-[calc(100%-8px)] cursor-grab justify-start gap-1.5 rounded-md px-1.5 py-1 text-left text-text hover:bg-hover active:cursor-grabbing"
                 style={{ paddingLeft: `${paddingLeft}px`, paddingRight: "8px" }}
+                draggable={!!repoPath}
+                onDragStart={(event) => {
+                  if (!repoPath) return;
+                  writeSidebarResourceDragData(event.dataTransfer, {
+                    type: "file",
+                    path: `${repoPath}/${folderNode.fullPath}`,
+                    name: folderNode.name,
+                    isDir: true,
+                  });
+                }}
               >
                 <FileExplorerIcon
                   fileName={folderNode.name}
@@ -452,6 +464,7 @@ const GitStatusPanel = ({
           showDirectory={false}
           showFileIcon
           indentLevel={depth}
+          repoPath={repoPath}
         />
       ));
 
