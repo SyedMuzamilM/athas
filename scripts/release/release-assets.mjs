@@ -131,38 +131,14 @@ function requiredAssets(version, channel) {
       checksum: true,
     },
     {
-      id: "linux-x64-appimage",
-      pattern: new RegExp(`^${appPrefix}_${escapedVersion}_amd64\\.AppImage$`),
+      id: "linux-x64-tarball",
+      pattern: new RegExp(`^${appPrefix}_${escapedVersion}_linux-x86_64\\.tar\\.gz$`),
       signature: true,
       checksum: true,
     },
     {
-      id: "linux-arm64-appimage",
-      pattern: new RegExp(`^${appPrefix}_${escapedVersion}_aarch64\\.AppImage$`),
-      signature: true,
-      checksum: true,
-    },
-    {
-      id: "linux-x64-deb",
-      pattern: new RegExp(`^${appPrefix}_${escapedVersion}_amd64\\.deb$`),
-      signature: true,
-      checksum: true,
-    },
-    {
-      id: "linux-arm64-deb",
-      pattern: new RegExp(`^${appPrefix}_${escapedVersion}_arm64\\.deb$`),
-      signature: true,
-      checksum: true,
-    },
-    {
-      id: "linux-x64-rpm",
-      pattern: new RegExp(`^${appPrefix}-${escapedVersion}-1\\.x86_64\\.rpm$`),
-      signature: true,
-      checksum: true,
-    },
-    {
-      id: "linux-arm64-rpm",
-      pattern: new RegExp(`^${appPrefix}-${escapedVersion}-1\\.aarch64\\.rpm$`),
+      id: "linux-arm64-tarball",
+      pattern: new RegExp(`^${appPrefix}_${escapedVersion}_linux-aarch64\\.tar\\.gz$`),
       signature: true,
       checksum: true,
     },
@@ -178,25 +154,19 @@ function requiredAssets(version, channel) {
       signature: true,
       checksum: true,
     },
-    {
-      id: "windows-x64-machine-nsis",
-      pattern: new RegExp(`^${appPrefix}_${escapedVersion}_x64-setup-machine\\.exe$`),
-      signature: true,
-      checksum: true,
-    },
-    {
-      id: "windows-arm64-machine-nsis",
-      pattern: new RegExp(`^${appPrefix}_${escapedVersion}_arm64-setup-machine\\.exe$`),
-      signature: true,
-      checksum: true,
-    },
   ];
 }
 
 function forbiddenAssetPatterns(version) {
   const escapedVersion = escapeRegExp(version);
   const appPrefix = "Athas(?: Preview)?";
-  return [new RegExp(`^${appPrefix}_${escapedVersion}_(?:x64|arm64)_en-US\\.msi(?:\\.sig)?$`)];
+  return [
+    new RegExp(`^${appPrefix}_${escapedVersion}_(?:x64|arm64)_en-US\\.msi(?:\\.sig)?$`),
+    new RegExp(`^${appPrefix}_${escapedVersion}_(?:amd64|aarch64)\\.AppImage(?:\\.sig)?$`),
+    new RegExp(`^${appPrefix}_${escapedVersion}_(?:amd64|arm64)\\.deb(?:\\.sig)?$`),
+    new RegExp(`^${appPrefix}-${escapedVersion}-1\\.(?:x86_64|aarch64)\\.rpm(?:\\.sig)?$`),
+    new RegExp(`^${appPrefix}_${escapedVersion}_(?:x64|arm64)-setup-machine\\.exe(?:\\.sig)?$`),
+  ];
 }
 
 function findRequiredAsset(filesByName, required) {
@@ -262,12 +232,8 @@ function buildLatestJson({ tag, repo, notes, assets }) {
   const version = versionFromTag(tag);
   const macArm = assetById(assets, "macos-arm64-updater");
   const macX64 = assetById(assets, "macos-x64-updater");
-  const linuxX64AppImage = assetById(assets, "linux-x64-appimage");
-  const linuxArmAppImage = assetById(assets, "linux-arm64-appimage");
-  const linuxX64Deb = assetById(assets, "linux-x64-deb");
-  const linuxArmDeb = assetById(assets, "linux-arm64-deb");
-  const linuxX64Rpm = assetById(assets, "linux-x64-rpm");
-  const linuxArmRpm = assetById(assets, "linux-arm64-rpm");
+  const linuxX64Tarball = assetById(assets, "linux-x64-tarball");
+  const linuxArmTarball = assetById(assets, "linux-arm64-tarball");
   const winX64Nsis = assetById(assets, "windows-x64-nsis");
   const winArmNsis = assetById(assets, "windows-arm64-nsis");
 
@@ -293,36 +259,20 @@ function buildLatestJson({ tag, repo, notes, assets }) {
         url: releaseUrl(repo, tag, macX64.name),
       },
       "linux-aarch64": {
-        signature: readSignature(linuxArmAppImage.signaturePath),
-        url: releaseUrl(repo, tag, linuxArmAppImage.name),
+        signature: readSignature(linuxArmTarball.signaturePath),
+        url: releaseUrl(repo, tag, linuxArmTarball.name),
       },
-      "linux-aarch64-appimage": {
-        signature: readSignature(linuxArmAppImage.signaturePath),
-        url: releaseUrl(repo, tag, linuxArmAppImage.name),
-      },
-      "linux-aarch64-deb": {
-        signature: readSignature(linuxArmDeb.signaturePath),
-        url: releaseUrl(repo, tag, linuxArmDeb.name),
-      },
-      "linux-aarch64-rpm": {
-        signature: readSignature(linuxArmRpm.signaturePath),
-        url: releaseUrl(repo, tag, linuxArmRpm.name),
+      "linux-aarch64-tar.gz": {
+        signature: readSignature(linuxArmTarball.signaturePath),
+        url: releaseUrl(repo, tag, linuxArmTarball.name),
       },
       "linux-x86_64": {
-        signature: readSignature(linuxX64AppImage.signaturePath),
-        url: releaseUrl(repo, tag, linuxX64AppImage.name),
+        signature: readSignature(linuxX64Tarball.signaturePath),
+        url: releaseUrl(repo, tag, linuxX64Tarball.name),
       },
-      "linux-x86_64-appimage": {
-        signature: readSignature(linuxX64AppImage.signaturePath),
-        url: releaseUrl(repo, tag, linuxX64AppImage.name),
-      },
-      "linux-x86_64-deb": {
-        signature: readSignature(linuxX64Deb.signaturePath),
-        url: releaseUrl(repo, tag, linuxX64Deb.name),
-      },
-      "linux-x86_64-rpm": {
-        signature: readSignature(linuxX64Rpm.signaturePath),
-        url: releaseUrl(repo, tag, linuxX64Rpm.name),
+      "linux-x86_64-tar.gz": {
+        signature: readSignature(linuxX64Tarball.signaturePath),
+        url: releaseUrl(repo, tag, linuxX64Tarball.name),
       },
       "windows-x86_64": {
         signature: readSignature(winX64Nsis.signaturePath),
@@ -399,13 +349,9 @@ function validateLatestJson(latestJson, { tag, repo, assetNames }) {
     "darwin-x86_64",
     "darwin-x86_64-app",
     "linux-aarch64",
-    "linux-aarch64-appimage",
-    "linux-aarch64-deb",
-    "linux-aarch64-rpm",
+    "linux-aarch64-tar.gz",
     "linux-x86_64",
-    "linux-x86_64-appimage",
-    "linux-x86_64-deb",
-    "linux-x86_64-rpm",
+    "linux-x86_64-tar.gz",
     "windows-x86_64",
     "windows-x86_64-nsis",
     "windows-aarch64",

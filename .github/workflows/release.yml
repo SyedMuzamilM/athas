@@ -184,7 +184,7 @@ jobs:
         if: matrix.os == 'linux'
         uses: actions/cache@v4
         with:
-          path: ~/.local/share/cef
+          path: .cache/tauri-cef
           key: ${{ runner.os }}-${{ runner.arch }}-cef-v146.4.1
 
       - name: Cache Bun dependencies
@@ -328,14 +328,34 @@ jobs:
           APPLE_ID: ${{ matrix.os == 'macos' && secrets.APPLE_ID || '' }}
           APPLE_PASSWORD: ${{ matrix.os == 'macos' && secrets.APPLE_PASSWORD || '' }}
           APPLE_TEAM_ID: ${{ matrix.os == 'macos' && secrets.APPLE_TEAM_ID || '' }}
+          CEF_PATH: ${{ matrix.os == 'linux' && format('{0}/.cache/tauri-cef', github.workspace) || '' }}
           NO_STRIP: ${{ matrix.os == 'linux' && 'true' || '' }}
           RUSTFLAGS: ${{ matrix.rustflags }}
         run: |
           if [[ "${{ matrix.os }}" == "linux" ]]; then
-            cargo tauri build ${{ matrix.args }} ${{ needs.release-metadata.outputs.is_prerelease == 'true' && '--config src-tauri/tauri.preview.conf.json' || '' }} -- ${{ matrix.cargo_features }}
+            cargo tauri build --no-bundle ${{ needs.release-metadata.outputs.is_prerelease == 'true' && '--config src-tauri/tauri.preview.conf.json' || '' }} -- ${{ matrix.cargo_features }}
           else
             bun tauri build ${{ matrix.args }} ${{ needs.release-metadata.outputs.is_prerelease == 'true' && '--config src-tauri/tauri.preview.conf.json' || '' }}
           fi
+
+      - name: Package Linux CEF tarball (Linux only)
+        if: matrix.os == 'linux'
+        env:
+          ATHAS_RELEASE_CHANNEL: ${{ needs.release-metadata.outputs.is_prerelease == 'true' && 'preview' || 'stable' }}
+          CEF_PATH: ${{ github.workspace }}/.cache/tauri-cef
+        run: bash scripts/release/package-linux-cef-tarball.sh "${{ runner.arch }}" release-dist
+
+      - name: Sign Linux CEF tarball (Linux only)
+        if: matrix.os == 'linux'
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for archive in release-dist/*.tar.gz; do
+            bun tauri signer sign "$archive"
+            test -s "${archive}.sig"
+          done
 
       - name: Collect Windows user installer (Windows only)
         if: matrix.os == 'windows'
@@ -355,41 +375,6 @@ jobs:
             throw "Could not find updater signature for $($setup.Name)."
           }
 
-      - name: Build Windows machine installer (Windows only)
-        if: matrix.os == 'windows'
-        shell: pwsh
-        env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        run: |
-          $configArgs = @()
-          if ("${{ needs.release-metadata.outputs.is_prerelease }}" -eq "true") {
-            $configArgs += @("--config", "src-tauri/tauri.preview.conf.json")
-          }
-          $configArgs += @(
-            "--config",
-            '{"bundle":{"createUpdaterArtifacts":true,"windows":{"nsis":{"installMode":"perMachine"}}}}'
-          )
-
-          bun tauri bundle ${{ matrix.args }} --bundles nsis @configArgs
-
-          $setup = Get-ChildItem -Recurse -Path "${{ matrix.bundle_path }}" -File -Filter "*-setup.exe" |
-            Sort-Object LastWriteTime -Descending |
-            Select-Object -First 1
-          if (-not $setup) {
-            throw "Could not find machine installer."
-          }
-
-          $dest = Join-Path "release-dist" ($setup.Name -replace '-setup\.exe$', '-setup-machine.exe')
-          $destSig = "$dest.sig"
-          Copy-Item $setup.FullName $dest
-          if (Test-Path "$($setup.FullName).sig") {
-            Copy-Item "$($setup.FullName).sig" $destSig
-            Remove-Item "$($setup.FullName).sig" -Force
-          } else {
-            throw "Could not find updater signature for $($setup.Name)."
-          }
-
       - name: Upload platform artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -397,9 +382,6 @@ jobs:
           path: |
             ${{ matrix.bundle_path }}/**/*.dmg
             ${{ matrix.bundle_path }}/**/*.app.tar.gz
-            ${{ matrix.bundle_path }}/**/*.AppImage
-            ${{ matrix.bundle_path }}/**/*.deb
-            ${{ matrix.bundle_path }}/**/*.rpm
             ${{ matrix.bundle_path }}/**/*.sig
             release-dist/*
           if-no-files-found: error

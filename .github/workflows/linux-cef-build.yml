@@ -30,11 +30,12 @@ concurrency:
 jobs:
   build:
     if: github.repository == 'athasdev/athas'
-    name: Build Linux CEF bundles
+    name: Build Linux CEF tarball
     runs-on: ${{ inputs.runner || 'ubuntu-22.04' }}
     timeout-minutes: 120
     env:
       CARGO_TERM_COLOR: always
+      CEF_PATH: ${{ github.workspace }}/.cache/tauri-cef
       NO_STRIP: "true"
     steps:
       - uses: actions/checkout@v6
@@ -72,7 +73,7 @@ jobs:
       - name: Cache CEF binaries
         uses: actions/cache@v4
         with:
-          path: ~/.local/share/cef
+          path: .cache/tauri-cef
           key: ${{ runner.os }}-${{ runner.arch }}-cef-v146.4.1
 
       - name: Cache Bun dependencies
@@ -111,20 +112,21 @@ jobs:
             exit 1
           fi
 
-      - name: Build Linux CEF bundles
+      - name: Build Linux CEF app
         run: |
           cargo tauri build \
-            --bundles deb,rpm \
+            --no-bundle \
             --config '{"bundle":{"createUpdaterArtifacts":false}}' \
             -- \
             --no-default-features \
             --features linux-cef
 
-      - name: Upload Linux CEF bundles
+      - name: Package Linux CEF tarball
+        run: bash scripts/release/package-linux-cef-tarball.sh "${{ runner.arch }}" release-dist
+
+      - name: Upload Linux CEF tarball
         uses: actions/upload-artifact@v4
         with:
           name: linux-cef-${{ runner.arch }}
-          path: |
-            target/release/bundle/**/*.deb
-            target/release/bundle/**/*.rpm
+          path: release-dist/*.tar.gz
           if-no-files-found: error

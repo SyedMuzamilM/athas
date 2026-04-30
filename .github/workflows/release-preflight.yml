@@ -44,7 +44,7 @@ jobs:
           bun -e '
             const config = JSON.parse(await Bun.file("src-tauri/tauri.conf.json").text());
             const targets = config.bundle?.targets ?? [];
-            const expected = ["app", "appimage", "deb", "dmg", "nsis", "rpm"];
+            const expected = ["app", "dmg", "nsis"];
             if (JSON.stringify(targets) !== JSON.stringify(expected)) {
               throw new Error(`Unexpected bundle targets: ${JSON.stringify(targets)}`);
             }

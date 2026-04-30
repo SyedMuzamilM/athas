@@ -21,7 +21,7 @@
     "dev:stable": "bun scripts/check-zig.ts && WEBKIT_DISABLE_DMABUF_RENDERER=1 tauri dev",
     "dev:preview": "bun scripts/check-zig.ts && WEBKIT_DISABLE_DMABUF_RENDERER=1 tauri dev --config src-tauri/tauri.preview.conf.json",
     "build:stable": "bun scripts/check-zig.ts && tauri build",
-    "build:linux-cef": "bun scripts/check-zig.ts && cargo tauri build -- --no-default-features --features linux-cef",
+    "build:linux-cef": "bun scripts/check-zig.ts && cargo tauri build --no-bundle -- --no-default-features --features linux-cef && bash scripts/release/package-linux-cef-tarball.sh $(uname -m) release-dist",
     "build:preview": "bun scripts/check-zig.ts && tauri build --config src-tauri/tauri.preview.conf.json",
     "build:dev": "bun scripts/check-zig.ts && tauri build --config src-tauri/tauri.dev.conf.json",
     "smoke": "bun scripts/smoke-app.ts",
