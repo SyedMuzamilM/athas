@@ -1,10 +1,10 @@
-name: "Linux CEF Build"
+name: "Linux Build"
 
 on:
   pull_request:
     branches: [master]
     paths:
-      - ".github/workflows/linux-cef-build.yml"
+      - ".github/workflows/linux-build.yml"
       - ".github/workflows/release.yml"
       - "Cargo.lock"
       - "Cargo.toml"
@@ -12,6 +12,7 @@ on:
       - "src-tauri/**"
       - "package.json"
       - "bun.lock"
+      - "scripts/release/package-linux-tarball.sh"
   workflow_dispatch:
     inputs:
       runner:
@@ -30,7 +31,7 @@ concurrency:
 jobs:
   build:
     if: github.repository == 'athasdev/athas'
-    name: Build Linux CEF tarball
+    name: Build Linux tarball
     runs-on: ${{ inputs.runner || 'ubuntu-22.04' }}
     timeout-minutes: 120
     env:
@@ -95,38 +96,38 @@ jobs:
       - name: Install frontend dependencies
         run: bun install --ignore-scripts && bun scripts/postinstall.ts
 
-      - name: Check Linux CEF feature graph
+      - name: Check Linux feature graph
         run: |
           set -euo pipefail
-          cargo tree -p athas --no-default-features --features linux-cef -i tauri-runtime-cef
-          cargo tree -p athas --no-default-features --features linux-cef -i tauri-runtime-wry >/tmp/tauri-runtime-wry.txt 2>&1 || true
+          cargo tree -p athas --no-default-features --features cef -i tauri-runtime-cef
+          cargo tree -p athas --no-default-features --features cef -i tauri-runtime-wry >/tmp/tauri-runtime-wry.txt 2>&1 || true
           if grep -q '^tauri-runtime-wry ' /tmp/tauri-runtime-wry.txt; then
-            echo "tauri-runtime-wry must not be present in the Linux CEF build"
+            echo "tauri-runtime-wry must not be present in the Linux build"
             cat /tmp/tauri-runtime-wry.txt
             exit 1
           fi
-          cargo tree -p athas --no-default-features --features linux-cef -i webkit2gtk >/tmp/webkit2gtk.txt 2>&1 || true
+          cargo tree -p athas --no-default-features --features cef -i webkit2gtk >/tmp/webkit2gtk.txt 2>&1 || true
           if grep -q '^webkit2gtk ' /tmp/webkit2gtk.txt; then
-            echo "webkit2gtk must not be present in the Linux CEF build"
+            echo "webkit2gtk must not be present in the Linux build"
             cat /tmp/webkit2gtk.txt
             exit 1
           fi
 
-      - name: Build Linux CEF app
+      - name: Build Linux app
         run: |
           cargo tauri build \
             --no-bundle \
             --config '{"bundle":{"createUpdaterArtifacts":false}}' \
             -- \
             --no-default-features \
-            --features linux-cef
+            --features cef
 
-      - name: Package Linux CEF tarball
-        run: bash scripts/release/package-linux-cef-tarball.sh "${{ runner.arch }}" release-dist
+      - name: Package Linux tarball
+        run: bash scripts/release/package-linux-tarball.sh "${{ runner.arch }}" release-dist
 
-      - name: Upload Linux CEF tarball
+      - name: Upload Linux tarball
         uses: actions/upload-artifact@v4
         with:
-          name: linux-cef-${{ runner.arch }}
+          name: linux-${{ runner.arch }}
           path: release-dist/*.tar.gz
           if-no-files-found: error

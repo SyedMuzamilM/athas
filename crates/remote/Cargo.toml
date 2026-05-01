@@ -6,7 +6,7 @@ edition = "2024"
 [features]
 default = ["tauri-wry"]
 tauri-wry = ["tauri/wry", "tauri/x11"]
-linux-cef = ["tauri/cef"]
+cef = ["tauri/cef"]
 
 [dependencies]
 lazy_static = "1.4"

@@ -1,7 +1,7 @@
-#[cfg(all(target_os = "linux", feature = "linux-cef"))]
+#[cfg(all(target_os = "linux", feature = "cef"))]
 pub type AthasRuntime = tauri::Cef;
 
-#[cfg(not(all(target_os = "linux", feature = "linux-cef")))]
+#[cfg(not(all(target_os = "linux", feature = "cef")))]
 pub type AthasRuntime = tauri::Wry;
 
 pub type AppHandle = tauri::AppHandle<AthasRuntime>;

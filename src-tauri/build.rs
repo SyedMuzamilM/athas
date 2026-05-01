@@ -3,7 +3,7 @@ fn main() {
       println!("cargo:rustc-link-arg-bin=athas=/NODEFAULTLIB:libvcruntime.lib");
    }
 
-   if std::env::var_os("CARGO_FEATURE_LINUX_CEF").is_some()
+   if std::env::var_os("CARGO_FEATURE_CEF").is_some()
       && std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("linux")
    {
       println!("cargo:rustc-link-arg-bin=athas=-Wl,-rpath,$ORIGIN");

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-arch_input="${1:?Usage: package-linux-cef-tarball.sh <arch> [out-dir]}"
+arch_input="${1:?Usage: package-linux-tarball.sh <arch> [out-dir]}"
 out_dir="${2:-release-dist}"
 channel="${ATHAS_RELEASE_CHANNEL:-stable}"
 
@@ -74,7 +74,7 @@ find_cef_dir() {
 
 cef_dir="$(find_cef_dir)" || {
   echo "Could not find a CEF distribution containing libcef.so." >&2
-  echo "Set CEF_PATH or run the Linux CEF build first." >&2
+  echo "Set CEF_PATH or run the Linux build first." >&2
   exit 1
 }
 
@@ -177,7 +177,7 @@ for required in \
 do
   if ! grep -Fxq "$required" "$archive_contents" \
     && ! grep -Fxq "${required}/" "$archive_contents"; then
-    echo "Linux CEF tarball is missing ${required}" >&2
+    echo "Linux tarball is missing ${required}" >&2
     exit 1
   fi
 done

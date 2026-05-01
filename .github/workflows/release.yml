@@ -105,7 +105,7 @@ jobs:
             artifact: "linux-x86_64"
             os: "linux"
             args: ""
-            cargo_features: "--no-default-features --features linux-cef"
+            cargo_features: "--no-default-features --features cef"
             target: ""
             bundle_path: "target/release/bundle"
             timeout_minutes: 120
@@ -114,7 +114,7 @@ jobs:
             artifact: "linux-aarch64"
             os: "linux"
             args: ""
-            cargo_features: "--no-default-features --features linux-cef"
+            cargo_features: "--no-default-features --features cef"
             target: ""
             bundle_path: "target/release/bundle"
             timeout_minutes: 120
@@ -338,14 +338,14 @@ jobs:
             bun tauri build ${{ matrix.args }} ${{ needs.release-metadata.outputs.is_prerelease == 'true' && '--config src-tauri/tauri.preview.conf.json' || '' }}
           fi
 
-      - name: Package Linux CEF tarball (Linux only)
+      - name: Package Linux tarball (Linux only)
         if: matrix.os == 'linux'
         env:
           ATHAS_RELEASE_CHANNEL: ${{ needs.release-metadata.outputs.is_prerelease == 'true' && 'preview' || 'stable' }}
           CEF_PATH: ${{ github.workspace }}/.cache/tauri-cef
-        run: bash scripts/release/package-linux-cef-tarball.sh "${{ runner.arch }}" release-dist
+        run: bash scripts/release/package-linux-tarball.sh "${{ runner.arch }}" release-dist
 
-      - name: Sign Linux CEF tarball (Linux only)
+      - name: Sign Linux tarball (Linux only)
         if: matrix.os == 'linux'
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
