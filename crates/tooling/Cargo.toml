@@ -6,7 +6,7 @@ edition = "2024"
 [features]
 default = ["tauri-wry"]
 tauri-wry = ["tauri/wry", "tauri/x11"]
-cef = ["tauri/cef"]
+linux = ["tauri/cef"]
 
 [dependencies]
 athas-runtime = { path = "../runtime" }

@@ -18,14 +18,14 @@ tauri-wry = [
   "tauri/wry",
   "tauri/x11",
 ]
-cef = [
-  "athas-ai/cef",
-  "athas-debugger/cef",
-  "athas-extensions/cef",
-  "athas-lsp/cef",
-  "athas-remote/cef",
-  "athas-terminal/cef",
-  "athas-tooling/cef",
+linux = [
+  "athas-ai/linux",
+  "athas-debugger/linux",
+  "athas-extensions/linux",
+  "athas-lsp/linux",
+  "athas-remote/linux",
+  "athas-terminal/linux",
+  "athas-tooling/linux",
   "tauri/cef",
 ]
 

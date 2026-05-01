@@ -6,7 +6,7 @@ edition = "2024"
 [features]
 default = ["tauri-wry"]
 tauri-wry = ["athas-terminal/tauri-wry", "tauri/wry", "tauri/x11"]
-cef = ["athas-terminal/cef", "tauri/cef"]
+linux = ["athas-terminal/linux", "tauri/cef"]
 
 [dependencies]
 agent-client-protocol = { version = "0.9", features = [
