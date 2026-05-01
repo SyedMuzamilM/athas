@@ -165,6 +165,9 @@ archive_name="${product_name}_${version}_linux-${arch}.tar.gz"
 archive_path="${out_dir}/${archive_name}"
 tar -C "$staging" -czf "$archive_path" "$app_dir_name"
 
+archive_contents="${staging}/archive-contents.txt"
+tar -tzf "$archive_path" > "$archive_contents"
+
 for required in \
   "${app_dir_name}/libexec/athas" \
   "${app_dir_name}/libexec/libcef.so" \
@@ -172,8 +175,8 @@ for required in \
   "${app_dir_name}/libexec/locales/en-US.pak" \
   "${app_dir_name}/lib/${product_name}/bundled"
 do
-  if ! tar -tzf "$archive_path" | grep -Fxq "$required" \
-    && ! tar -tzf "$archive_path" | grep -Fxq "${required}/"; then
+  if ! grep -Fxq "$required" "$archive_contents" \
+    && ! grep -Fxq "${required}/" "$archive_contents"; then
     echo "Linux CEF tarball is missing ${required}" >&2
     exit 1
   fi
