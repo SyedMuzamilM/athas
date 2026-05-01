@@ -547,6 +547,7 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
             e.preventDefault();
             e.stopPropagation();
             clearKeyBuffer();
+            facade.saveUndoState();
             setMode("insert");
             return true;
           }
@@ -573,6 +574,7 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
             // Update textarea cursor
             facade.collapseSelection(newOffset);
 
+            facade.saveUndoState();
             setMode("insert");
             return true;
           }
@@ -583,6 +585,7 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
           e.stopPropagation();
           clearKeyBuffer();
           vimEdit.appendToLine();
+          facade.saveUndoState();
           setMode("insert");
           return true;
         case "I":
@@ -590,6 +593,7 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
           e.stopPropagation();
           clearKeyBuffer();
           vimEdit.insertAtLineStart();
+          facade.saveUndoState();
           setMode("insert");
           return true;
         case "o": {
@@ -700,9 +704,35 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
           }
           e.preventDefault();
           e.stopPropagation();
-          clearKeyBuffer();
-          vimEdit.undo();
+          {
+            // Read count from key buffer (e.g., "4u" undo 4 changes)
+            const buffer = getKeyBuffer();
+            const countStr = buffer.join("");
+            const count = countStr ? parseInt(countStr, 10) : 1;
+            clearKeyBuffer();
+            vimEdit.undo(Number.isNaN(count) ? 1 : count);
+          }
           return true;
+        case "-":
+          // g-: go to older text state (undo)
+          if (getKeyBuffer().join("") === "g") {
+            e.preventDefault();
+            e.stopPropagation();
+            clearKeyBuffer();
+            vimEdit.undo();
+            return true;
+          }
+          break;
+        case "+":
+          // g+: go to newer text state (redo)
+          if (getKeyBuffer().join("") === "g") {
+            e.preventDefault();
+            e.stopPropagation();
+            clearKeyBuffer();
+            vimEdit.redo();
+            return true;
+          }
+          break;
         case "d": {
           if (e.ctrlKey) {
             e.preventDefault();
@@ -757,8 +787,12 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
           if (e.ctrlKey) {
             e.preventDefault();
             e.stopPropagation();
+            // Read count from key buffer (e.g., "4<C-r>" redo 4 changes)
+            const buffer = getKeyBuffer();
+            const countStr = buffer.join("");
+            const count = countStr ? parseInt(countStr, 10) : 1;
             clearKeyBuffer();
-            vimEdit.redo();
+            vimEdit.redo(Number.isNaN(count) ? 1 : count);
             return true;
           }
           // Wait for next character for replace
@@ -1090,6 +1124,40 @@ export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
           e.stopPropagation();
           enterCommandMode();
           return true;
+        case "u":
+        case "U": {
+          e.preventDefault();
+          e.stopPropagation();
+          if (visualSelection.start && visualSelection.end) {
+            const lines = useEditorViewStore.getState().lines;
+            const selectionOffsets = getVisualSelectionOffsets(
+              visualSelection.start,
+              visualSelection.end,
+              lines,
+              currentVisualMode,
+            );
+            if (selectionOffsets) {
+              const content = facade.getContent();
+              const selectedText = content.slice(selectionOffsets.start, selectionOffsets.end);
+              const transformed =
+                key === "u" ? selectedText.toLowerCase() : selectedText.toUpperCase();
+              const newContent =
+                content.slice(0, selectionOffsets.start) +
+                transformed +
+                content.slice(selectionOffsets.end);
+              facade.saveUndoState();
+              facade.setContent(newContent);
+              facade.collapseSelection(selectionOffsets.start);
+              setCursorPosition({
+                line: visualSelection.start.line,
+                column: visualSelection.start.column,
+                offset: selectionOffsets.start,
+              });
+            }
+          }
+          setMode("normal");
+          return true;
+        }
         case "d":
         case "y":
         case "c": {

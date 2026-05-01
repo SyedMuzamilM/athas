@@ -5,6 +5,7 @@ import { useHistoryStore } from "@/features/editor/stores/history-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { createDomEditorFacade } from "@/features/vim/core/dom-editor-facade";
 import { useVimStore } from "./vim-store";
+import { createVimEditing } from "./vim-editing";
 
 export interface VimCommand {
   name: string;
@@ -172,6 +173,62 @@ const terminalCommand: VimCommand = {
   },
 };
 
+// Undo
+const undoCommand: VimCommand = {
+  name: "undo",
+  aliases: ["u"],
+  description: "Undo the last change",
+  execute: async () => {
+    createVimEditing().undo();
+  },
+};
+
+// Redo
+const redoCommand: VimCommand = {
+  name: "redo",
+  aliases: ["red"],
+  description: "Redo the last undone change",
+  execute: async () => {
+    createVimEditing().redo();
+  },
+};
+
+// Earlier: go back N changes (or time)
+const earlierCommand: VimCommand = {
+  name: "earlier",
+  aliases: ["ea"],
+  description: "Go back in time (N changes or time)",
+  execute: async (args?: string[]) => {
+    const vimEdit = createVimEditing();
+    let count = 1;
+    if (args && args.length > 0) {
+      const parsed = parseInt(args[0], 10);
+      if (!Number.isNaN(parsed)) {
+        count = parsed;
+      }
+    }
+    vimEdit.undo(count);
+  },
+};
+
+// Later: go forward N changes (or time)
+const laterCommand: VimCommand = {
+  name: "later",
+  aliases: ["lat"],
+  description: "Go forward in time (N changes or time)",
+  execute: async (args?: string[]) => {
+    const vimEdit = createVimEditing();
+    let count = 1;
+    if (args && args.length > 0) {
+      const parsed = parseInt(args[0], 10);
+      if (!Number.isNaN(parsed)) {
+        count = parsed;
+      }
+    }
+    vimEdit.redo(count);
+  },
+};
+
 // Available vim commands
 export const vimCommands: VimCommand[] = [
   writeCommand,
@@ -184,6 +241,10 @@ export const vimCommands: VimCommand[] = [
   setOptionCommand,
   sidebarCommand,
   terminalCommand,
+  undoCommand,
+  redoCommand,
+  earlierCommand,
+  laterCommand,
 ];
 
 // Parse and execute vim command

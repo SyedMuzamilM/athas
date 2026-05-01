@@ -1,3 +1,4 @@
+import { current } from "immer";
 import isEqual from "fast-deep-equal";
 import { immer } from "zustand/middleware/immer";
 import { createWithEqualityFn } from "zustand/traditional";
@@ -42,6 +43,12 @@ export const useHistoryStore = createSelectors(
 
             const history = state.bufferHistories[bufferId];
 
+            // Skip if content is identical to the top of the past stack (dedup)
+            const topEntry = history.past[history.past.length - 1];
+            if (topEntry && topEntry.content === entry.content) {
+              return;
+            }
+
             // Add to past
             history.past.push(entry);
 
@@ -69,7 +76,8 @@ export const useHistoryStore = createSelectors(
               const lastEntry = hist.past.pop();
               if (lastEntry) {
                 hist.future.push(lastEntry);
-                entry = lastEntry;
+                // Use immer's current() to get a plain snapshot
+                entry = current(lastEntry) as HistoryEntry;
               }
             }
           });
@@ -91,7 +99,8 @@ export const useHistoryStore = createSelectors(
               const nextEntry = hist.future.pop();
               if (nextEntry) {
                 hist.past.push(nextEntry);
-                entry = nextEntry;
+                // Use immer's current() to get a plain snapshot
+                entry = current(nextEntry) as HistoryEntry;
               }
             }
           });

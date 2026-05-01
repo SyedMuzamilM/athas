@@ -3,6 +3,7 @@ import { combine } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import { useSettingsStore } from "@/features/settings/store";
 import { createSelectors } from "@/utils/zustand-selectors";
+import { pauseAutoHistory, resumeAutoHistory } from "@/features/editor/stores/editor-app-store";
 
 export type VimMode = "normal" | "insert" | "visual" | "command";
 
@@ -75,6 +76,17 @@ const useVimStoreBase = create(
     combine(defaultVimState, (set, get) => ({
       actions: {
         setMode: (mode: VimMode) => {
+          const previousMode = get().mode;
+
+          // Pause auto-history when entering insert mode,
+          // resume when leaving it. This ensures the entire
+          // insert session is a single undo entry.
+          if (previousMode !== "insert" && mode === "insert") {
+            pauseAutoHistory();
+          } else if (previousMode === "insert" && mode !== "insert") {
+            resumeAutoHistory();
+          }
+
           set((state) => {
             state.mode = mode;
             // Clear key buffer when switching modes

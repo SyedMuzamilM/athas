@@ -18,8 +18,8 @@ export interface VimEditorFacade {
   /** Current editor content as a single string */
   getContent(): string;
 
-  /** Replace the entire editor content */
-  setContent(value: string): void;
+  /** Replace the entire editor content. Pass markDirty=false to suppress the dirty flag. */
+  setContent(value: string, markDirty?: boolean): void;
 
   /** Current content split into lines */
   getLines(): string[];

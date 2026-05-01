@@ -5,14 +5,15 @@ import { calculateOffsetFromPosition } from "@/features/editor/utils/position";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
 import { useVimStore } from "@/features/vim/stores/vim-store";
 import { createDomEditorFacade } from "@/features/vim/core/dom-editor-facade";
+import { editorAPI } from "@/features/editor/extensions/api";
 
 export interface VimEditingCommands {
   deleteLine: () => void;
   yankLine: () => void;
   paste: () => void;
   pasteAbove: () => void;
-  undo: () => void;
-  redo: () => void;
+  undo: (count?: number) => void;
+  redo: (count?: number) => void;
   deleteChar: () => void;
   deleteCharBefore: () => void;
   replaceChar: (char: string) => void;
@@ -34,8 +35,8 @@ export const createVimEditing = (): VimEditingCommands => {
   const getContent = () => facade.getContent();
 
   // Update buffer content
-  const updateContent = (newContent: string) => {
-    facade.setContent(newContent);
+  const updateContent = (newContent: string, markDirty?: boolean) => {
+    facade.setContent(newContent, markDirty);
   };
 
   // Save state for undo
@@ -158,61 +159,32 @@ export const createVimEditing = (): VimEditingCommands => {
       updateTextareaCursor(newPosition);
     },
 
-    undo: () => {
+    undo: (count = 1) => {
       const { activeBufferId } = useBufferStore.getState();
       if (!activeBufferId) return;
 
       const historyStore = useHistoryStore.getState();
-      if (!historyStore.actions.canUndo(activeBufferId)) return;
 
-      const currentPos = getCursorPosition();
-
-      // Get previous state from history
-      const entry = historyStore.actions.undo(activeBufferId);
-      if (!entry) return;
-
-      // Restore content
-      updateContent(entry.content);
-
-      // Restore cursor position if available, otherwise maintain current position
-      if (entry.cursorPosition) {
-        setCursorPosition(entry.cursorPosition);
-        updateTextareaCursor(entry.cursorPosition);
-      } else {
-        // Try to maintain cursor position within new content bounds
-        const newLines = entry.content.split("\n");
-        const newLine = Math.min(currentPos.line, newLines.length - 1);
-        const newColumn = Math.min(currentPos.column, newLines[newLine].length);
-        const newOffset = calculateOffsetFromPosition(newLine, newColumn, newLines);
-
-        const newPosition = { line: newLine, column: newColumn, offset: newOffset };
-        setCursorPosition(newPosition);
-        updateTextareaCursor(newPosition);
+      // Perform count undo operations
+      let lastEntry = null;
+      for (let i = 0; i < count; i++) {
+        if (!historyStore.actions.canUndo(activeBufferId)) break;
+        lastEntry = historyStore.actions.undo(activeBufferId);
       }
-    },
 
-    redo: () => {
-      const { activeBufferId } = useBufferStore.getState();
-      if (!activeBufferId) return;
+      if (!lastEntry) return;
 
-      const historyStore = useHistoryStore.getState();
-      if (!historyStore.actions.canRedo(activeBufferId)) return;
-
-      // Get next state from history
-      const entry = historyStore.actions.redo(activeBufferId);
-      if (!entry) return;
-
-      // Restore content
-      updateContent(entry.content);
+      // Restore content (markDirty=false so undo doesn't flag buffer as modified)
+      updateContent(lastEntry.content, false);
 
       // Restore cursor position if available, otherwise maintain current position
-      if (entry.cursorPosition) {
-        setCursorPosition(entry.cursorPosition);
-        updateTextareaCursor(entry.cursorPosition);
+      if (lastEntry.cursorPosition) {
+        setCursorPosition(lastEntry.cursorPosition);
+        updateTextareaCursor(lastEntry.cursorPosition);
       } else {
         // Try to maintain cursor position within new content bounds
         const currentPos = getCursorPosition();
-        const newLines = entry.content.split("\n");
+        const newLines = lastEntry.content.split("\n");
         const newLine = Math.min(currentPos.line, newLines.length - 1);
         const newColumn = Math.min(currentPos.column, newLines[newLine].length);
         const newOffset = calculateOffsetFromPosition(newLine, newColumn, newLines);
@@ -221,6 +193,52 @@ export const createVimEditing = (): VimEditingCommands => {
         setCursorPosition(newPosition);
         updateTextareaCursor(newPosition);
       }
+
+      editorAPI.emitEvent("contentChange", {
+        content: lastEntry.content,
+        changes: [],
+      });
+    },
+
+    redo: (count = 1) => {
+      const { activeBufferId } = useBufferStore.getState();
+      if (!activeBufferId) return;
+
+      const historyStore = useHistoryStore.getState();
+
+      // Perform count redo operations
+      let lastEntry = null;
+      for (let i = 0; i < count; i++) {
+        if (!historyStore.actions.canRedo(activeBufferId)) break;
+        lastEntry = historyStore.actions.redo(activeBufferId);
+      }
+
+      if (!lastEntry) return;
+
+      // Restore content (markDirty=false so redo doesn't flag buffer as modified)
+      updateContent(lastEntry.content, false);
+
+      // Restore cursor position if available, otherwise maintain current position
+      if (lastEntry.cursorPosition) {
+        setCursorPosition(lastEntry.cursorPosition);
+        updateTextareaCursor(lastEntry.cursorPosition);
+      } else {
+        // Try to maintain cursor position within new content bounds
+        const currentPos = getCursorPosition();
+        const newLines = lastEntry.content.split("\n");
+        const newLine = Math.min(currentPos.line, newLines.length - 1);
+        const newColumn = Math.min(currentPos.column, newLines[newLine].length);
+        const newOffset = calculateOffsetFromPosition(newLine, newColumn, newLines);
+
+        const newPosition = { line: newLine, column: newColumn, offset: newOffset };
+        setCursorPosition(newPosition);
+        updateTextareaCursor(newPosition);
+      }
+
+      editorAPI.emitEvent("contentChange", {
+        content: lastEntry.content,
+        changes: [],
+      });
     },
 
     deleteChar: () => {

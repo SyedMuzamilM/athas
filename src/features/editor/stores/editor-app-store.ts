@@ -7,10 +7,23 @@ import { gitDiffCache } from "@/features/git/utils/git-diff-cache";
 import { isEditorContent } from "@/features/panes/types/pane-content";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { writeFile } from "@/features/file-system/controllers/platform";
+import type { Position } from "@/features/editor/types/editor";
+import { useEditorStateStore } from "@/features/editor/stores/state-store";
 
 const HISTORY_DEBOUNCE_MS = 500;
 const historyDebounceTimers = new Map<string, NodeJS.Timeout>();
 const lastBufferContent = new Map<string, string>();
+const lastBufferCursor = new Map<string, Position>();
+
+let autoHistoryPaused = false;
+
+export function pauseAutoHistory(): void {
+  autoHistoryPaused = true;
+}
+
+export function resumeAutoHistory(): void {
+  autoHistoryPaused = false;
+}
 
 export function cleanupBufferHistoryTracking(bufferId: string): void {
   const timer = historyDebounceTimers.get(bufferId);
@@ -19,6 +32,16 @@ export function cleanupBufferHistoryTracking(bufferId: string): void {
     historyDebounceTimers.delete(bufferId);
   }
   lastBufferContent.delete(bufferId);
+  lastBufferCursor.delete(bufferId);
+}
+
+export function syncLastBufferContent(bufferId: string, content: string): void {
+  const timer = historyDebounceTimers.get(bufferId);
+  if (timer) {
+    clearTimeout(timer);
+    historyDebounceTimers.delete(bufferId);
+  }
+  lastBufferContent.set(bufferId, content);
 }
 
 interface AppState {
@@ -82,18 +105,32 @@ export const useEditorAppStore = createSelectors(
                 clearTimeout(existingTimer);
               }
 
-              const timer = setTimeout(() => {
+              // Capture cursor position now (before any further edits)
+              lastBufferCursor.set(activeBufferId, {
+                ...useEditorStateStore.getState().cursorPosition,
+              });
+
+              const timer = setTimeout(async () => {
+                if (autoHistoryPaused) {
+                  historyDebounceTimers.delete(activeBufferId);
+                  lastBufferContent.set(activeBufferId, content);
+                  return;
+                }
+
                 const { pushHistory } = useHistoryStore.getState().actions;
                 const oldContent = lastBufferContent.get(activeBufferId);
+                const oldCursor = lastBufferCursor.get(activeBufferId);
 
                 if (oldContent !== undefined) {
                   pushHistory(activeBufferId, {
                     content: oldContent,
+                    cursorPosition: oldCursor,
                     timestamp: Date.now(),
                   });
                 }
 
                 lastBufferContent.set(activeBufferId, content);
+                lastBufferCursor.delete(activeBufferId);
                 historyDebounceTimers.delete(activeBufferId);
               }, HISTORY_DEBOUNCE_MS);
 

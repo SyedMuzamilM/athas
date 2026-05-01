@@ -6,6 +6,7 @@
  */
 
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { syncLastBufferContent } from "@/features/editor/stores/editor-app-store";
 import { useHistoryStore } from "@/features/editor/stores/history-store";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
 import { useEditorStateStore } from "@/features/editor/stores/state-store";
@@ -30,11 +31,12 @@ export const createDomEditorFacade = (): VimEditorFacade => {
       return useEditorViewStore.getState().actions.getContent();
     },
 
-    setContent(value: string): void {
+    setContent(value: string, markDirty?: boolean): void {
       const { activeBufferId, actions } = useBufferStore.getState();
       if (!activeBufferId) return;
 
-      actions.updateBufferContent(activeBufferId, value);
+      actions.updateBufferContent(activeBufferId, value, markDirty);
+      syncLastBufferContent(activeBufferId, value);
 
       const textarea = getTextarea();
       if (textarea) {
