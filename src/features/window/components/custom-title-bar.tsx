@@ -1,5 +1,13 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { ArrowSquareOut, CornersIn, CornersOut, List, Minus, X } from "@phosphor-icons/react";
+import {
+  ArrowSquareOut,
+  CornersIn,
+  CornersOut,
+  List,
+  Minus,
+  Sparkle,
+  X,
+} from "@phosphor-icons/react";
 import { type ReactNode, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
@@ -53,6 +61,21 @@ function orderHeaderItems<T extends string>(items: Array<HeaderItem<T>>, ordered
     .filter((item): item is HeaderItem<T> => Boolean(item));
   const missingItems = items.filter((item) => !orderedIds.includes(item.id));
   return [...orderedItems, ...missingItems];
+}
+
+function placeAiChatBeforeAccount<T extends string>(items: Array<HeaderItem<T>>) {
+  const aiChatIndex = items.findIndex((item) => item.id === "ai-chat");
+  const accountIndex = items.findIndex((item) => item.id === "account");
+
+  if (aiChatIndex < 0 || accountIndex < 0 || aiChatIndex === accountIndex - 1) {
+    return items;
+  }
+
+  const nextItems = [...items];
+  const [aiChatItem] = nextItems.splice(aiChatIndex, 1);
+  const nextAccountIndex = nextItems.findIndex((item) => item.id === "account");
+  nextItems.splice(nextAccountIndex, 0, aiChatItem);
+  return nextItems;
 }
 
 const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
@@ -283,6 +306,28 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
       content: <NotificationsMenu />,
     },
     {
+      id: "ai-chat",
+      label: "AI Chat",
+      content: (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          active={settings.isAIChatVisible}
+          tooltip="Toggle AI Chat"
+          tooltipSide="bottom"
+          commandId="workbench.toggleAIChat"
+          onClick={() => {
+            useSettingsStore.getState().toggleAIChatVisible();
+          }}
+          className={cn(TITLE_BAR_ICON_BUTTON_CLASS_NAME, "[&_svg]:size-4")}
+          aria-label="Toggle AI Chat"
+        >
+          <Sparkle weight="duotone" />
+        </Button>
+      ),
+    },
+    {
       id: "account",
       label: "Account",
       content: <AccountMenu className={!isMacOS ? "mr-1" : undefined} />,
@@ -381,11 +426,11 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         {/* Account menu */}
         <div className="flex h-8 items-center">
           <div className="flex items-center gap-1">
-            {orderHeaderItems(headerTrailingItems, settings.headerTrailingItemsOrder).map(
-              (item) => (
-                <div key={item.id}>{item.content}</div>
-              ),
-            )}
+            {placeAiChatBeforeAccount(
+              orderHeaderItems(headerTrailingItems, settings.headerTrailingItemsOrder),
+            ).map((item) => (
+              <div key={item.id}>{item.content}</div>
+            ))}
           </div>
         </div>
         {titleBarContextMenuPortal}
@@ -433,7 +478,9 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
       {/* Right side */}
       <div className="z-20 flex items-center">
         <div className="flex items-center gap-1">
-          {orderHeaderItems(headerTrailingItems, settings.headerTrailingItemsOrder).map((item) => (
+          {placeAiChatBeforeAccount(
+            orderHeaderItems(headerTrailingItems, settings.headerTrailingItemsOrder),
+          ).map((item) => (
             <div key={item.id}>{item.content}</div>
           ))}
         </div>

@@ -132,9 +132,10 @@ export function ContextSelector({
       <Dropdown
         isOpen={isOpen}
         anchorRef={triggerRef}
-        anchorSide="top"
+        anchorSide="bottom"
         onClose={onToggleOpen}
-        className={chatComposerDropdownClassName("w-[min(340px,calc(100vw-16px))]")}
+        className={chatComposerDropdownClassName("w-[min(300px,calc(100vw-16px))]")}
+        style={{ maxHeight: "238px" }}
       >
         <AIFileSelector
           files={fileItems}
@@ -146,6 +147,9 @@ export function ContextSelector({
           onSelectedIndexChange={setSelectedIndex}
           searchInputRef={searchInputRef}
           emptyLabel={searchTerm ? "No matching files found" : "No files available"}
+          compact
+          autoFocusSearchInput
+          listClassName="max-h-[176px]"
         />
       </Dropdown>
 

@@ -63,6 +63,7 @@ import {
   getFilenameFromPath,
   isBinaryContent,
   isBinaryFile,
+  isKnownTextFile,
   isImageFile,
   isPdfFile,
 } from "./file-utils";
@@ -120,6 +121,7 @@ const wrapWithRootFolder = (
 };
 
 let latestFileOpenRequestId = 0;
+const textFileDecoder = new TextDecoder("utf-8");
 const MAX_SESSION_BUFFERS_TO_RESTORE = 8;
 const LARGE_WORKSPACE_GIT_STATUS_THRESHOLD = 2000;
 const MAX_PROJECT_FILES_TO_SCAN = 5000;
@@ -838,7 +840,9 @@ export const useFileSystemStore = createSelectors(
           );
           fileOpenBenchmark.finish(path, "binary-buffer-opened");
         } else {
-          if (!path.startsWith("remote://")) {
+          let preloadedLocalText: string | null = null;
+
+          if (!path.startsWith("remote://") && !isKnownTextFile(resolvedPath)) {
             try {
               const fileData = await readFile(resolvedPath);
 
@@ -865,6 +869,8 @@ export const useFileSystemStore = createSelectors(
                 fileOpenBenchmark.finish(path, "binary-sniff-buffer-opened");
                 return;
               }
+
+              preloadedLocalText = textFileDecoder.decode(fileData);
             } catch (error) {
               console.error("Failed to inspect file bytes before opening:", error);
             }
@@ -914,7 +920,7 @@ export const useFileSystemStore = createSelectors(
               filePath: remotePath,
             });
           } else {
-            content = await readFileContent(resolvedPath);
+            content = preloadedLocalText ?? (await readFileContent(resolvedPath));
           }
           fileOpenBenchmark.mark(path, "file-read", `${content.length} chars`);
 
@@ -2021,6 +2027,11 @@ export const useFileSystemStore = createSelectors(
                   tab.path,
                   watcherStartedAt,
                 );
+
+                fffSetWorkspace(tab.path).catch((error) => {
+                  console.error("[fff] set_workspace failed:", error);
+                });
+
                 const gitStatusStartedAt = performance.now();
                 logWorkspaceOpenStep("start", "switchToProject:getGitStatus", tab.path);
                 const gitStatus = await getGitStatus(tab.path);

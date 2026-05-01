@@ -70,7 +70,7 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
 
   const adjustedPosition = useMemo(() => {
     const dropdownWidth = Math.min(Math.max(position.width, 280), window.innerWidth - 16);
-    const dropdownHeight = Math.min(260, EDITOR_CONSTANTS.BREADCRUMB_DROPDOWN_MAX_HEIGHT);
+    const dropdownHeight = Math.min(210, EDITOR_CONSTANTS.BREADCRUMB_DROPDOWN_MAX_HEIGHT);
     const padding = 8;
 
     let { left } = position;
@@ -127,7 +127,7 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
       transition={{ duration: 0.15, ease: "easeOut" }}
       className={chatComposerDropdownClassName("fixed z-[10040] flex select-none flex-col")}
       style={{
-        maxHeight: "220px",
+        maxHeight: "210px",
         width: `${adjustedPosition.width}px`,
         left: `${adjustedPosition.left}px`,
         top: `${adjustedPosition.top}px`,
@@ -144,7 +144,8 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
         selectedIndex={selectedIndex}
         onSelectedIndexChange={setSelectedIndex}
         showSearchInput={false}
-        listClassName="max-h-[220px]"
+        listClassName="max-h-[210px]"
+        compact
       />
     </motion.div>,
     document.body,

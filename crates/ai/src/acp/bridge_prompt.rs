@@ -1,9 +1,10 @@
 use super::types::{AcpEvent, StopReason};
+use crate::runtime::AthasAppHandle as AppHandle;
 use acp::Agent;
 use agent_client_protocol as acp;
 use anyhow::{Context, Result, bail};
 use std::sync::Arc;
-use tauri::{AppHandle, Emitter};
+use tauri::Emitter;
 
 const ACP_PROMPT_TIMEOUT_SECONDS: u64 = 90;
 

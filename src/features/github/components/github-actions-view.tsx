@@ -14,6 +14,7 @@ import {
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
+import { writeSidebarResourceDragData } from "@/features/sidebar-drag/sidebar-resource-drag";
 import GitHubSidebarLoadingBar from "./github-sidebar-loading-bar";
 import { useGitHubStore } from "../stores/github-store";
 import type { WorkflowRunListItem } from "../types/github";
@@ -24,15 +25,28 @@ interface WorkflowRunRowProps {
   run: WorkflowRunListItem;
   isActive: boolean;
   onSelect: () => void;
+  repoPath?: string | null;
 }
 
-const WorkflowRunRow = memo(({ run, isActive, onSelect }: WorkflowRunRowProps) => (
+const WorkflowRunRow = memo(({ run, isActive, onSelect, repoPath }: WorkflowRunRowProps) => (
   <Button
     onClick={onSelect}
+    draggable
+    onDragStart={(event) => {
+      const title = run.displayTitle || run.name || run.workflowName || `Run #${run.databaseId}`;
+      writeSidebarResourceDragData(event.dataTransfer, {
+        type: "github-action",
+        repoPath: repoPath ?? undefined,
+        runId: run.databaseId,
+        title,
+        url: run.url,
+        name: title,
+      });
+    }}
     variant="ghost"
     size="sm"
     active={isActive}
-    className="h-auto w-full min-w-0 items-start justify-start rounded-xl px-3 py-2.5 text-left"
+    className="h-auto w-full min-w-0 cursor-grab items-start justify-start rounded-xl px-3 py-2.5 text-left transition-[transform,background-color,opacity] active:cursor-grabbing"
   >
     <div className="grid size-5 shrink-0 place-content-center rounded-full bg-secondary-bg text-text-lighter">
       <Activity className="size-3.5" />
@@ -178,6 +192,7 @@ const GitHubActionsView = memo(({ refreshNonce = 0 }: GitHubActionsViewProps) =>
                 key={run.databaseId}
                 run={run}
                 isActive={activeRunId === run.databaseId}
+                repoPath={repoPath}
                 onSelect={() =>
                   startTransition(() => {
                     openGitHubActionBuffer({

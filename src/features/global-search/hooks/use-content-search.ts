@@ -12,6 +12,9 @@ export interface ContentSearchOptions {
   useRegex: boolean;
 }
 
+const canUseContentSearch = (rootPath: string | null | undefined): rootPath is string =>
+  Boolean(rootPath) && !rootPath?.startsWith("remote://") && !rootPath?.startsWith("diff://");
+
 export const useContentSearch = (isVisible: boolean) => {
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const [query, setQuery] = useState("");
@@ -37,8 +40,10 @@ export const useContentSearch = (isVisible: boolean) => {
   );
 
   const performSearch = useCallback(async () => {
-    if (!debouncedQuery || !rootFolderPath) {
+    const searchRootPath = rootFolderPath;
+    if (!debouncedQuery || !canUseContentSearch(searchRootPath)) {
       setRawResults([]);
+      setIsSearching(false);
       return;
     }
 
@@ -48,7 +53,7 @@ export const useContentSearch = (isVisible: boolean) => {
 
     try {
       const searchResults = await searchFilesContent({
-        root_path: rootFolderPath,
+        root_path: searchRootPath,
         query: debouncedQuery,
         case_sensitive: searchOptions.caseSensitive,
         whole_word: searchOptions.wholeWord,

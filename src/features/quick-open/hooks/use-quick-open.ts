@@ -38,7 +38,11 @@ export const useQuickOpen = () => {
     rootFolderPath: loaderRootFolder,
   } = useFileLoader(isQuickOpenVisible);
 
-  const { hits: fffHits } = useFffSearch(debouncedQuery, isQuickOpenVisible && !isSymbolMode);
+  const { hits: fffHits } = useFffSearch(
+    debouncedQuery,
+    isQuickOpenVisible && !isSymbolMode,
+    rootFolderPath,
+  );
 
   const { openBufferFiles, recentFilesInResults, otherFiles } = useFileSearch(
     files,

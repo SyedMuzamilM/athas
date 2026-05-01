@@ -3,10 +3,10 @@ use super::{
    client::PermissionResponse,
    types::{AcpAgentStatus, AgentConfig},
 };
+use crate::runtime::AthasAppHandle as AppHandle;
 use anyhow::Result;
 use athas_terminal::TerminalManager;
 use std::sync::Arc;
-use tauri::AppHandle;
 use tokio::sync::{Mutex, mpsc, oneshot};
 
 /// Commands that can be sent to the ACP worker thread

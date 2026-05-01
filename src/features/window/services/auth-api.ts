@@ -99,7 +99,7 @@ export class AuthApiError extends Error {
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export function isAuthInvalidError(error: unknown): boolean {
-  return error instanceof AuthApiError && (error.status === 401 || error.status === 403);
+  return error instanceof AuthApiError && error.status === 401;
 }
 
 function getApiBaseUnavailableMessage(apiBase = API_BASE): string {
@@ -199,17 +199,20 @@ export async function fetchSettingsSyncSnapshot(
   tokenOverride?: string,
 ): Promise<CloudSettingsSyncSnapshot | null> {
   const response = await authenticatedFetch("/api/account/settings-sync", {}, tokenOverride);
+
+  const data = (await response.json().catch(() => null)) as {
+    snapshot?: CloudSettingsSyncSnapshot | null;
+    error?: string;
+  } | null;
+
   if (!response.ok) {
     throw new AuthApiError(
-      `Failed to fetch settings sync snapshot: ${response.status}`,
+      data?.error || `Failed to fetch settings sync snapshot: ${response.status}`,
       response.status,
     );
   }
 
-  const data = (await response.json()) as {
-    snapshot?: CloudSettingsSyncSnapshot | null;
-  };
-  return data.snapshot ?? null;
+  return data?.snapshot ?? null;
 }
 
 export async function pushSettingsSyncSnapshot(input: {

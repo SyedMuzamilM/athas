@@ -1,6 +1,9 @@
 import { listen } from "@tauri-apps/api/event";
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import type React from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { motion, type PanInfo, useAnimationControls } from "framer-motion";
 import { ProviderApiKeyCommand } from "@/features/ai/components/provider-api-key-command";
+import { MultiAgentPanel } from "@/features/ai/components/multi-agent-panel";
 import {
   appendChatAcpEvent,
   type ChatAcpEventInput,
@@ -14,6 +17,7 @@ import {
   markToolCallComplete,
   updateToolCall,
 } from "@/features/ai/lib/tool-call-state";
+import { requestInlineEdit } from "@/features/editor/services/editor-inline-edit-service";
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import { getChatCompletionStream, isAcpAgent } from "@/features/ai/services/ai-chat-service";
 import { useAIChatStore } from "@/features/ai/store/store";
@@ -33,6 +37,24 @@ import AIChatInputBar from "../input/chat-input-bar";
 import { ChatHeader } from "./chat-header";
 import { ChatMessages } from "./chat-messages";
 
+function normalizeAgentSessionTitle(value: string): string | null {
+  const normalized = value
+    .replace(/[`"'“”‘’]/g, "")
+    .replace(/[^\p{L}\p{N}\s-]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!normalized) return null;
+
+  const words = normalized.split(" ").slice(0, 2);
+  const title = words.join(" ").trim();
+  return title || null;
+}
+
+function fallbackAgentSessionTitle(message: string): string {
+  return message.length > 50 ? `${message.substring(0, 50)}...` : message;
+}
+
 const AIChat = memo(function AIChat({
   className,
   activeBuffer,
@@ -51,12 +73,16 @@ const AIChat = memo(function AIChat({
 
   const chatState = useChatState();
   const chatActions = useChatActions();
+  const activeAgentChatIdsFromStore = useAIChatStore((state) => state.activeAgentChatIds);
   const { showToast } = useToast();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const carouselViewportRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const shouldAutoScrollRef = useRef(true);
+  const lastSwipeAtRef = useRef(0);
+  const carouselControls = useAnimationControls();
   const [permissionQueue, setPermissionQueue] = useState<
     Array<{
       requestId: string;
@@ -67,6 +93,125 @@ const AIChat = memo(function AIChat({
     }>
   >([]);
   const [acpEvents, setAcpEvents] = useState<ChatAcpEvent[]>([]);
+  const [agentPickerOpenSignal, setAgentPickerOpenSignal] = useState(0);
+  const [carouselWidth, setCarouselWidth] = useState(0);
+  const [isDraggingCarousel, setIsDraggingCarousel] = useState(false);
+
+  const activeAgentChatIds = useMemo(() => {
+    const ids: string[] = [];
+    const addChat = (chatId: string) => {
+      if (!ids.includes(chatId)) ids.push(chatId);
+    };
+
+    for (const chatId of activeAgentChatIdsFromStore) {
+      const chat = chatState.chats.find((item) => item.id === chatId);
+      if (chat) {
+        addChat(chat.id);
+      }
+    }
+
+    if (chatState.currentChatId) {
+      addChat(chatState.currentChatId);
+    }
+
+    return ids;
+  }, [activeAgentChatIdsFromStore, chatState.chats, chatState.currentChatId]);
+
+  const activeAgentIndex = useMemo(() => {
+    const index = activeAgentChatIds.indexOf(chatState.currentChatId ?? "");
+    return index >= 0 ? index : 0;
+  }, [activeAgentChatIds, chatState.currentChatId]);
+  const carouselChatIds = activeAgentChatIds.length > 0 ? activeAgentChatIds : [null];
+
+  const switchAgentByOffset = useCallback(
+    (offset: number) => {
+      if (!chatState.currentChatId || activeAgentChatIds.length === 0) {
+        setAgentPickerOpenSignal((current) => current + 1);
+        return;
+      }
+
+      const currentIndex = activeAgentChatIds.indexOf(chatState.currentChatId);
+      const nextIndex = currentIndex + offset;
+
+      if (nextIndex >= 0 && nextIndex < activeAgentChatIds.length) {
+        chatActions.switchToChat(activeAgentChatIds[nextIndex]);
+        return;
+      }
+
+      setAgentPickerOpenSignal((current) => current + 1);
+    },
+    [activeAgentChatIds, chatActions, chatState.currentChatId],
+  );
+
+  const handleAgentDragEnd = useCallback(
+    (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+      setIsDraggingCarousel(false);
+
+      if (carouselWidth <= 0 || activeAgentChatIds.length === 0) {
+        void carouselControls.start({ x: 0 });
+        return;
+      }
+
+      const projectedIndex =
+        activeAgentIndex - info.offset.x / carouselWidth - info.velocity.x / 2600;
+      const nextIndex = Math.min(
+        activeAgentChatIds.length - 1,
+        Math.max(0, Math.round(projectedIndex)),
+      );
+
+      if (nextIndex !== activeAgentIndex) {
+        chatActions.switchToChat(activeAgentChatIds[nextIndex]);
+        return;
+      }
+
+      void carouselControls.start({
+        x: -activeAgentIndex * carouselWidth,
+        transition: { type: "spring", stiffness: 420, damping: 42, mass: 0.9 },
+      });
+    },
+    [activeAgentChatIds, activeAgentIndex, carouselControls, carouselWidth, chatActions],
+  );
+
+  const handleAgentWheel = useCallback(
+    (event: React.WheelEvent<HTMLDivElement>) => {
+      if (Math.abs(event.deltaX) < 32 || Math.abs(event.deltaX) <= Math.abs(event.deltaY)) {
+        return;
+      }
+
+      const now = Date.now();
+      if (now - lastSwipeAtRef.current < 360) {
+        return;
+      }
+      lastSwipeAtRef.current = now;
+      event.preventDefault();
+      switchAgentByOffset(event.deltaX > 0 ? 1 : -1);
+    },
+    [switchAgentByOffset],
+  );
+
+  useEffect(() => {
+    const element = carouselViewportRef.current;
+    if (!element) return;
+
+    const updateWidth = () => {
+      setCarouselWidth(element.clientWidth);
+    };
+
+    updateWidth();
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(element);
+
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (isDraggingCarousel || carouselWidth <= 0) return;
+
+    void carouselControls.start({
+      x: -activeAgentIndex * carouselWidth,
+      transition: { type: "spring", stiffness: 420, damping: 42, mass: 0.9 },
+    });
+  }, [activeAgentIndex, carouselControls, carouselWidth, isDraggingCarousel]);
 
   useEffect(() => {
     if (activeBuffer) {
@@ -109,7 +254,9 @@ const AIChat = memo(function AIChat({
             store.setSessionConfigOptions(payload.configOptions);
             break;
           case "session_info_update": {
-            const chat = store.getCurrentChat();
+            const chat =
+              store.chats.find((item) => item.acpSessionId === payload.sessionId) ??
+              (store.acpStatus?.sessionId === payload.sessionId ? store.getCurrentChat() : null);
             const nextTitle = chat ? getChatTitleFromSessionInfo(chat.title, payload.title) : null;
             if (chat && nextTitle) {
               store.updateChatTitle(chat.id, nextTitle);
@@ -155,6 +302,55 @@ const AIChat = memo(function AIChat({
     event.stopPropagation();
     chatActions.deleteChat(chatId);
   };
+
+  const updateInitialAgentSessionTitle = useCallback(
+    async (chatId: string, userMessage: string) => {
+      const fallbackTitle = fallbackAgentSessionTitle(userMessage);
+      chatActions.updateChatTitle(chatId, fallbackTitle);
+
+      const authState = useAuthStore.getState();
+      const subscriptionStatus = authState.subscription?.status ?? "free";
+      const enterprisePolicy = authState.subscription?.enterprise?.policy;
+      const managedPolicy = enterprisePolicy?.managedMode ? enterprisePolicy : null;
+      const isPro = subscriptionStatus === "pro";
+
+      if (!isPro || (managedPolicy && !managedPolicy.aiCompletionEnabled)) {
+        return;
+      }
+
+      const model = useSettingsStore.getState().settings.aiAutocompleteModelId;
+      if (!model) return;
+
+      try {
+        const { editedText } = await requestInlineEdit(
+          {
+            model,
+            beforeSelection: "",
+            selectedText: userMessage,
+            afterSelection: "",
+            instruction:
+              "Name the software feature or task being worked on. Return exactly one or two words, no punctuation, no quotes, no explanation. Prefer a concrete product feature label over a generic verb.",
+            filePath: "agent-session-title",
+            languageId: "text",
+          },
+          { useByok: false },
+        );
+
+        const generatedTitle = normalizeAgentSessionTitle(editedText);
+        if (!generatedTitle) return;
+
+        const currentChat = useAIChatStore.getState().getChatById(chatId);
+        if (!currentChat) return;
+
+        if (currentChat.title === fallbackTitle || currentChat.title === "New Chat") {
+          chatActions.updateChatTitle(chatId, generatedTitle);
+        }
+      } catch (error) {
+        console.debug("Failed to generate agent session title:", error);
+      }
+    },
+    [chatActions],
+  );
 
   const scrollToBottom = useCallback((force = false) => {
     if (!force && !shouldAutoScrollRef.current) {
@@ -314,11 +510,7 @@ const AIChat = memo(function AIChat({
 
     const currentMessages = useAIChatStore.getState().getMessagesForChat(chatId);
     if (currentMessages.length === 2) {
-      const title =
-        userMessage.content.length > 50
-          ? `${userMessage.content.substring(0, 50)}...`
-          : userMessage.content;
-      chatActions.updateChatTitle(chatId, title);
+      void updateInitialAgentSessionTitle(chatId, userMessage.content);
     }
 
     chatActions.setIsTyping(true);
@@ -827,6 +1019,7 @@ details: ${errorDetails || mainError}
   return (
     <div
       className={`ai-chat-surface ui-font flex h-full flex-col bg-transparent text-text text-xs ${className || ""}`}
+      onWheel={handleAgentWheel}
     >
       <ChatHeader onDeleteChat={handleDeleteChat} />
       {isAiChatBlockedByPolicy ? (
@@ -841,11 +1034,47 @@ details: ${errorDetails || mainError}
       ) : (
         <>
           <div
-            ref={messagesContainerRef}
-            onScroll={handleMessagesScroll}
-            className="scrollbar-hidden relative z-0 flex-1 overflow-y-auto"
+            ref={carouselViewportRef}
+            className="scrollbar-hidden relative z-0 flex-1 overflow-hidden"
           >
-            <ChatMessages ref={messagesEndRef} onApplyCode={onApplyCode} acpEvents={acpEvents} />
+            <motion.div
+              className="flex h-full cursor-grab select-none active:cursor-grabbing"
+              style={{
+                width: carouselWidth > 0 ? carouselWidth * carouselChatIds.length : "100%",
+              }}
+              animate={carouselControls}
+              drag="x"
+              dragConstraints={{
+                left:
+                  carouselWidth > 0 ? -Math.max(0, carouselChatIds.length - 1) * carouselWidth : 0,
+                right: 0,
+              }}
+              dragElastic={0.18}
+              dragMomentum={false}
+              onDragStart={() => setIsDraggingCarousel(true)}
+              onDragEnd={handleAgentDragEnd}
+            >
+              {carouselChatIds.map((chatId) => {
+                const selected = chatId === chatState.currentChatId;
+
+                return (
+                  <div
+                    key={chatId ?? "empty-chat"}
+                    ref={selected ? messagesContainerRef : undefined}
+                    onScroll={selected ? handleMessagesScroll : undefined}
+                    className="h-full shrink-0 overflow-y-auto"
+                    style={{ width: carouselWidth > 0 ? carouselWidth : "100%" }}
+                  >
+                    <ChatMessages
+                      ref={selected ? messagesEndRef : undefined}
+                      chatId={chatId}
+                      onApplyCode={onApplyCode}
+                      acpEvents={selected ? acpEvents : []}
+                    />
+                  </div>
+                );
+              })}
+            </motion.div>
           </div>
 
           {currentPermission && (
@@ -916,6 +1145,7 @@ details: ${errorDetails || mainError}
             onSendMessage={handleSendMessage}
             onStopStreaming={stopStreaming}
           />
+          <MultiAgentPanel openSignal={agentPickerOpenSignal} />
 
           <ProviderApiKeyCommand
             isOpen={chatState.apiKeyModalState.isOpen}

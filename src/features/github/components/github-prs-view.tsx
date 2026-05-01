@@ -29,6 +29,7 @@ import { useFileSystemStore } from "@/features/file-system/controllers/store";
 import GitProjectSelector from "@/features/git/components/git-project-selector";
 import { isNotGitRepositoryError, resolveRepositoryPath } from "@/features/git/api/git-repo-api";
 import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
+import { writeSidebarResourceDragData } from "@/features/sidebar-drag/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
 import { Button } from "@/ui/button";
@@ -65,17 +66,31 @@ interface PRListItemProps {
   isActive: boolean;
   onSelect: () => void;
   onContextMenu: (event: React.MouseEvent, pr: PullRequest) => void;
+  repoPath?: string | null;
 }
 
-const PRListItem = memo(({ pr, isActive, onSelect, onContextMenu }: PRListItemProps) => {
+const PRListItem = memo(({ pr, isActive, onSelect, onContextMenu, repoPath }: PRListItemProps) => {
   return (
     <Button
       onClick={onSelect}
       onContextMenu={(event) => onContextMenu(event, pr)}
+      draggable
+      onDragStart={(event) => {
+        writeSidebarResourceDragData(event.dataTransfer, {
+          type: "github-pr",
+          repoPath: repoPath ?? undefined,
+          number: pr.number,
+          title: pr.title,
+          authorAvatarUrl:
+            pr.author.avatarUrl ||
+            `https://github.com/${encodeURIComponent(pr.author.login || "github")}.png?size=32`,
+          name: `PR #${pr.number}`,
+        });
+      }}
       variant="ghost"
       size="sm"
       className={cn(
-        "h-auto w-full items-start justify-start rounded-xl px-3 py-2.5 text-left hover:bg-hover/70",
+        "h-auto w-full cursor-grab items-start justify-start rounded-xl px-3 py-2.5 text-left transition-[transform,background-color,opacity] hover:bg-hover/70 active:cursor-grabbing",
         isActive && "bg-hover/80 text-text",
       )}
     >
@@ -525,6 +540,7 @@ const GitHubPRsView = memo(() => {
                       isActive={activePRNumber === pr.number}
                       onSelect={() => handleSelectPR(pr)}
                       onContextMenu={handlePRContextMenu}
+                      repoPath={effectiveRepoPath}
                     />
                   ))}
                 </div>

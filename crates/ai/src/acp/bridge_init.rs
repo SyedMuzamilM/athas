@@ -1,17 +1,19 @@
 use super::{
    client::{AthasAcpClient, PermissionResponse},
+   process::{force_kill_process_group, stop_child_tree_mut, terminate_process_group},
    types::{
       AcpAgentCapabilities, AcpEvent, AgentConfig, SessionConfigOption, SessionMode,
       SessionModeState,
    },
 };
+use crate::runtime::AthasAppHandle as AppHandle;
 use acp::Agent;
 use agent_client_protocol as acp;
 use anyhow::{Result, bail};
 use athas_terminal::TerminalManager;
 use serde_json::json;
 use std::{path::PathBuf, process::Stdio, sync::Arc};
-use tauri::{AppHandle, Emitter};
+use tauri::Emitter;
 use tokio::{
    process::{Child, Command},
    sync::mpsc,
@@ -24,6 +26,7 @@ pub(super) struct InitializedAcpWorker {
    pub auth_method_id: Option<String>,
    pub agent_capabilities: AcpAgentCapabilities,
    pub process: Child,
+   pub process_group_id: Option<u32>,
    pub io_handle: tokio::task::JoinHandle<()>,
    pub client: Arc<AthasAcpClient>,
    pub permission_sender: mpsc::Sender<PermissionResponse>,
@@ -39,6 +42,7 @@ pub(super) async fn initialize_worker(
 ) -> Result<InitializedAcpWorker> {
    let (mut child, uses_npx_codex_adapter) =
       spawn_agent_process(config, workspace_path.as_deref())?;
+   let process_group_id = child.id();
    let stdin = child
       .stdin
       .take()
@@ -114,6 +118,7 @@ pub(super) async fn initialize_worker(
       auth_method_id,
       agent_capabilities,
       process: child,
+      process_group_id,
       io_handle,
       client,
       permission_sender,
@@ -137,9 +142,9 @@ where
 }
 
 fn configure_background_agent_command(command: &mut Command) {
-   #[cfg(not(target_os = "windows"))]
+   #[cfg(unix)]
    {
-      let _ = command;
+      command.process_group(0);
    }
 
    #[cfg(target_os = "windows")]
@@ -254,12 +259,14 @@ async fn initialize_connection(
       }
       Ok(Err(e)) => {
          io_handle.abort();
-         let _ = child.kill().await;
+         let process_group_id = child.id();
+         stop_child_tree_mut(child, process_group_id).await;
          bail!("Failed to initialize ACP connection: {}", e);
       }
       Err(_) => {
          io_handle.abort();
-         let _ = child.kill().await;
+         let process_group_id = child.id();
+         stop_child_tree_mut(child, process_group_id).await;
          bail!(
             "ACP initialization timed out - agent may not support ACP protocol or requires \
              different arguments"
@@ -316,6 +323,7 @@ async fn bootstrap_session(
       {
          if let Err(e) = authenticate(connection.clone()).await {
             ctx.io_handle.abort();
+            terminate_process_group(ctx.child.id());
             let _ = ctx.child.kill().await;
             bail!("{}", e);
          }
@@ -346,6 +354,7 @@ async fn bootstrap_session(
          }
          Ok(Err(err)) => {
             ctx.io_handle.abort();
+            terminate_process_group(ctx.child.id());
             let _ = ctx.child.kill().await;
             bail!(
                "Failed to load ACP session {}: {}",
@@ -355,6 +364,7 @@ async fn bootstrap_session(
          }
          Err(_) => {
             ctx.io_handle.abort();
+            force_kill_process_group(ctx.child.id());
             let _ = ctx.child.kill().await;
             bail!("ACP session/load timed out");
          }
@@ -367,6 +377,7 @@ async fn bootstrap_session(
    {
       if let Err(e) = authenticate(connection.clone()).await {
          ctx.io_handle.abort();
+         terminate_process_group(ctx.child.id());
          let _ = ctx.child.kill().await;
          bail!("{}", e);
       }
@@ -379,12 +390,14 @@ async fn bootstrap_session(
       Ok(Err(e)) => {
          log::error!("Failed to create ACP session: {}", e);
          ctx.io_handle.abort();
+         terminate_process_group(ctx.child.id());
          let _ = ctx.child.kill().await;
          bail!("Failed to create ACP session: {}", e);
       }
       Err(_) => {
          log::error!("ACP session creation timed out");
          ctx.io_handle.abort();
+         force_kill_process_group(ctx.child.id());
          let _ = ctx.child.kill().await;
          bail!("ACP session creation timed out");
       }

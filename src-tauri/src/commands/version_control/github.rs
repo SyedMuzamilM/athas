@@ -14,7 +14,7 @@ where
       .map_err(|error| format!("GitHub command task failed: {}", error))?
 }
 
-fn get_stored_github_token(app: &tauri::AppHandle) -> Option<String> {
+fn get_stored_github_token(app: &crate::app_runtime::AppHandle) -> Option<String> {
    get_secret(app, "github_token")
       .ok()
       .flatten()
@@ -24,7 +24,7 @@ fn get_stored_github_token(app: &tauri::AppHandle) -> Option<String> {
 
 #[tauri::command]
 pub async fn github_check_auth(
-   app: tauri::AppHandle,
+   app: crate::app_runtime::AppHandle,
 ) -> Result<athas_github::GitHubAuthStatus, String> {
    let github_token = get_stored_github_token(&app);
    run_blocking(move || athas_github::github_check_auth(github_token)).await
@@ -32,7 +32,7 @@ pub async fn github_check_auth(
 
 #[tauri::command]
 pub async fn github_list_prs(
-   app: tauri::AppHandle,
+   app: crate::app_runtime::AppHandle,
    repo_path: String,
    filter: String,
 ) -> Result<Vec<PullRequest>, String> {
@@ -41,14 +41,14 @@ pub async fn github_list_prs(
 }
 
 #[tauri::command]
-pub async fn github_get_current_user(app: tauri::AppHandle) -> Result<String, String> {
+pub async fn github_get_current_user(app: crate::app_runtime::AppHandle) -> Result<String, String> {
    let github_token = get_stored_github_token(&app);
    run_blocking(move || athas_github::github_get_current_user(github_token)).await
 }
 
 #[tauri::command]
 pub async fn github_list_issues(
-   app: tauri::AppHandle,
+   app: crate::app_runtime::AppHandle,
    repo_path: String,
 ) -> Result<Vec<IssueListItem>, String> {
    let github_token = get_stored_github_token(&app);
@@ -57,7 +57,7 @@ pub async fn github_list_issues(
 
 #[tauri::command]
 pub async fn github_list_workflow_runs(
-   app: tauri::AppHandle,
+   app: crate::app_runtime::AppHandle,
    repo_path: String,
 ) -> Result<Vec<WorkflowRunListItem>, String> {
    let github_token = get_stored_github_token(&app);
@@ -66,7 +66,7 @@ pub async fn github_list_workflow_runs(
 
 #[tauri::command]
 pub async fn github_checkout_pr(
-   app: tauri::AppHandle,
+   app: crate::app_runtime::AppHandle,
    repo_path: String,
    pr_number: i64,
 ) -> Result<(), String> {
@@ -76,7 +76,7 @@ pub async fn github_checkout_pr(
 
 #[tauri::command]
 pub async fn github_get_pr_details(
-   app: tauri::AppHandle,
+   app: crate::app_runtime::AppHandle,
    repo_path: String,
    pr_number: i64,
 ) -> Result<PullRequestDetails, String> {
@@ -87,7 +87,7 @@ pub async fn github_get_pr_details(
 
 #[tauri::command]
 pub async fn github_get_pr_diff(
-   app: tauri::AppHandle,
+   app: crate::app_runtime::AppHandle,
    repo_path: String,
    pr_number: i64,
 ) -> Result<String, String> {
@@ -97,7 +97,7 @@ pub async fn github_get_pr_diff(
 
 #[tauri::command]
 pub async fn github_get_pr_files(
-   app: tauri::AppHandle,
+   app: crate::app_runtime::AppHandle,
    repo_path: String,
    pr_number: i64,
 ) -> Result<Vec<PullRequestFile>, String> {
@@ -107,7 +107,7 @@ pub async fn github_get_pr_files(
 
 #[tauri::command]
 pub async fn github_get_pr_comments(
-   app: tauri::AppHandle,
+   app: crate::app_runtime::AppHandle,
    repo_path: String,
    pr_number: i64,
 ) -> Result<Vec<PullRequestComment>, String> {
@@ -118,7 +118,7 @@ pub async fn github_get_pr_comments(
 
 #[tauri::command]
 pub async fn github_get_issue_details(
-   app: tauri::AppHandle,
+   app: crate::app_runtime::AppHandle,
    repo_path: String,
    issue_number: i64,
 ) -> Result<IssueDetails, String> {
@@ -131,7 +131,7 @@ pub async fn github_get_issue_details(
 
 #[tauri::command]
 pub async fn github_get_workflow_run_details(
-   app: tauri::AppHandle,
+   app: crate::app_runtime::AppHandle,
    repo_path: String,
    run_id: i64,
 ) -> Result<WorkflowRunDetails, String> {
@@ -144,7 +144,7 @@ pub async fn github_get_workflow_run_details(
 
 #[tauri::command]
 pub async fn github_get_workflow_job_logs(
-   app: tauri::AppHandle,
+   app: crate::app_runtime::AppHandle,
    repo_path: String,
    job_id: i64,
 ) -> Result<String, String> {
@@ -154,16 +154,21 @@ pub async fn github_get_workflow_job_logs(
 }
 
 #[tauri::command]
-pub async fn store_github_token(app: tauri::AppHandle, token: String) -> Result<(), String> {
+pub async fn store_github_token(
+   app: crate::app_runtime::AppHandle,
+   token: String,
+) -> Result<(), String> {
    store_secret(&app, "github_token", &token)
 }
 
 #[tauri::command]
-pub async fn get_github_token(app: tauri::AppHandle) -> Result<Option<String>, String> {
+pub async fn get_github_token(
+   app: crate::app_runtime::AppHandle,
+) -> Result<Option<String>, String> {
    get_secret(&app, "github_token")
 }
 
 #[tauri::command]
-pub async fn remove_github_token(app: tauri::AppHandle) -> Result<(), String> {
+pub async fn remove_github_token(app: crate::app_runtime::AppHandle) -> Result<(), String> {
    remove_secret(&app, "github_token")
 }

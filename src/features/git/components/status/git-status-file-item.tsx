@@ -1,5 +1,6 @@
 import type { MouseEvent } from "react";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
+import { writeSidebarResourceDragData } from "@/features/sidebar-drag/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/store";
 import Checkbox from "@/ui/checkbox";
 import { cn } from "@/utils/cn";
@@ -22,6 +23,7 @@ interface GitFileItemProps {
   showFileIcon?: boolean;
   indentLevel?: number;
   className?: string;
+  repoPath?: string;
 }
 
 export const GitFileItem = ({
@@ -36,6 +38,7 @@ export const GitFileItem = ({
   showFileIcon = false,
   indentLevel = 0,
   className,
+  repoPath,
 }: GitFileItemProps) => {
   const compactGitStatusBadges = useSettingsStore((state) => state.settings.compactGitStatusBadges);
   const pathParts = file.path.split("/");
@@ -63,11 +66,24 @@ export const GitFileItem = ({
       <div
         className={cn(
           "file-tree-row ui-text-sm group relative mx-1 flex h-6 cursor-pointer items-center gap-1.5 rounded-md px-1.5 py-1 hover:bg-hover",
+          repoPath && "cursor-grab active:cursor-grabbing",
           className,
         )}
         style={{ paddingLeft: `${indentPx}px`, paddingRight: "8px" }}
         onClick={onClick}
         onContextMenu={onContextMenu}
+        draggable={!!repoPath}
+        onDragStart={(event) => {
+          if (!repoPath) return;
+          writeSidebarResourceDragData(event.dataTransfer, {
+            type: "git-file-diff",
+            repoPath,
+            filePath: file.path,
+            staged: file.staged,
+            status: file.status,
+            name: fileName,
+          });
+        }}
       >
         {showFileIcon && (
           <FileExplorerIcon

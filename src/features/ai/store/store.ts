@@ -42,6 +42,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
         messageQueue: [],
         isProcessingQueue: false,
         pendingAgentLaunchRequest: null,
+        activeAgentChatIds: [],
         mode: "chat",
         outputStyle: "default",
 
@@ -145,6 +146,20 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           set((state) => {
             state.pendingAgentLaunchRequest = request;
           }),
+        registerActiveAgentChat: (chatId) =>
+          set((state) => {
+            if (!state.activeAgentChatIds.includes(chatId)) {
+              state.activeAgentChatIds.push(chatId);
+            }
+          }),
+        setActiveAgentChatOrder: (chatIds) =>
+          set((state) => {
+            const ordered = chatIds.filter((chatId) => state.activeAgentChatIds.includes(chatId));
+            const remaining = state.activeAgentChatIds.filter(
+              (chatId) => !ordered.includes(chatId),
+            );
+            state.activeAgentChatIds = [...ordered, ...remaining];
+          }),
 
         // Input actions
         setInput: (input) =>
@@ -241,6 +256,10 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           set((state) => {
             state.chats.unshift(newChat);
             state.currentChatId = newChat.id;
+            state.activeAgentChatIds = [
+              newChat.id,
+              ...state.activeAgentChatIds.filter((chatId) => chatId !== newChat.id),
+            ];
             state.isChatHistoryVisible = false;
             // Clear input and reset state when creating new chat
             state.input = "";
@@ -288,6 +307,9 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
         switchToChat: (chatId) => {
           set((state) => {
             state.currentChatId = chatId;
+            if (!state.activeAgentChatIds.includes(chatId)) {
+              state.activeAgentChatIds.unshift(chatId);
+            }
             state.isChatHistoryVisible = false;
             // Clear input and reset state when switching chats
             state.input = "";
@@ -304,6 +326,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             if (chatIndex !== -1) {
               state.chats.splice(chatIndex, 1);
             }
+            state.activeAgentChatIds = state.activeAgentChatIds.filter((id) => id !== chatId);
 
             // If we deleted the current chat, switch to the most recent one
             if (chatId === state.currentChatId) {
@@ -913,6 +936,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
 
           set((state) => {
             state.currentChatId = snapshot?.currentChatId || null;
+            state.activeAgentChatIds = snapshot?.currentChatId ? [snapshot.currentChatId] : [];
             state.selectedAgentId = snapshot?.selectedAgentId || "custom";
             state.isChatHistoryVisible = snapshot?.isChatHistoryVisible || false;
             state.selectedBufferIds = selectedBufferIds;

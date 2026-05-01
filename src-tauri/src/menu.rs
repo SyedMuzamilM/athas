@@ -11,7 +11,7 @@ pub struct ThemeData {
 
 #[tauri::command]
 pub async fn rebuild_menu_themes(
-   app: tauri::AppHandle,
+   app: crate::app_runtime::AppHandle,
    themes: Vec<ThemeData>,
 ) -> Result<(), String> {
    // Only rebuild menu if native menu bar is enabled
@@ -27,7 +27,10 @@ pub async fn rebuild_menu_themes(
 }
 
 #[tauri::command]
-pub async fn toggle_menu_bar(app: tauri::AppHandle, toggle: Option<bool>) -> Result<(), String> {
+pub async fn toggle_menu_bar(
+   app: crate::app_runtime::AppHandle,
+   toggle: Option<bool>,
+) -> Result<(), String> {
    #[cfg(target_os = "windows")]
    {
       let _ = toggle;

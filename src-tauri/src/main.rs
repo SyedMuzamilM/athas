@@ -4,10 +4,12 @@
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
-use app_setup::configure_app;
+use app_runtime::AthasRuntime;
+use app_setup::{configure_app, shutdown_background_services};
 use commands::*;
 use terminal::{close_terminal, create_terminal, list_shells, terminal_resize, terminal_write};
 
+mod app_runtime;
 mod app_setup;
 mod bootstrap;
 mod commands;
@@ -17,9 +19,10 @@ mod menu;
 mod secure_storage;
 mod terminal;
 
+#[cfg_attr(all(target_os = "linux", feature = "linux"), tauri::cef_entry_point)]
 fn main() {
    #[cfg(target_os = "linux")]
-   if std::env::var("WEBKIT_DISABLE_DMABUF_RENDERER").is_err() {
+   if cfg!(not(feature = "linux")) && std::env::var("WEBKIT_DISABLE_DMABUF_RENDERER").is_err() {
       // SAFETY: Called at program start before any threads are spawned
       unsafe {
          std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
@@ -29,7 +32,7 @@ fn main() {
    #[cfg(target_os = "macos")]
    bootstrap::macos::disable_macos_autofill_heuristics();
 
-   tauri::Builder::default()
+   tauri::Builder::<AthasRuntime>::new()
       .plugin(tauri_plugin_store::Builder::default().build())
       .plugin(tauri_plugin_clipboard_manager::init())
       .plugin(logger::init(log::LevelFilter::Info))
@@ -340,6 +343,12 @@ fn main() {
          menu::toggle_menu_bar,
          menu::rebuild_menu_themes,
       ])
-      .run(tauri::generate_context!())
-      .expect("error while running tauri application");
+      .build(tauri::generate_context!())
+      .expect("error while building tauri application")
+      .run(|app_handle, event| match event {
+         tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit => {
+            shutdown_background_services(app_handle);
+         }
+         _ => {}
+      });
 }

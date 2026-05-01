@@ -1,3 +1,4 @@
+use crate::runtime::AthasAppHandle as AppHandle;
 use anyhow::{Context, Result, bail};
 use athas_runtime::{NodeRuntime, process::configure_background_command};
 use crossbeam_channel::{Sender, bounded};
@@ -15,7 +16,7 @@ use std::{
    },
    thread,
 };
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{Emitter, Manager};
 use tokio::sync::oneshot;
 
 type PendingRequests = Arc<Mutex<HashMap<u64, oneshot::Sender<Result<Value>>>>>;

@@ -1,4 +1,4 @@
-use crate::{ToolConfig, ToolError, ToolRuntime, platform};
+use crate::{ToolConfig, ToolError, ToolRuntime, platform, runtime::AthasAppHandle as AppHandle};
 use athas_runtime::{RuntimeManager, RuntimeType, process::configure_background_command};
 use flate2::read::GzDecoder;
 use futures_util::StreamExt;
@@ -41,7 +41,7 @@ fn validate_binary_download_url(input: &str) -> Result<(), ToolError> {
 pub struct ToolInstaller;
 
 impl ToolInstaller {
-   fn get_runtime_root(app_handle: &tauri::AppHandle) -> Result<PathBuf, ToolError> {
+   fn get_runtime_root(app_handle: &AppHandle) -> Result<PathBuf, ToolError> {
       app_handle
          .path()
          .app_data_dir()
@@ -397,7 +397,7 @@ impl ToolInstaller {
       })
    }
 
-   fn binary_install_dir(app_handle: &tauri::AppHandle, name: &str) -> Result<PathBuf, ToolError> {
+   fn binary_install_dir(app_handle: &AppHandle, name: &str) -> Result<PathBuf, ToolError> {
       Ok(Self::get_tools_dir(app_handle)?.join("binary").join(name))
    }
 
@@ -442,10 +442,7 @@ impl ToolInstaller {
    }
 
    /// Install a tool based on its configuration
-   pub async fn install(
-      app_handle: &tauri::AppHandle,
-      config: &ToolConfig,
-   ) -> Result<PathBuf, ToolError> {
+   pub async fn install(app_handle: &AppHandle, config: &ToolConfig) -> Result<PathBuf, ToolError> {
       match config.runtime {
          ToolRuntime::Bun => {
             let package = config
@@ -513,7 +510,7 @@ impl ToolInstaller {
    }
 
    /// Get the installation directory for tools
-   pub fn get_tools_dir(app_handle: &tauri::AppHandle) -> Result<PathBuf, ToolError> {
+   pub fn get_tools_dir(app_handle: &AppHandle) -> Result<PathBuf, ToolError> {
       let data_dir = app_handle
          .path()
          .app_data_dir()
@@ -523,7 +520,7 @@ impl ToolInstaller {
 
    /// Install a package via Bun (global)
    async fn install_via_bun(
-      app_handle: &tauri::AppHandle,
+      app_handle: &AppHandle,
       package: &str,
       command_name: &str,
    ) -> Result<PathBuf, ToolError> {
@@ -568,7 +565,7 @@ impl ToolInstaller {
 
    /// Install a package via npm (global)
    async fn install_via_npm(
-      app_handle: &tauri::AppHandle,
+      app_handle: &AppHandle,
       package: &str,
       command_name: &str,
    ) -> Result<PathBuf, ToolError> {
@@ -619,7 +616,7 @@ impl ToolInstaller {
 
    /// Install a package via pip (user)
    async fn install_via_pip(
-      app_handle: &tauri::AppHandle,
+      app_handle: &AppHandle,
       package: &str,
       command_name: &str,
    ) -> Result<PathBuf, ToolError> {
@@ -688,7 +685,7 @@ impl ToolInstaller {
 
    /// Install a package via go install
    async fn install_via_go(
-      app_handle: &tauri::AppHandle,
+      app_handle: &AppHandle,
       package: &str,
       command_name: &str,
    ) -> Result<PathBuf, ToolError> {
@@ -729,7 +726,7 @@ impl ToolInstaller {
 
    /// Install a package via cargo install
    async fn install_via_cargo(
-      app_handle: &tauri::AppHandle,
+      app_handle: &AppHandle,
       package: &str,
       command_name: &str,
    ) -> Result<PathBuf, ToolError> {
@@ -843,7 +840,7 @@ impl ToolInstaller {
 
    /// Install a package via RubyGems into an Athas-managed GEM_HOME.
    async fn install_via_gem(
-      app_handle: &tauri::AppHandle,
+      app_handle: &AppHandle,
       package: &str,
       command_name: &str,
    ) -> Result<PathBuf, ToolError> {
@@ -896,7 +893,7 @@ impl ToolInstaller {
    /// - A 100 MB streaming size cap, independently of any `Content-Length`.
    /// - Successful HTTP status.
    async fn download_binary(
-      app_handle: &tauri::AppHandle,
+      app_handle: &AppHandle,
       name: &str,
       command_name: &str,
       url: &str,
@@ -948,10 +945,7 @@ impl ToolInstaller {
    }
 
    /// Check if a tool is installed
-   pub fn is_installed(
-      app_handle: &tauri::AppHandle,
-      config: &ToolConfig,
-   ) -> Result<bool, ToolError> {
+   pub fn is_installed(app_handle: &AppHandle, config: &ToolConfig) -> Result<bool, ToolError> {
       let path = Self::get_tool_path(app_handle, config)?;
       if !path.exists() {
          return Ok(false);
@@ -962,10 +956,7 @@ impl ToolInstaller {
    }
 
    /// Get the path where a tool would be/is installed
-   pub fn get_tool_path(
-      app_handle: &tauri::AppHandle,
-      config: &ToolConfig,
-   ) -> Result<PathBuf, ToolError> {
+   pub fn get_tool_path(app_handle: &AppHandle, config: &ToolConfig) -> Result<PathBuf, ToolError> {
       let tools_dir = Self::get_tools_dir(app_handle)?;
 
       match config.runtime {
@@ -1063,7 +1054,7 @@ impl ToolInstaller {
    /// For Node/Bun tools, this returns the package bin entrypoint (e.g. .js/.mjs)
    /// so the LSP client can run it with managed Node runtime.
    pub fn get_lsp_launch_path(
-      app_handle: &tauri::AppHandle,
+      app_handle: &AppHandle,
       config: &ToolConfig,
    ) -> Result<PathBuf, ToolError> {
       let tools_dir = Self::get_tools_dir(app_handle)?;

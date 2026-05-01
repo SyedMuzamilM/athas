@@ -38,7 +38,7 @@ export const useGlobalSearch = () => {
   } = useFileLoader(isGlobalSearchVisible);
 
   // Rust-side fuzzy search with frecency + git ranking (only when visible)
-  const { hits: fffHits } = useFffSearch(debouncedQuery, isGlobalSearchVisible);
+  const { hits: fffHits } = useFffSearch(debouncedQuery, isGlobalSearchVisible, rootFolderPath);
 
   // Search and categorize files
   const { openBufferFiles, recentFilesInResults, otherFiles } = useFileSearch(

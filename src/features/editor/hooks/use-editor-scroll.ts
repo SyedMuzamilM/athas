@@ -9,6 +9,7 @@ interface UseEditorScrollOptions {
   viewStateKey: string | null;
   linesCount: number;
   minimapEnabled: boolean;
+  lockVerticalScroll?: boolean;
   switchGuardRef: RefObject<number>;
   highlightRef: RefObject<HTMLDivElement | null>;
   primaryCursorRef: RefObject<HTMLDivElement | null>;
@@ -29,6 +30,7 @@ export function useEditorScroll({
   viewStateKey,
   linesCount,
   minimapEnabled,
+  lockVerticalScroll = false,
   switchGuardRef,
   highlightRef,
   primaryCursorRef,
@@ -51,7 +53,11 @@ export function useEditorScroll({
 
   const handleScroll = useCallback(
     (e: React.UIEvent<HTMLTextAreaElement>) => {
-      const scrollTop = e.currentTarget.scrollTop;
+      if (lockVerticalScroll && e.currentTarget.scrollTop !== 0) {
+        e.currentTarget.scrollTop = 0;
+      }
+
+      const scrollTop = lockVerticalScroll ? 0 : e.currentTarget.scrollTop;
       const scrollLeft = e.currentTarget.scrollLeft;
 
       if (lastScrollRef.current.top === scrollTop && lastScrollRef.current.left === scrollLeft) {
@@ -144,6 +150,7 @@ export function useEditorScroll({
       handleViewportScroll,
       linesCount,
       minimapEnabled,
+      lockVerticalScroll,
       switchGuardRef,
       highlightRef,
       primaryCursorRef,
